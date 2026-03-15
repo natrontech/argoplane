@@ -33,26 +33,29 @@ export const NetworkingStatusPanel: React.FC<StatusPanelProps> = ({ application 
 
   if (!loaded || !summary) return null;
 
+  const hasDrops = summary.dropped > 0;
+
   return (
     <span style={box} title="Network flows in last 5 minutes">
       <span style={title}>Flows</span>
-      <span style={val}>{fmt(summary.total)}</span>
-      <span style={{ ...dot, background: colors.greenSolid }} />
-      <span style={val}>{fmt(summary.forwarded)}</span>
-      {summary.dropped > 0 && (
-        <>
-          <span style={{ ...dot, background: colors.redSolid }} />
-          <span style={{ ...val, color: colors.redText }}>{fmt(summary.dropped)}</span>
-        </>
-      )}
+      <Item label="fwd" value={fmt(summary.forwarded)} color={colors.greenSolid} />
+      {hasDrops && <Item label="drop" value={fmt(summary.dropped)} color={colors.redSolid} />}
     </span>
   );
 };
 
+const Item: React.FC<{ label: string; value: string; color: string }> = ({ label, value, color }) => (
+  <span style={item}>
+    <span style={lbl}>{label}</span>
+    <span style={{ ...dot, background: color }} />
+    <span style={val}>{value}</span>
+  </span>
+);
+
 const box: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
-  gap: 6,
+  gap: 8,
   background: colors.gray50,
   border: `1px solid ${colors.gray200}`,
   borderRadius: radius.md,
@@ -69,10 +72,17 @@ const title: React.CSSProperties = {
   marginRight: 2,
 };
 
-const val: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: fontWeight.semibold,
-  color: colors.gray700,
+const item: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 3,
+};
+
+const lbl: React.CSSProperties = {
+  fontSize: 10,
+  color: colors.gray400,
+  fontWeight: fontWeight.medium,
+  textTransform: 'uppercase',
 };
 
 const dot: React.CSSProperties = {
@@ -80,4 +90,10 @@ const dot: React.CSSProperties = {
   height: 8,
   borderRadius: 1,
   flexShrink: 0,
+};
+
+const val: React.CSSProperties = {
+  fontSize: 12,
+  fontWeight: fontWeight.semibold,
+  color: colors.gray700,
 };
