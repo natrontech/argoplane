@@ -81,11 +81,12 @@ func (h *BackupsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, backups)
 }
 
-// HandleCreate creates an on-demand backup for a namespace.
+// HandleCreate creates a backup for a namespace, optionally linked to a schedule.
 func (h *BackupsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Namespace string `json:"namespace"`
-		TTL       string `json:"ttl,omitempty"`
+		Namespace    string `json:"namespace"`
+		TTL          string `json:"ttl,omitempty"`
+		ScheduleName string `json:"scheduleName,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request body")
@@ -103,9 +104,18 @@ func (h *BackupsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	username := r.Header.Get("Argocd-Username")
-	slog.Info("creating on-demand backup", "namespace", req.Namespace, "ttl", req.TTL, "user", username)
+	slog.Info("creating backup", "namespace", req.Namespace, "ttl", req.TTL, "schedule", req.ScheduleName, "user", username)
 
 	backupName := fmt.Sprintf("%s-ondemand-%d", req.Namespace, time.Now().Unix())
+
+	labels := map[string]interface{}{
+		"argoplane.io/triggered-by": username,
+		"argoplane.io/on-demand":    "true",
+	}
+	if req.ScheduleName != "" {
+		labels["velero.io/schedule-name"] = req.ScheduleName
+		backupName = fmt.Sprintf("%s-%d", req.ScheduleName, time.Now().Unix())
+	}
 
 	backup := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -114,10 +124,7 @@ func (h *BackupsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 			"metadata": map[string]interface{}{
 				"name":      backupName,
 				"namespace": h.veleroNamespace,
-				"labels": map[string]interface{}{
-					"argoplane.io/triggered-by": username,
-					"argoplane.io/on-demand":    "true",
-				},
+				"labels":    labels,
 			},
 			"spec": map[string]interface{}{
 				"includedNamespaces": []interface{}{req.Namespace},

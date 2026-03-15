@@ -11,8 +11,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DEMO_DIR="$REPO_ROOT/examples/demo-app"
 
-echo "==> Creating namespace (if needed)"
+echo "==> Creating namespaces (if needed)"
 kubectl create namespace argoplane-demo 2>/dev/null || true
+kubectl create namespace velero 2>/dev/null || true
 
 echo "==> Applying demo manifests directly (local dev)"
 kubectl apply -f "$DEMO_DIR/manifests/" -n argoplane-demo
@@ -44,7 +45,7 @@ echo "      traffic-allowed           Deployment           (curls guestbook ever
 echo "      traffic-blocked           Deployment           (curls guestbook every 5s, DROPPED)"
 echo "      guestbook-policy          CiliumNetworkPolicy  (restricts ingress to role=frontend-client)"
 echo "      traffic-generator-egress  CiliumNetworkPolicy  (restricts traffic-allowed egress)"
-echo "      argoplane-demo-daily      Velero Schedule"
+echo "      argoplane-demo-daily      Velero Schedule       (in velero namespace, shows as 'app' ownership)"
 echo ""
 echo "    Platform-managed resources (NOT in ArgoCD tree, show as 'platform' ownership):"
 echo "      platform-default-deny-ingress   CiliumClusterwideNetworkPolicy  (baseline deny-all ingress)"
