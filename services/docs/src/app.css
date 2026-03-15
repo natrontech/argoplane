@@ -378,3 +378,52 @@ body {
   color: var(--color-orange-500);
   border-bottom: none;
 }
+
+/* Heading copy-link button */
+.heading-with-anchor {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.heading-anchor {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-gray-300);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.heading-with-anchor:hover .heading-anchor {
+  opacity: 1;
+}
+
+.heading-anchor:hover {
+  color: var(--color-gray-500);
+}
+
+.heading-anchor.copied {
+  color: var(--color-success-text);
+  opacity: 1;
+}
+
+.dark .heading-anchor {
+  color: var(--color-gray-600);
+}
+
+.dark .heading-anchor:hover {
+  color: var(--color-gray-400);
+}
+
+.dark .heading-anchor.copied {
+  color: var(--color-success);
+}
