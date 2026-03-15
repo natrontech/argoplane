@@ -17,11 +17,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
+
+	"github.com/natrontech/argoplane/extensions/networking/backend/internal/handler"
+	"github.com/natrontech/argoplane/extensions/networking/backend/internal/hubble"
 )
 
 type Config struct {
-	Port     string `envconfig:"PORT" default:"8082"`
-	LogLevel string `envconfig:"LOG_LEVEL" default:"info"`
+	Port           string `envconfig:"PORT" default:"8082"`
+	LogLevel       string `envconfig:"LOG_LEVEL" default:"info"`
+	HubbleRelayURL string `envconfig:"HUBBLE_RELAY_URL" default:""`
 }
 
 func main() {
@@ -45,11 +49,29 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Initialize Hubble Relay client (optional).
+	var hubbleClient *hubble.Client
+	if config.HubbleRelayURL != "" {
+		hc, err := hubble.NewClient(config.HubbleRelayURL)
+		if err != nil {
+			slog.Warn("failed to create hubble client, flows will be unavailable", "error", err, "url", config.HubbleRelayURL)
+		} else {
+			hubbleClient = hc
+			defer hubbleClient.Close()
+			slog.Info("hubble relay connected", "url", config.HubbleRelayURL)
+		}
+	} else {
+		slog.Info("hubble relay not configured, flows endpoint will return empty results")
+	}
+
+	flowsHandler := handler.NewFlowsHandler(hubbleClient)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/policies", handlePolicies(dynClient))
 	mux.HandleFunc("GET /api/v1/endpoints", handleEndpoints(dynClient))
 	mux.HandleFunc("GET /api/v1/clusterwide-policies", handleClusterwidePolicies(dynClient))
 	mux.HandleFunc("GET /api/v1/identities", handleIdentities(dynClient))
+	mux.HandleFunc("GET /api/v1/flows", flowsHandler.Handle)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})

@@ -8,7 +8,6 @@ import {
   Cell,
   StatusBadge,
   Tag,
-  Card,
   MetricCard,
   colors,
   panel,
@@ -19,9 +18,12 @@ import {
   fetchClusterwidePolicies,
   fetchEndpoints,
   fetchIdentities,
+  fetchFlows,
   PolicySummary,
   EndpointSummary,
   IdentitySummary,
+  FlowSummary,
+  FlowsResponse,
 } from '../api';
 
 interface ExtensionProps {
@@ -30,13 +32,17 @@ interface ExtensionProps {
   application: any;
 }
 
+type VerdictFilter = 'all' | 'forwarded' | 'dropped' | 'error';
+
 export const NetworkingPanel: React.FC<ExtensionProps> = ({ resource, application }) => {
   const [policies, setPolicies] = React.useState<PolicySummary[]>([]);
   const [clusterPolicies, setClusterPolicies] = React.useState<PolicySummary[]>([]);
   const [endpoints, setEndpoints] = React.useState<EndpointSummary[]>([]);
   const [identities, setIdentities] = React.useState<IdentitySummary[]>([]);
+  const [flowsResponse, setFlowsResponse] = React.useState<FlowsResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [verdictFilter, setVerdictFilter] = React.useState<VerdictFilter>('all');
 
   const namespace = resource?.metadata?.namespace || '';
   const name = resource?.metadata?.name || '';
@@ -55,16 +61,18 @@ export const NetworkingPanel: React.FC<ExtensionProps> = ({ resource, applicatio
       fetchClusterwidePolicies(appNamespace, appName, project),
       fetchEndpoints(namespace, appNamespace, appName, project),
       fetchIdentities(namespace, appNamespace, appName, project),
+      fetchFlows(namespace, appNamespace, appName, project, '5m', 100, verdictFilter),
     ])
-      .then(([pol, cpol, ep, id]) => {
+      .then(([pol, cpol, ep, id, flows]) => {
         setPolicies(pol);
         setClusterPolicies(cpol);
         setEndpoints(ep);
         setIdentities(id);
+        setFlowsResponse(flows);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [namespace, appNamespace, appName, project]);
+  }, [namespace, appNamespace, appName, project, verdictFilter]);
 
   if (loading) {
     return <Loading />;
@@ -83,6 +91,10 @@ export const NetworkingPanel: React.FC<ExtensionProps> = ({ resource, applicatio
     (ep) => ep.ingressEnforcement === 'true' || ep.egressEnforcement === 'true'
   ).length;
 
+  const flows = flowsResponse?.flows || [];
+  const flowSummary = flowsResponse?.summary;
+  const hubbleAvailable = flowsResponse?.hubble ?? false;
+
   return (
     <div style={panel}>
       <SectionHeader title="NETWORKING" />
@@ -99,13 +111,84 @@ export const NetworkingPanel: React.FC<ExtensionProps> = ({ resource, applicatio
         marginTop: spacing[4],
       }}>
         <MetricCard label="Network Policies" value={String(totalPolicies)} />
-        <MetricCard label="Namespace Policies" value={String(policies.length)} />
-        <MetricCard label="Clusterwide Policies" value={String(clusterPolicies.length)} />
         <MetricCard label="Endpoints" value={String(endpoints.length)} />
         <MetricCard label="Policy Enforced" value={String(enforcedEndpoints)} />
         <MetricCard label="Identities" value={String(identities.length)} />
       </div>
 
+      {/* Traffic Flows Section */}
+      {hubbleAvailable && (
+        <div style={{ marginTop: spacing[6] }}>
+          <SectionHeader title="TRAFFIC FLOWS" />
+
+          {flowSummary && (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+              gap: spacing[3],
+              marginTop: spacing[3],
+            }}>
+              <MetricCard label="Total Flows" value={String(flowSummary.total)} />
+              <MetricCard label="Forwarded" value={String(flowSummary.forwarded)} />
+              <MetricCard label="Dropped" value={String(flowSummary.dropped)} />
+              <MetricCard label="Errors" value={String(flowSummary.error)} />
+            </div>
+          )}
+
+          <div style={{
+            display: 'flex',
+            gap: spacing[2],
+            marginTop: spacing[4],
+            marginBottom: spacing[3],
+          }}>
+            {(['all', 'forwarded', 'dropped', 'error'] as VerdictFilter[]).map((v) => (
+              <button
+                key={v}
+                onClick={() => setVerdictFilter(v)}
+                style={{
+                  padding: `${spacing[1]} ${spacing[3]}`,
+                  border: `1px solid ${verdictFilter === v ? colors.orange500 : colors.gray200}`,
+                  borderRadius: '4px',
+                  background: verdictFilter === v ? colors.orange500 : 'transparent',
+                  color: verdictFilter === v ? '#fff' : colors.gray800,
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  textTransform: 'uppercase' as const,
+                }}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+
+          {flows.length > 0 ? (
+            <DataTable columns={['Time', 'Direction', 'Source', 'Destination', 'Protocol', 'Verdict']}>
+              {flows.map((f, i) => (
+                <FlowRow key={i} flow={f} />
+              ))}
+            </DataTable>
+          ) : (
+            <EmptyState message="No flows recorded in the last 5 minutes" />
+          )}
+        </div>
+      )}
+
+      {!hubbleAvailable && flowsResponse && (
+        <div style={{
+          marginTop: spacing[6],
+          padding: spacing[4],
+          background: colors.gray50,
+          border: `1px solid ${colors.gray200}`,
+          borderRadius: '4px',
+          color: colors.gray500,
+          fontSize: '13px',
+        }}>
+          Hubble Relay is not configured. Enable it in your Cilium installation to see live traffic flows.
+        </div>
+      )}
+
+      {/* Policies Section */}
       {totalPolicies > 0 && (
         <div style={{ marginTop: spacing[6] }}>
           <SectionHeader title="CILIUM NETWORK POLICIES" />
@@ -120,6 +203,7 @@ export const NetworkingPanel: React.FC<ExtensionProps> = ({ resource, applicatio
         </div>
       )}
 
+      {/* Endpoints Section */}
       {endpoints.length > 0 && (
         <div style={{ marginTop: spacing[6] }}>
           <SectionHeader title="CILIUM ENDPOINTS" />
@@ -153,6 +237,7 @@ export const NetworkingPanel: React.FC<ExtensionProps> = ({ resource, applicatio
         </div>
       )}
 
+      {/* Identities Section */}
       {identities.length > 0 && (
         <div style={{ marginTop: spacing[6] }}>
           <SectionHeader title="SECURITY IDENTITIES" />
@@ -173,10 +258,59 @@ export const NetworkingPanel: React.FC<ExtensionProps> = ({ resource, applicatio
         </div>
       )}
 
-      {totalPolicies === 0 && endpoints.length === 0 && (
+      {totalPolicies === 0 && endpoints.length === 0 && !hubbleAvailable && (
         <EmptyState message={`No Cilium networking data found in ${namespace}`} />
       )}
     </div>
+  );
+};
+
+const FlowRow: React.FC<{ flow: FlowSummary }> = ({ flow }) => {
+  const verdictStatus = flow.verdict === 'FORWARDED'
+    ? 'healthy'
+    : flow.verdict === 'DROPPED'
+      ? 'failed'
+      : 'degraded';
+
+  const verdictLabel = flow.verdict === 'DROPPED' && flow.dropReason
+    ? `${flow.verdict} (${flow.dropReason})`
+    : flow.verdict;
+
+  const source = flow.sourcePod
+    ? `${flow.sourceNamespace}/${flow.sourcePod}`
+    : flow.sourceIP || '-';
+
+  const dest = flow.destPod
+    ? `${flow.destNamespace}/${flow.destPod}`
+    : flow.destDNS || flow.destIP || '-';
+
+  const protocol = flow.destPort > 0
+    ? `${flow.protocol}:${flow.destPort}`
+    : flow.protocol || '-';
+
+  const directionTag = flow.direction === 'INGRESS'
+    ? 'green'
+    : flow.direction === 'EGRESS'
+      ? 'orange'
+      : 'gray';
+
+  const timeStr = flow.time
+    ? new Date(flow.time).toLocaleTimeString()
+    : '-';
+
+  return (
+    <tr>
+      <Cell>{timeStr}</Cell>
+      <Cell mono={false}>
+        <Tag variant={directionTag as any}>{flow.direction || 'UNKNOWN'}</Tag>
+      </Cell>
+      <Cell>{source}</Cell>
+      <Cell>{dest}</Cell>
+      <Cell>{protocol}</Cell>
+      <Cell mono={false}>
+        <StatusBadge status={verdictStatus as any} label={verdictLabel} />
+      </Cell>
+    </tr>
   );
 };
 
