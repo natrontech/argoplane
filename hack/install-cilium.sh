@@ -13,7 +13,12 @@ helm upgrade --install cilium cilium/cilium \
     --namespace kube-system \
     --set ipam.mode=kubernetes \
     --set hubble.enabled=true \
+    --set hubble.relay.enabled=true \
+    --set hubble.relay.service.type=ClusterIP \
     --wait --timeout 300s
+
+echo "==> Waiting for Hubble Relay to be ready"
+kubectl -n kube-system rollout status deployment hubble-relay --timeout=120s
 
 echo "==> Waiting for Cilium to be ready"
 kubectl -n kube-system rollout status daemonset cilium --timeout=180s

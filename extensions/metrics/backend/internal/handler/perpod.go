@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -22,18 +24,18 @@ func NewPerPod(prom *prometheus.Client) *PerPod {
 }
 
 type perPodSeries struct {
-	Metric string        `json:"metric"`
-	Unit   string        `json:"unit"`
-	Pods   []podTimeline `json:"pods"`
+	Metric     string        `json:"metric"`
+	Unit       string        `json:"unit"`
+	Timestamps []string      `json:"timestamps"`
+	Pods       []podTimeline `json:"pods"`
 }
 
 type podTimeline struct {
-	Pod    string      `json:"pod"`
-	Series []dataPoint `json:"series"`
+	Pod    string    `json:"pod"`
+	Values []float64 `json:"values"`
 }
 
 // Handle serves GET /api/v1/per-pod-series.
-// Query params: namespace, name, kind, range, pods (optional comma-separated list).
 func (h *PerPod) Handle(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
 	name := r.URL.Query().Get("name")
@@ -58,10 +60,19 @@ func (h *PerPod) Handle(w http.ResponseWriter, r *http.Request) {
 	end := time.Now()
 	start, step := rangeParams(timeRange, end)
 
+	// Build shared timestamp grid
+	var timestamps []time.Time
+	for t := start; !t.After(end); t = t.Add(step) {
+		timestamps = append(timestamps, t)
+	}
+	tsStrings := make([]string, len(timestamps))
+	for i, t := range timestamps {
+		tsStrings[i] = t.UTC().Format(time.RFC3339)
+	}
+
 	// Build pod selector
 	var podSelector string
 	if podsParam != "" {
-		// Explicit pod list from resource tree
 		pods := strings.Split(podsParam, ",")
 		podSelector = fmt.Sprintf(`namespace="%s",pod=~"%s"`, namespace, strings.Join(pods, "|"))
 	} else if name != "" {
@@ -95,25 +106,42 @@ func (h *PerPod) Handle(w http.ResponseWriter, r *http.Request) {
 		allSeries, err := h.prom.QueryRange(r.Context(), m.query, start, end, step)
 		if err != nil {
 			slog.Warn("per-pod range query failed", "metric", m.name, "error", err)
-			results = append(results, perPodSeries{Metric: m.name, Unit: displayUnit(m.unit), Pods: []podTimeline{}})
+			results = append(results, perPodSeries{Metric: m.name, Unit: displayUnit(m.unit), Timestamps: tsStrings, Pods: []podTimeline{}})
 			continue
 		}
 
-		pps := perPodSeries{Metric: m.name, Unit: displayUnit(m.unit)}
+		pps := perPodSeries{Metric: m.name, Unit: displayUnit(m.unit), Timestamps: tsStrings}
+
 		for _, s := range allSeries {
 			podName := s.Metric["pod"]
 			if podName == "" {
 				continue
 			}
-			pt := podTimeline{Pod: podName}
+
+			// Build a map of timestamp -> value for this pod
+			valMap := make(map[int64]float64)
 			for _, dp := range s.Values {
-				pt.Series = append(pt.Series, dataPoint{
-					Time:  dp.Time.UTC().Format(time.RFC3339),
-					Value: convertValue(dp.Value, m.unit),
-				})
+				valMap[dp.Time.Unix()] = convertValue(dp.Value, m.unit)
 			}
-			pps.Pods = append(pps.Pods, pt)
+
+			// Align to the shared timestamp grid, NaN for gaps
+			values := make([]float64, len(timestamps))
+			for i, t := range timestamps {
+				if v, ok := valMap[t.Unix()]; ok {
+					values[i] = v
+				} else {
+					values[i] = math.NaN()
+				}
+			}
+
+			pps.Pods = append(pps.Pods, podTimeline{Pod: podName, Values: values})
 		}
+
+		// Sort pods alphabetically for stable colors
+		sort.Slice(pps.Pods, func(i, j int) bool {
+			return pps.Pods[i].Pod < pps.Pods[j].Pod
+		})
+
 		results = append(results, pps)
 	}
 
