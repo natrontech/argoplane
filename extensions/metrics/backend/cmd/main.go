@@ -32,11 +32,11 @@ func main() {
 
 	promClient := prometheus.NewClient(config.PrometheusURL)
 	resourceHandler := handler.NewResource(promClient)
-	clusterHandler := handler.NewCluster(promClient)
+	appHandler := handler.NewApp(promClient)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/resource-metrics", resourceHandler.Handle)
-	mux.HandleFunc("GET /api/v1/cluster-metrics", clusterHandler.Handle)
+	mux.HandleFunc("GET /api/v1/app-metrics", appHandler.Handle)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})

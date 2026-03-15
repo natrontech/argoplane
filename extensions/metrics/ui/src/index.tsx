@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { MetricsPanel } from './components/MetricsPanel';
-import { MetricsDashboard } from './components/MetricsDashboard';
+import { MetricsStatusPanel, MetricsFlyout } from './components/MetricsStatusPanel';
 
 ((window: any) => {
   // Resource tab: Deployments
@@ -30,11 +30,11 @@ import { MetricsDashboard } from './components/MetricsDashboard';
     { icon: 'fa-chart-line' }
   );
 
-  // System-level sidebar page: Cluster Metrics Dashboard
-  window.extensionsAPI.registerSystemLevelExtension(
-    MetricsDashboard,
+  // Status panel: compact CPU/Memory on each app's status bar
+  window.extensionsAPI.registerStatusPanelExtension(
+    MetricsStatusPanel,
     'Metrics',
     'metrics',
-    'fa-chart-line'
+    MetricsFlyout
   );
 })(window);

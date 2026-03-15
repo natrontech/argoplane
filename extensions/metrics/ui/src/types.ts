@@ -17,18 +17,6 @@ export interface TimeSeriesMetric {
   series: DataPoint[];
 }
 
-export interface NamespaceMetric {
-  namespace: string;
-  cpu: number;
-  memory: number;
-}
-
-export interface ClusterMetricsResponse {
-  summary: MetricData[];
-  timeSeries?: TimeSeriesMetric[];
-  namespaces: NamespaceMetric[];
-}
-
 export interface ExtensionProps {
   resource: any;
   tree: any;
