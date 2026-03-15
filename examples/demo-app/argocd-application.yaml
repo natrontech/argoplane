@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argoplane-demo
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: argoplane-demo
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/natrontech/argoplane.git
+    targetRevision: HEAD
+    path: examples/demo-app/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argoplane-demo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
