@@ -4,6 +4,8 @@ import {
   EmptyState,
   Tag,
   Button,
+  Input,
+  SectionHeader,
   colors,
   fonts,
   fontSize,
@@ -14,404 +16,83 @@ import {
 import { fetchPoliciesWithOwnership, fetchEndpoints, fetchFlows } from '../api';
 import {
   PolicySummary,
-  EndpointSummary,
   FlowSummary,
   FlowsResponse,
   ResourceRef,
   VerdictFilter,
+  DirectionFilter,
   TimeRange,
 } from '../types';
 
 // ============================================================
-// Graph data model
+// Sorting
 // ============================================================
 
-interface GraphNode {
-  id: string;
-  label: string;
-  shortLabel: string;
-  column: 'left' | 'center' | 'right';
-  x: number;
-  y: number;
-  totalFwd: number;
-  totalDrop: number;
-}
+type SortField = 'time' | 'verdict' | 'direction' | 'source' | 'dest' | 'protocol' | 'port';
+type SortDir = 'asc' | 'desc';
 
-interface GraphEdge {
-  id: string;
-  sourceId: string;
-  targetId: string;
-  forwarded: number;
-  dropped: number;
-  errors: number;
-  protocol: string;
-  port: number;
-  dropReasons: string[];
-  // Computed path coordinates
-  sx: number; sy: number; tx: number; ty: number;
-}
-
-const NODE_H = 32;
-const NODE_GAP = 10;
-const NODE_RADIUS = 4;
-const TOP_PAD = 12;
-
-function truncate(s: string, max: number): string {
-  return s.length > max ? s.slice(0, max - 1) + '\u2026' : s;
-}
-
-// ============================================================
-// Build graph layout from raw flows
-// ============================================================
-
-function buildGraph(flows: FlowSummary[], namespace: string, width: number): {
-  nodes: GraphNode[];
-  edges: GraphEdge[];
-  height: number;
-} {
-  const NODE_W = Math.min(width * 0.24, 180);
-  const COL_LEFT = 0;
-  const COL_CENTER = (width - NODE_W) / 2;
-  const COL_RIGHT = width - NODE_W;
-
-  // Collect unique nodes and aggregate edges.
-  const centerSet = new Map<string, { fwd: number; drop: number }>();
-  const leftSet = new Map<string, { fwd: number; drop: number }>();
-  const rightSet = new Map<string, { fwd: number; drop: number }>();
-  const edgeMap = new Map<string, {
-    sourceCol: 'left' | 'center';
-    sourceLabel: string;
-    targetCol: 'center' | 'right';
-    targetLabel: string;
-    // Note: left→right is possible when neither pod is in-namespace.
-    forwarded: number;
-    dropped: number;
-    errors: number;
-    protocol: string;
-    port: number;
-    dropReasons: string[];
-  }>();
-
-  function ensureNode(set: Map<string, { fwd: number; drop: number }>, label: string) {
-    if (!set.has(label)) set.set(label, { fwd: 0, drop: 0 });
-  }
-
-  function addToNode(set: Map<string, { fwd: number; drop: number }>, label: string, fwd: number, drop: number) {
-    const n = set.get(label)!;
-    n.fwd += fwd;
-    n.drop += drop;
-  }
-
-  function addEdge(
-    srcCol: 'left' | 'center', srcLabel: string,
-    tgtCol: 'center' | 'right', tgtLabel: string,
-    f: FlowSummary, fwd: number, drop: number
-  ) {
-    const proto = f.protocol || '';
-    const port = f.destPort || 0;
-    const prefix = srcCol === 'left' ? 'l' : 'c';
-    const suffix = tgtCol === 'right' ? 'r' : 'c';
-    const ek = `${prefix}:${srcLabel}|${suffix}:${tgtLabel}|${proto}:${port}`;
-    if (!edgeMap.has(ek)) {
-      edgeMap.set(ek, { sourceCol: srcCol, sourceLabel: srcLabel, targetCol: tgtCol, targetLabel: tgtLabel, forwarded: 0, dropped: 0, errors: 0, protocol: proto, port, dropReasons: [] });
+function sortFlows(flows: FlowSummary[], field: SortField, dir: SortDir): FlowSummary[] {
+  const sorted = [...flows];
+  const m = dir === 'asc' ? 1 : -1;
+  sorted.sort((a, b) => {
+    let av: string | number;
+    let bv: string | number;
+    switch (field) {
+      case 'time': av = a.time; bv = b.time; break;
+      case 'verdict': av = a.verdict; bv = b.verdict; break;
+      case 'direction': av = a.direction; bv = b.direction; break;
+      case 'source': av = a.sourcePod || a.sourceIP || ''; bv = b.sourcePod || b.sourceIP || ''; break;
+      case 'dest': av = a.destPod || a.destDNS || a.destIP || ''; bv = b.destPod || b.destDNS || b.destIP || ''; break;
+      case 'protocol': av = a.protocol; bv = b.protocol; break;
+      case 'port': av = a.destPort; bv = b.destPort; break;
+      default: return 0;
     }
-    const e = edgeMap.get(ek)!;
-    e.forwarded += fwd;
-    e.dropped += drop;
-    if (f.verdict === 'ERROR') e.errors++;
-    if (f.dropReason && !e.dropReasons.includes(f.dropReason)) e.dropReasons.push(f.dropReason);
-  }
-
-  for (const f of flows) {
-    const srcInNs = f.sourceNamespace === namespace;
-    const dstInNs = f.destNamespace === namespace;
-    const hasSrcPod = !!f.sourcePod;
-    const hasDstPod = !!f.destPod;
-    const isSourceLocal = srcInNs && hasSrcPod;
-    const isDestLocal = dstInNs && hasDstPod;
-    const fwd = f.verdict === 'FORWARDED' ? 1 : 0;
-    const drop = f.verdict === 'DROPPED' ? 1 : 0;
-
-    if (isSourceLocal && isDestLocal) {
-      // Internal: source in center, dest on right (same namespace pod-to-pod).
-      ensureNode(centerSet, f.sourcePod);
-      addToNode(centerSet, f.sourcePod, fwd, drop);
-      ensureNode(rightSet, f.destPod);
-      addToNode(rightSet, f.destPod, fwd, drop);
-      addEdge('center', f.sourcePod, 'right', f.destPod, f, fwd, drop);
-
-    } else if (isSourceLocal) {
-      // Outbound: center → right.
-      const rightLabel = hasDstPod
-        ? (dstInNs ? f.destPod : `${f.destNamespace}/${f.destPod}`)
-        : f.destDNS || f.destIP || 'unknown';
-      ensureNode(centerSet, f.sourcePod);
-      addToNode(centerSet, f.sourcePod, fwd, drop);
-      ensureNode(rightSet, rightLabel);
-      addToNode(rightSet, rightLabel, fwd, drop);
-      addEdge('center', f.sourcePod, 'right', rightLabel, f, fwd, drop);
-
-    } else if (isDestLocal) {
-      // Inbound: left → center.
-      const leftLabel = hasSrcPod
-        ? (srcInNs ? f.sourcePod : `${f.sourceNamespace}/${f.sourcePod}`)
-        : f.sourceIP || 'unknown';
-      ensureNode(leftSet, leftLabel);
-      addToNode(leftSet, leftLabel, fwd, drop);
-      ensureNode(centerSet, f.destPod);
-      addToNode(centerSet, f.destPod, fwd, drop);
-      addEdge('left', leftLabel, 'center', f.destPod, f, fwd, drop);
-
-    } else {
-      // Neither side has a known pod in namespace. Use IPs/DNS.
-      const srcLabel = f.sourcePod
-        ? `${f.sourceNamespace}/${f.sourcePod}`
-        : f.sourceIP || 'unknown';
-      const dstLabel = f.destPod
-        ? `${f.destNamespace}/${f.destPod}`
-        : f.destDNS || f.destIP || 'unknown';
-      ensureNode(leftSet, srcLabel);
-      addToNode(leftSet, srcLabel, fwd, drop);
-      ensureNode(rightSet, dstLabel);
-      addToNode(rightSet, dstLabel, fwd, drop);
-      addEdge('left', srcLabel, 'right', dstLabel, f, fwd, drop);
-    }
-  }
-
-  // Position nodes in columns.
-  const leftLabels = Array.from(leftSet.keys());
-  const centerLabels = Array.from(centerSet.keys());
-  const rightLabels = Array.from(rightSet.keys());
-
-  const maxCol = Math.max(leftLabels.length, centerLabels.length, rightLabels.length, 1);
-  const totalH = maxCol * (NODE_H + NODE_GAP) - NODE_GAP + TOP_PAD * 2;
-
-  function positionColumn(labels: string[], x: number, data: Map<string, { fwd: number; drop: number }>, col: 'left' | 'center' | 'right'): GraphNode[] {
-    const colH = labels.length * (NODE_H + NODE_GAP) - NODE_GAP;
-    const startY = TOP_PAD + (totalH - TOP_PAD * 2 - colH) / 2;
-    const maxChars = col === 'center' ? 20 : 18;
-
-    return labels.map((label, i) => {
-      const d = data.get(label)!;
-      return {
-        id: `${col}:${label}`,
-        label,
-        shortLabel: truncate(label, maxChars),
-        column: col,
-        x,
-        y: startY + i * (NODE_H + NODE_GAP),
-        totalFwd: d.fwd,
-        totalDrop: d.drop,
-      };
-    });
-  }
-
-  const nodes: GraphNode[] = [
-    ...positionColumn(leftLabels, COL_LEFT, leftSet, 'left'),
-    ...positionColumn(centerLabels, COL_CENTER, centerSet, 'center'),
-    ...positionColumn(rightLabels, COL_RIGHT, rightSet, 'right'),
-  ];
-
-  const nodeMap = new Map(nodes.map((n) => [n.id, n]));
-
-  // Build edges with coordinates.
-  const edges: GraphEdge[] = [];
-  for (const [ek, e] of edgeMap) {
-    const srcId = e.sourceCol === 'left' ? `left:${e.sourceLabel}` : `center:${e.sourceLabel}`;
-    const tgtId = e.targetCol === 'right' ? `right:${e.targetLabel}` : `center:${e.targetLabel}`;
-    const src = nodeMap.get(srcId);
-    const tgt = nodeMap.get(tgtId);
-    if (!src || !tgt) continue;
-
-    edges.push({
-      id: ek,
-      sourceId: srcId,
-      targetId: tgtId,
-      forwarded: e.forwarded,
-      dropped: e.dropped,
-      errors: e.errors,
-      protocol: e.protocol,
-      port: e.port,
-      dropReasons: e.dropReasons,
-      sx: src.x + NODE_W,
-      sy: src.y + NODE_H / 2,
-      tx: tgt.x,
-      ty: tgt.y + NODE_H / 2,
-    });
-  }
-
-  return { nodes, edges, height: Math.max(totalH, 120) };
+    if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * m;
+    return String(av).localeCompare(String(bv)) * m;
+  });
+  return sorted;
 }
 
 // ============================================================
-// SVG sub-components
+// Flow table sub-component
 // ============================================================
 
-const EdgePath: React.FC<{
-  edge: GraphEdge;
-  highlighted: boolean;
-  dimmed: boolean;
-  onHover: (edge: GraphEdge | null) => void;
-}> = ({ edge, highlighted, dimmed, onHover }) => {
-  const total = edge.forwarded + edge.dropped + edge.errors;
-  const thickness = Math.max(1.5, Math.min(5, Math.sqrt(total) * 1.2));
-  const cpx = Math.abs(edge.tx - edge.sx) * 0.4;
-
-  const path = `M ${edge.sx} ${edge.sy} C ${edge.sx + cpx} ${edge.sy}, ${edge.tx - cpx} ${edge.ty}, ${edge.tx} ${edge.ty}`;
-
-  let strokeColor: string;
-  if (edge.dropped > 0 && edge.forwarded === 0) {
-    strokeColor = colors.red;
-  } else if (edge.dropped > 0) {
-    strokeColor = colors.yellowSolid;
-  } else {
-    strokeColor = colors.greenSolid;
-  }
-
-  const opacity = dimmed ? 0.15 : highlighted ? 1 : 0.6;
-  const dashArray = edge.dropped > 0 && edge.forwarded === 0 ? '6 3' : undefined;
-
-  return (
-    <g
-      onMouseEnter={() => onHover(edge)}
-      onMouseLeave={() => onHover(null)}
-      style={{ cursor: 'pointer' }}
-    >
-      {/* Invisible wide path for easier hover target */}
-      <path d={path} fill="none" stroke="transparent" strokeWidth={12} />
-      <path
-        d={path}
-        fill="none"
-        stroke={strokeColor}
-        strokeWidth={thickness}
-        strokeDasharray={dashArray}
-        opacity={opacity}
-      />
-      {/* Drop count badge at midpoint */}
-      {edge.dropped > 0 && highlighted && (
-        <DropBadgeSVG
-          x={(edge.sx + edge.tx) / 2}
-          y={(edge.sy + edge.ty) / 2 - 10}
-          count={edge.dropped}
-          reason={edge.dropReasons[0]}
-        />
-      )}
-    </g>
-  );
+const VerdictBadge: React.FC<{ verdict: string }> = ({ verdict }) => {
+  const v = verdict.toUpperCase();
+  const variant = v === 'FORWARDED' ? 'green' : v === 'DROPPED' ? 'red' : 'gray';
+  return <Tag variant={variant}>{v === 'FORWARDED' ? 'FWD' : v === 'DROPPED' ? 'DROP' : v}</Tag>;
 };
 
-const DropBadgeSVG: React.FC<{ x: number; y: number; count: number; reason?: string }> = ({ x, y, count, reason }) => {
-  const text = reason ? `${count} drop: ${reason}` : `${count} drop`;
-  const textLen = text.length * 5.5 + 12;
-
+const DirectionBadge: React.FC<{ direction: string }> = ({ direction }) => {
+  const d = direction.toUpperCase();
   return (
-    <g>
-      <rect x={x - textLen / 2} y={y - 8} width={textLen} height={16} rx={2} fill={colors.redLight} stroke={colors.red} strokeWidth={0.5} />
-      <text x={x} y={y + 3} textAnchor="middle" fontSize={10} fontFamily={fonts.mono} fill={colors.redText}>{text}</text>
-    </g>
-  );
-};
-
-const NodeRect: React.FC<{
-  node: GraphNode;
-  selected: boolean;
-  dimmed: boolean;
-  nodeWidth: number;
-  onClick: () => void;
-}> = ({ node, selected, dimmed, nodeWidth, onClick }) => {
-  const hasDrop = node.totalDrop > 0;
-  const borderColor = selected ? colors.orange500 : hasDrop ? colors.red : colors.gray300;
-  const bgColor = selected ? '#FFF7ED' : hasDrop ? colors.redLight : colors.white;
-  const textColor = dimmed ? colors.gray300 : colors.gray800;
-  const opacity = dimmed ? 0.5 : 1;
-
-  // Count badge
-  const countText = hasDrop ? `${node.totalFwd}/${node.totalDrop}` : String(node.totalFwd);
-
-  return (
-    <g onClick={onClick} style={{ cursor: 'pointer' }} opacity={opacity}>
-      <rect
-        x={node.x}
-        y={node.y}
-        width={nodeWidth}
-        height={NODE_H}
-        rx={NODE_RADIUS}
-        fill={bgColor}
-        stroke={borderColor}
-        strokeWidth={selected ? 2 : 1}
-      />
-      {/* Label */}
-      <text
-        x={node.x + 8}
-        y={node.y + NODE_H / 2 + 4}
-        fontSize={11}
-        fontFamily={fonts.mono}
-        fontWeight={node.column === 'center' ? 600 : 400}
-        fill={textColor}
-      >
-        {node.shortLabel}
-      </text>
-      {/* Flow count badge on the right side */}
-      <text
-        x={node.x + nodeWidth - 8}
-        y={node.y + NODE_H / 2 + 4}
-        textAnchor="end"
-        fontSize={10}
-        fontFamily={fonts.mono}
-        fill={hasDrop ? colors.redText : colors.greenText}
-      >
-        {countText}
-      </text>
-      {/* Column indicator line on center pods */}
-      {node.column === 'center' && (
-        <rect
-          x={node.x}
-          y={node.y}
-          width={3}
-          height={NODE_H}
-          rx={NODE_RADIUS}
-          fill={colors.orange500}
-        />
-      )}
-    </g>
-  );
-};
-
-// ============================================================
-// Edge tooltip
-// ============================================================
-
-const EdgeTooltip: React.FC<{ edge: GraphEdge; containerRect: DOMRect | null }> = ({ edge, containerRect }) => {
-  if (!containerRect) return null;
-  const x = (edge.sx + edge.tx) / 2;
-  const y = Math.min(edge.sy, edge.ty) - 4;
-  const proto = edge.port > 0 ? `${edge.protocol}:${edge.port}` : edge.protocol;
-
-  return (
-    <div style={{
-      position: 'absolute',
-      left: x,
-      top: y,
-      transform: 'translate(-50%, -100%)',
-      background: colors.gray800,
-      color: colors.white,
-      padding: `${spacing[1]}px ${spacing[2]}px`,
-      borderRadius: 4,
+    <span style={{
       fontSize: fontSize.xs,
       fontFamily: fonts.mono,
-      whiteSpace: 'nowrap',
-      pointerEvents: 'none',
-      zIndex: 10,
+      fontWeight: fontWeight.medium,
+      color: d === 'INGRESS' ? colors.blueText : colors.orange600,
     }}>
-      <span>{proto}</span>
-      <span style={{ color: colors.greenSolid, marginLeft: spacing[2] }}>{edge.forwarded} fwd</span>
-      {edge.dropped > 0 && (
-        <span style={{ color: colors.redSolid, marginLeft: spacing[2] }}>{edge.dropped} drop</span>
-      )}
-      {edge.dropReasons.length > 0 && (
-        <span style={{ color: colors.red, marginLeft: spacing[2] }}>({edge.dropReasons[0]})</span>
-      )}
-    </div>
+      {d === 'INGRESS' ? 'IN' : d === 'EGRESS' ? 'OUT' : d}
+    </span>
+  );
+};
+
+const SortableHeader: React.FC<{
+  label: string;
+  field: SortField;
+  currentField: SortField;
+  currentDir: SortDir;
+  onSort: (field: SortField) => void;
+}> = ({ label, field, currentField, currentDir, onSort }) => {
+  const active = currentField === field;
+  const arrow = active ? (currentDir === 'asc' ? ' \u25B2' : ' \u25BC') : '';
+  return (
+    <th
+      style={{ ...thStyle, cursor: 'pointer', userSelect: 'none' }}
+      onClick={() => onSort(field)}
+    >
+      {label}{arrow}
+    </th>
   );
 };
 
@@ -420,20 +101,22 @@ const EdgeTooltip: React.FC<{ edge: GraphEdge; containerRect: DOMRect | null }> 
 // ============================================================
 
 const REFRESH_INTERVAL = 30_000;
+const PAGE_SIZE = 50;
 
 export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ application, tree }) => {
   const [policies, setPolicies] = React.useState<PolicySummary[]>([]);
-  const [endpoints, setEndpoints] = React.useState<EndpointSummary[]>([]);
   const [flowsResponse, setFlowsResponse] = React.useState<FlowsResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [selectedNode, setSelectedNode] = React.useState<string | null>(null);
-  const [hoveredEdge, setHoveredEdge] = React.useState<GraphEdge | null>(null);
-  const [verdictFilter, setVerdictFilter] = React.useState<VerdictFilter>('all');
-  const [timeRange, setTimeRange] = React.useState<TimeRange>('5m');
 
-  const graphContainerRef = React.useRef<HTMLDivElement>(null);
-  const [graphWidth, setGraphWidth] = React.useState(800);
+  const [verdictFilter, setVerdictFilter] = React.useState<VerdictFilter>('all');
+  const [directionFilter, setDirectionFilter] = React.useState<DirectionFilter>('all');
+  const [timeRange, setTimeRange] = React.useState<TimeRange>('5m');
+  const [search, setSearch] = React.useState('');
+  const [sortField, setSortField] = React.useState<SortField>('time');
+  const [sortDir, setSortDir] = React.useState<SortDir>('desc');
+  const [page, setPage] = React.useState(0);
+  const [activeTab, setActiveTab] = React.useState<'flows' | 'policies'>('flows');
 
   const namespace = application?.spec?.destination?.namespace || '';
   const appName = application?.metadata?.name || '';
@@ -447,57 +130,58 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
       .map((n: any) => ({ group: n.group || '', kind: n.kind, namespace: n.namespace || '', name: n.name }));
   }, [tree, namespace]);
 
-  // Measure graph container.
-  React.useEffect(() => {
-    if (!graphContainerRef.current) return;
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setGraphWidth(entry.contentRect.width);
-      }
-    });
-    observer.observe(graphContainerRef.current);
-    return () => observer.disconnect();
-  }, []);
-
   const fetchAll = React.useCallback(() => {
     if (!namespace) return;
     const policiesP = fetchPoliciesWithOwnership(namespace, resourceRefs, appNamespace, appName, project).catch(() => [] as PolicySummary[]);
-    const endpointsP = fetchEndpoints(namespace, appNamespace, appName, project).catch(() => [] as EndpointSummary[]);
-    const flowsP = fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter).catch(() => ({ flows: [], hubble: false } as FlowsResponse));
+    const flowsP = fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter, directionFilter).catch(() => ({ flows: [], hubble: false } as FlowsResponse));
 
-    Promise.all([policiesP, endpointsP, flowsP])
-      .then(([pol, ep, fl]) => { setPolicies(pol); setEndpoints(ep); setFlowsResponse(fl); setError(null); })
+    Promise.all([policiesP, flowsP])
+      .then(([pol, fl]) => { setPolicies(pol); setFlowsResponse(fl); setError(null); })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [namespace, appNamespace, appName, project, resourceRefs, timeRange, verdictFilter]);
+  }, [namespace, appNamespace, appName, project, resourceRefs, timeRange, verdictFilter, directionFilter]);
 
   React.useEffect(() => { setLoading(true); fetchAll(); }, [fetchAll]);
   React.useEffect(() => { const i = setInterval(fetchAll, REFRESH_INTERVAL); return () => clearInterval(i); }, [fetchAll]);
 
-  // All hooks must be above early returns to satisfy rules of hooks.
+  // Reset page when filters change.
+  React.useEffect(() => { setPage(0); }, [search, sortField, sortDir, verdictFilter, directionFilter, timeRange]);
+
   const flows = flowsResponse?.flows || [];
   const flowSummary = flowsResponse?.summary;
   const hubbleAvailable = flowsResponse?.hubble ?? false;
 
-  const graph = React.useMemo(() => buildGraph(flows, namespace, graphWidth), [flows, namespace, graphWidth]);
-  const nodeWidth = Math.min(graphWidth * 0.24, 180);
+  // Client-side text filter.
+  const filteredFlows = React.useMemo(() => {
+    if (!search.trim()) return flows;
+    const q = search.toLowerCase();
+    return flows.filter((f) =>
+      f.sourcePod.toLowerCase().includes(q) ||
+      f.destPod.toLowerCase().includes(q) ||
+      (f.sourceIP || '').toLowerCase().includes(q) ||
+      (f.destIP || '').toLowerCase().includes(q) ||
+      (f.destDNS || '').toLowerCase().includes(q) ||
+      f.protocol.toLowerCase().includes(q) ||
+      (f.dropReason || '').toLowerCase().includes(q) ||
+      f.summary.toLowerCase().includes(q) ||
+      f.sourceNamespace.toLowerCase().includes(q) ||
+      f.destNamespace.toLowerCase().includes(q)
+    );
+  }, [flows, search]);
 
-  const selectedPodName = selectedNode?.startsWith('center:') ? selectedNode.slice(7) : null;
-  const selectedEndpoint = selectedPodName ? endpoints.find((ep) => ep.name === selectedPodName) : null;
-  const displayPolicies = React.useMemo(() => {
-    if (!selectedPodName) return policies;
-    const ep = endpoints.find((e) => e.name === selectedPodName);
-    if (!ep?.labels) return policies;
-    return policies.filter((p) => {
-      if (!p.endpointSelector) return true;
-      return Object.entries(p.endpointSelector).every(([k, v]) => ep.labels && ep.labels[`k8s:${k}`] === v);
-    });
-  }, [selectedPodName, endpoints, policies]);
+  const sortedFlows = React.useMemo(() => sortFlows(filteredFlows, sortField, sortDir), [filteredFlows, sortField, sortDir]);
 
-  const connectedEdgeIds = React.useMemo(() => {
-    if (!selectedNode) return new Set<string>();
-    return new Set(graph.edges.filter((e) => e.sourceId === selectedNode || e.targetId === selectedNode).map((e) => e.id));
-  }, [selectedNode, graph.edges]);
+  const totalPages = Math.max(1, Math.ceil(sortedFlows.length / PAGE_SIZE));
+  const pageFlows = sortedFlows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  const handleSort = (field: SortField) => {
+    if (field === sortField) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir(field === 'time' ? 'desc' : 'asc');
+    }
+  };
 
   if (loading) return <div style={panel}><Loading /></div>;
   if (error) {
@@ -510,202 +194,231 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
   }
 
   return (
-    <div style={rootPanel}>
-      {/* === Top strip === */}
-      <div style={topStrip}>
-        <div style={summaryRow}>
-          <span style={appLabelStyle}>{appName}</span>
-          <span style={nsStyle}>{namespace}</span>
+    <div style={rootStyle}>
+      {/* === Top bar === */}
+      <div style={topBar}>
+        <div style={topLeft}>
+          <span style={appLabel}>{appName}</span>
+          <span style={nsLabel}>{namespace}</span>
           {hubbleAvailable && flowSummary && (
             <>
-              <Divider />
-              <Metric label="flows" value={flowSummary.total} />
-              <Metric label="fwd" value={flowSummary.forwarded} color={colors.greenText} />
-              <Metric label="drop" value={flowSummary.dropped} color={flowSummary.dropped > 0 ? colors.redText : undefined} />
-              <Metric label="err" value={flowSummary.error} color={flowSummary.error > 0 ? colors.yellowText : undefined} />
+              <Sep />
+              <Stat label="flows" value={flowSummary.total} />
+              <Stat label="fwd" value={flowSummary.forwarded} color={colors.greenText} />
+              <Stat label="drop" value={flowSummary.dropped} color={flowSummary.dropped > 0 ? colors.redText : undefined} />
+              <Stat label="err" value={flowSummary.error} color={flowSummary.error > 0 ? colors.yellowText : undefined} />
             </>
           )}
         </div>
-        <div style={controlsRow}>
+        <div style={topRight}>
           {(['5m', '15m', '1h'] as TimeRange[]).map((t) => (
             <button key={t} onClick={() => setTimeRange(t)} style={pill(timeRange === t)}>{t}</button>
           ))}
-          <Divider />
+          <Sep />
           {(['all', 'forwarded', 'dropped', 'error'] as VerdictFilter[]).map((v) => (
             <button key={v} onClick={() => setVerdictFilter(v)} style={pill(verdictFilter === v)}>{v}</button>
+          ))}
+          <Sep />
+          {(['all', 'ingress', 'egress'] as DirectionFilter[]).map((d) => (
+            <button key={d} onClick={() => setDirectionFilter(d)} style={pill(directionFilter === d)}>{d}</button>
           ))}
         </div>
       </div>
 
-      {/* === Main content === */}
-      <div style={mainContent}>
-        {/* Graph area */}
-        <div style={graphCol} ref={graphContainerRef}>
-          {!hubbleAvailable && (
-            <div style={noticeStyle}>Hubble Relay not configured. Enable it to see traffic flows.</div>
-          )}
-
-          {hubbleAvailable && graph.nodes.length === 0 && (
-            <EmptyState message={`No flows in the last ${timeRange}`} />
-          )}
-
-          {hubbleAvailable && graph.nodes.length > 0 && (
-            <div style={{ position: 'relative' }}>
-              {/* Column labels */}
-              <div style={colLabelsRow}>
-                <span style={colLabel}>INBOUND</span>
-                <span style={{ ...colLabel, color: colors.orange500 }}>APP PODS</span>
-                <span style={colLabel}>OUTBOUND</span>
-              </div>
-
-              <svg
-                width={graphWidth}
-                height={graph.height}
-                style={{ display: 'block' }}
-                onClick={(e) => { if (e.target === e.currentTarget) setSelectedNode(null); }}
-              >
-                {/* Edges */}
-                {graph.edges.map((edge) => {
-                  const isHighlighted = !selectedNode || connectedEdgeIds.has(edge.id);
-                  const isDimmed = !!selectedNode && !connectedEdgeIds.has(edge.id);
-                  return (
-                    <EdgePath
-                      key={edge.id}
-                      edge={edge}
-                      highlighted={isHighlighted || hoveredEdge?.id === edge.id}
-                      dimmed={isDimmed}
-                      onHover={setHoveredEdge}
-                    />
-                  );
-                })}
-                {/* Nodes */}
-                {graph.nodes.map((node) => {
-                  const isDimmed = !!selectedNode && selectedNode !== node.id && !connectedEdgeIds.has(node.id)
-                    && !graph.edges.some((e) => (e.sourceId === selectedNode || e.targetId === selectedNode) && (e.sourceId === node.id || e.targetId === node.id));
-                  return (
-                    <NodeRect
-                      key={node.id}
-                      node={node}
-                      selected={selectedNode === node.id}
-                      dimmed={isDimmed}
-                      nodeWidth={nodeWidth}
-                      onClick={() => setSelectedNode(selectedNode === node.id ? null : node.id)}
-                    />
-                  );
-                })}
-              </svg>
-
-              {/* Edge tooltip */}
-              {hoveredEdge && (
-                <EdgeTooltip edge={hoveredEdge} containerRect={graphContainerRef.current?.getBoundingClientRect() || null} />
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Detail panel */}
-        <div style={detailPanel}>
-          {/* Policies */}
-          <div style={panelSection}>
-            <div style={panelHeader}>
-              {selectedPodName ? `POLICIES \u2014 ${truncate(selectedPodName, 20)}` : `POLICIES (${policies.length})`}
-            </div>
-            {displayPolicies.length === 0 && <div style={emptyHint}>No policies</div>}
-            {displayPolicies.map((p) => (
-              <PolicyCard key={`${p.scope}-${p.name}`} policy={p} />
-            ))}
-          </div>
-
-          {/* Endpoint detail */}
-          {selectedEndpoint && (
-            <div style={panelSection}>
-              <div style={panelHeader}>ENDPOINT</div>
-              <div style={kvGrid}>
-                <KV label="IP" value={selectedEndpoint.ipv4 || selectedEndpoint.ipv6 || '-'} />
-                <KV label="Identity" value={String(selectedEndpoint.identityId || '-')} />
-                <KV label="State" value={selectedEndpoint.state || '?'} />
-                <KV label="Ingress" value={selectedEndpoint.ingressEnforcement === 'true' ? 'enforced' : 'none'} />
-                <KV label="Egress" value={selectedEndpoint.egressEnforcement === 'true' ? 'enforced' : 'none'} />
-              </div>
-            </div>
-          )}
-
-          {/* Legend */}
-          <div style={{ ...panelSection, marginTop: 'auto' }}>
-            <div style={panelHeader}>LEGEND</div>
-            <div style={legendGrid}>
-              <LegendItem color={colors.greenSolid} label="Forwarded" />
-              <LegendItem color={colors.red} label="Dropped" dashed />
-              <LegendItem color={colors.yellowSolid} label="Mixed" />
-              <LegendItem color={colors.orange500} label="App pod" square />
-            </div>
-          </div>
-        </div>
+      {/* === Tabs === */}
+      <div style={tabBar}>
+        <button style={tab(activeTab === 'flows')} onClick={() => setActiveTab('flows')}>
+          Flows {hubbleAvailable && `(${filteredFlows.length})`}
+        </button>
+        <button style={tab(activeTab === 'policies')} onClick={() => setActiveTab('policies')}>
+          Policies ({policies.length})
+        </button>
       </div>
+
+      {/* === Flows tab === */}
+      {activeTab === 'flows' && (
+        <div style={tabContent}>
+          {!hubbleAvailable && (
+            <div style={notice}>Hubble Relay not configured. Enable it to see traffic flows.</div>
+          )}
+
+          {hubbleAvailable && (
+            <>
+              <div style={searchRow}>
+                <Input
+                  value={search}
+                  onChange={setSearch}
+                  placeholder="Filter by pod, IP, DNS, protocol, drop reason..."
+                  style={{ flex: 1, maxWidth: 420 }}
+                />
+                <span style={countLabel}>{filteredFlows.length} flows</span>
+              </div>
+
+              {filteredFlows.length === 0 ? (
+                <EmptyState message={search ? 'No flows match your search' : `No flows in the last ${timeRange}`} />
+              ) : (
+                <>
+                  <div style={tableWrap}>
+                    <table style={tableStyle}>
+                      <thead>
+                        <tr>
+                          <SortableHeader label="Time" field="time" currentField={sortField} currentDir={sortDir} onSort={handleSort} />
+                          <SortableHeader label="Verdict" field="verdict" currentField={sortField} currentDir={sortDir} onSort={handleSort} />
+                          <SortableHeader label="Dir" field="direction" currentField={sortField} currentDir={sortDir} onSort={handleSort} />
+                          <SortableHeader label="Source" field="source" currentField={sortField} currentDir={sortDir} onSort={handleSort} />
+                          <SortableHeader label="Destination" field="dest" currentField={sortField} currentDir={sortDir} onSort={handleSort} />
+                          <SortableHeader label="Proto" field="protocol" currentField={sortField} currentDir={sortDir} onSort={handleSort} />
+                          <SortableHeader label="Port" field="port" currentField={sortField} currentDir={sortDir} onSort={handleSort} />
+                          <th style={thStyle}>Drop Reason</th>
+                          <th style={thStyle}>Summary</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pageFlows.map((f, i) => (
+                          <FlowRow key={`${f.time}-${i}`} flow={f} namespace={namespace} />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div style={paginationRow}>
+                      <button style={pageBtn} disabled={page === 0} onClick={() => setPage(page - 1)}>Prev</button>
+                      <span style={pageLabel}>{page + 1} / {totalPages}</span>
+                      <button style={pageBtn} disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>Next</button>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* === Policies tab === */}
+      {activeTab === 'policies' && (
+        <div style={tabContent}>
+          {policies.length === 0 ? (
+            <EmptyState message="No Cilium network policies found" />
+          ) : (
+            <div style={tableWrap}>
+              <table style={tableStyle}>
+                <thead>
+                  <tr>
+                    <th style={thStyle}>Name</th>
+                    <th style={thStyle}>Scope</th>
+                    <th style={thStyle}>Owner</th>
+                    <th style={thStyle}>Selector</th>
+                    <th style={thStyle}>Ingress</th>
+                    <th style={thStyle}>Egress</th>
+                    <th style={thStyle}>Created</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {policies.map((p) => (
+                    <PolicyRow key={`${p.scope}-${p.name}`} policy={p} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
 
 // ============================================================
-// Small shared sub-components
+// Row components
 // ============================================================
 
-const Metric: React.FC<{ label: string; value: number; color?: string }> = ({ label, value, color }) => (
+const FlowRow: React.FC<{ flow: FlowSummary; namespace: string }> = ({ flow: f, namespace }) => {
+  const srcDisplay = f.sourcePod
+    ? (f.sourceNamespace !== namespace ? `${f.sourceNamespace}/${f.sourcePod}` : f.sourcePod)
+    : f.sourceIP || 'unknown';
+  const dstDisplay = f.destPod
+    ? (f.destNamespace !== namespace ? `${f.destNamespace}/${f.destPod}` : f.destPod)
+    : f.destDNS || f.destIP || 'unknown';
+
+  const time = formatTime(f.time);
+  const isDrop = f.verdict === 'DROPPED';
+
+  return (
+    <tr style={isDrop ? dropRowStyle : undefined}>
+      <td style={tdStyle}>{time}</td>
+      <td style={tdStyle}><VerdictBadge verdict={f.verdict} /></td>
+      <td style={tdStyle}><DirectionBadge direction={f.direction} /></td>
+      <td style={{ ...tdStyle, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={srcDisplay}>{srcDisplay}</td>
+      <td style={{ ...tdStyle, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={dstDisplay}>{dstDisplay}</td>
+      <td style={tdStyle}>{f.protocol}</td>
+      <td style={tdStyle}>{f.destPort || '-'}</td>
+      <td style={{ ...tdStyle, color: f.dropReason ? colors.redText : colors.gray400 }}>
+        {f.dropReason || '-'}
+      </td>
+      <td style={{ ...tdStyle, color: colors.gray500, maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={f.summary}>
+        {f.summary}
+      </td>
+    </tr>
+  );
+};
+
+const PolicyRow: React.FC<{ policy: PolicySummary }> = ({ policy: p }) => {
+  const sel = p.endpointSelector
+    ? Object.entries(p.endpointSelector).map(([k, v]) => `${k}=${v}`).join(', ')
+    : 'all pods';
+  const created = formatTime(p.creationTimestamp);
+
+  return (
+    <tr>
+      <td style={{ ...tdStyle, fontWeight: fontWeight.semibold }}>{p.name}</td>
+      <td style={tdStyle}>
+        <Tag variant={p.scope === 'clusterwide' ? 'orange' : 'gray'}>{p.scope}</Tag>
+      </td>
+      <td style={tdStyle}>
+        <Tag variant={p.ownership === 'app' ? 'green' : 'gray'}>
+          {p.ownership === 'app' ? 'App' : 'Platform'}
+        </Tag>
+      </td>
+      <td style={{ ...tdStyle, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={sel}>{sel}</td>
+      <td style={tdStyle}>
+        {p.hasIngress ? <span style={{ color: colors.greenText }}>{p.ingressRuleCount} rules</span> : <span style={{ color: colors.gray400 }}>-</span>}
+      </td>
+      <td style={tdStyle}>
+        {p.hasEgress ? <span style={{ color: colors.orange600 }}>{p.egressRuleCount} rules</span> : <span style={{ color: colors.gray400 }}>-</span>}
+      </td>
+      <td style={tdStyle}>{created}</td>
+    </tr>
+  );
+};
+
+// ============================================================
+// Helpers
+// ============================================================
+
+function formatTime(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  } catch {
+    return iso;
+  }
+}
+
+const Stat: React.FC<{ label: string; value: number; color?: string }> = ({ label, value, color }) => (
   <span style={{ display: 'flex', alignItems: 'baseline', gap: 3, fontSize: fontSize.sm, fontFamily: fonts.mono }}>
     <span style={{ color: color || colors.gray800, fontWeight: fontWeight.semibold }}>{value}</span>
     <span style={{ color: colors.gray400 }}>{label}</span>
   </span>
 );
 
-const Divider: React.FC = () => <span style={{ width: 1, height: 16, background: colors.gray200, flexShrink: 0 }} />;
-
-const PolicyCard: React.FC<{ policy: PolicySummary }> = ({ policy }) => {
-  const sel = policy.endpointSelector
-    ? Object.entries(policy.endpointSelector).map(([k, v]) => `${k}=${v}`).join(', ')
-    : 'all pods';
-
-  return (
-    <div style={{ ...policyCard, borderLeftColor: policy.ownership === 'app' ? colors.greenSolid : colors.gray300 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 4 }}>
-        <span style={policyNameStyle}>{policy.name}</span>
-        <Tag variant={policy.ownership === 'app' ? 'green' : 'gray'}>
-          {policy.ownership === 'app' ? 'App' : 'Platform'}
-        </Tag>
-      </div>
-      <div style={{ fontSize: 10, color: colors.gray400, fontFamily: fonts.mono, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
-        {sel}
-        {policy.hasIngress && <span style={{ color: colors.greenText, marginLeft: spacing[2] }}>{policy.ingressRuleCount}in</span>}
-        {policy.hasEgress && <span style={{ color: colors.orange500, marginLeft: spacing[2] }}>{policy.egressRuleCount}eg</span>}
-      </div>
-    </div>
-  );
-};
-
-const KV: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <>
-    <span style={{ color: colors.gray400, fontSize: fontSize.xs, fontFamily: fonts.mono }}>{label}</span>
-    <span style={{ color: colors.gray800, fontSize: fontSize.xs, fontFamily: fonts.mono, fontWeight: fontWeight.medium }}>{value}</span>
-  </>
-);
-
-const LegendItem: React.FC<{ color: string; label: string; dashed?: boolean; square?: boolean }> = ({ color, label, dashed, square }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: colors.gray500 }}>
-    {square ? (
-      <span style={{ width: 10, height: 10, borderRadius: 2, background: color, flexShrink: 0 }} />
-    ) : (
-      <svg width={20} height={6}>
-        <line x1={0} y1={3} x2={20} y2={3} stroke={color} strokeWidth={2} strokeDasharray={dashed ? '4 2' : undefined} />
-      </svg>
-    )}
-    <span>{label}</span>
-  </div>
-);
+const Sep: React.FC = () => <span style={{ width: 1, height: 16, background: colors.gray200, flexShrink: 0 }} />;
 
 // ============================================================
 // Styles
 // ============================================================
 
-const rootPanel: React.CSSProperties = {
+const rootStyle: React.CSSProperties = {
   ...panel,
   overflow: 'hidden',
   maxWidth: '100%',
@@ -714,7 +427,7 @@ const rootPanel: React.CSSProperties = {
   height: '100%',
 };
 
-const topStrip: React.CSSProperties = {
+const topBar: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
@@ -722,31 +435,31 @@ const topStrip: React.CSSProperties = {
   gap: spacing[2],
   paddingBottom: spacing[3],
   borderBottom: `1px solid ${colors.gray200}`,
-  marginBottom: spacing[3],
   flexShrink: 0,
 };
 
-const summaryRow: React.CSSProperties = {
+const topLeft: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: spacing[3],
   flexWrap: 'wrap',
 };
 
-const controlsRow: React.CSSProperties = {
+const topRight: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: spacing[1],
+  flexWrap: 'wrap',
 };
 
-const appLabelStyle: React.CSSProperties = {
+const appLabel: React.CSSProperties = {
   fontFamily: fonts.mono,
   fontWeight: fontWeight.semibold,
   fontSize: fontSize.md,
   color: colors.gray800,
 };
 
-const nsStyle: React.CSSProperties = {
+const nsLabel: React.CSSProperties = {
   fontFamily: fonts.mono,
   fontSize: fontSize.sm,
   color: colors.gray400,
@@ -766,99 +479,82 @@ const pill = (active: boolean): React.CSSProperties => ({
   lineHeight: '20px',
 });
 
-const mainContent: React.CSSProperties = {
+const tabBar: React.CSSProperties = {
   display: 'flex',
-  gap: spacing[4],
+  gap: 0,
+  borderBottom: `1px solid ${colors.gray200}`,
+  marginTop: spacing[3],
+  flexShrink: 0,
+};
+
+const tab = (active: boolean): React.CSSProperties => ({
+  padding: `${spacing[2]}px ${spacing[4]}px`,
+  border: 'none',
+  borderBottom: active ? `2px solid ${colors.orange500}` : '2px solid transparent',
+  background: 'transparent',
+  color: active ? colors.gray800 : colors.gray400,
+  fontWeight: active ? fontWeight.semibold : fontWeight.medium,
+  fontSize: fontSize.sm,
+  fontFamily: fonts.mono,
+  cursor: 'pointer',
+});
+
+const tabContent: React.CSSProperties = {
   flex: 1,
   minHeight: 0,
-  overflow: 'hidden',
+  overflowY: 'auto',
+  paddingTop: spacing[3],
 };
 
-const graphCol: React.CSSProperties = {
-  flex: '1 1 65%',
-  overflowY: 'auto',
-  overflowX: 'hidden',
-  minWidth: 0,
-};
-
-const detailPanel: React.CSSProperties = {
-  flex: '0 0 260px',
-  overflowY: 'auto',
-  minWidth: 0,
-  borderLeft: `1px solid ${colors.gray200}`,
-  paddingLeft: spacing[3],
+const searchRow: React.CSSProperties = {
   display: 'flex',
-  flexDirection: 'column',
+  alignItems: 'center',
   gap: spacing[3],
+  marginBottom: spacing[3],
 };
 
-const colLabelsRow: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  paddingBottom: spacing[2],
-};
-
-const colLabel: React.CSSProperties = {
-  fontSize: 10,
+const countLabel: React.CSSProperties = {
+  fontSize: fontSize.xs,
   fontFamily: fonts.mono,
-  fontWeight: fontWeight.semibold,
-  letterSpacing: '0.5px',
   color: colors.gray400,
-  textTransform: 'uppercase' as const,
-  width: '24%',
-  textAlign: 'center',
+  flexShrink: 0,
 };
 
-const panelSection: React.CSSProperties = {};
-
-const panelHeader: React.CSSProperties = {
-  fontSize: 10,
-  fontFamily: fonts.mono,
-  fontWeight: fontWeight.semibold,
-  letterSpacing: '0.5px',
-  color: colors.gray400,
-  textTransform: 'uppercase' as const,
-  marginBottom: spacing[2],
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
+const tableWrap: React.CSSProperties = {
+  overflowX: 'auto',
 };
 
-const policyCard: React.CSSProperties = {
-  borderLeft: `3px solid ${colors.gray300}`,
-  padding: `${spacing[1]}px ${spacing[2]}px`,
-  marginBottom: spacing[1],
-  background: colors.gray50,
-  borderRadius: `0 4px 4px 0`,
+const tableStyle: React.CSSProperties = {
+  width: '100%',
+  borderCollapse: 'collapse',
+  borderSpacing: 0,
 };
 
-const policyNameStyle: React.CSSProperties = {
-  fontFamily: fonts.mono,
+const thStyle: React.CSSProperties = {
   fontSize: fontSize.xs,
   fontWeight: fontWeight.semibold,
-  color: colors.gray800,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+  color: colors.gray500,
+  padding: `${spacing[2]}px ${spacing[2]}px`,
+  borderBottom: `2px solid ${colors.gray200}`,
+  textAlign: 'left',
   whiteSpace: 'nowrap',
 };
 
-const kvGrid: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'auto 1fr',
-  gap: `2px ${spacing[2]}px`,
-  background: colors.gray50,
-  border: `1px solid ${colors.gray200}`,
-  borderRadius: 4,
-  padding: spacing[2],
+const tdStyle: React.CSSProperties = {
+  fontSize: fontSize.sm,
+  padding: `${spacing[1]}px ${spacing[2]}px`,
+  borderBottom: `1px solid ${colors.gray100}`,
+  fontFamily: fonts.mono,
+  whiteSpace: 'nowrap',
 };
 
-const legendGrid: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 4,
+const dropRowStyle: React.CSSProperties = {
+  background: colors.redLight,
 };
 
-const noticeStyle: React.CSSProperties = {
+const notice: React.CSSProperties = {
   padding: spacing[3],
   background: colors.gray50,
   border: `1px solid ${colors.gray200}`,
@@ -867,8 +563,21 @@ const noticeStyle: React.CSSProperties = {
   fontSize: fontSize.sm,
 };
 
-const emptyHint: React.CSSProperties = {
-  color: colors.gray400,
+const paginationRow: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: spacing[3],
+  paddingTop: spacing[3],
+};
+
+const pageBtn: React.CSSProperties = {
+  ...pill(false),
+  opacity: 1,
+};
+
+const pageLabel: React.CSSProperties = {
   fontSize: fontSize.xs,
   fontFamily: fonts.mono,
+  color: colors.gray500,
 };
