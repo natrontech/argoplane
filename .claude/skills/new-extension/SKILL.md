@@ -61,6 +61,13 @@ extensions/$ARGUMENTS/
 - Kubernetes service: `argoplane-$ARGUMENTS-backend`
 - Proxy extension name in ArgoCD config: `$ARGUMENTS`
 
+## Design System
+
+- Import React components and tokens from `@argoplane/shared` (StatusBadge, Button, Card, MetricCard, etc.)
+- Follow the design rules in `.claude/rules/design.md`
+- Visual reference: open `docs/styleguide/index.html` in a browser
+- CSS classes for non-React surfaces: `design-system/components.css` (`.ap-*` prefix)
+
 ## Copy Patterns From
 
 Use `extensions/metrics/` as the reference implementation for the structure.
