@@ -823,17 +823,18 @@ h1, h2, h3, h4, h5, h6 {
    ArgoCD uses gradient+starfield bg, .login__box, .login__logo.
    ================================================================= */
 
-/* Override the gradient+starfield background */
+/* Override the gradient+starfield background with pixel-art wallpaper */
 .login {
-  background: var(--ap-gray-900) !important;
+  background: url("./custom/login-wallpaper.jpg") center center / cover no-repeat var(--ap-gray-900) !important;
 }
 
-/* Left decorative content panel */
+/* Left decorative content panel: dark overlay for readability */
 .login__content {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
+  background: rgba(28, 25, 23, 0.45) !important;
 }
 
 /* Replace "Let's get stuff deployed!" text */
@@ -871,9 +872,9 @@ h1, h2, h3, h4, h5, h6 {
   image-rendering: crisp-edges;
 }
 
-/* "ArgoPlane" text under logo in login box */
+/* "ArgoCD" title under logo in login box */
 .login__logo::after {
-  content: "ArgoPlane";
+  content: "ArgoCD";
   display: block;
   font-family: var(--ap-font-body);
   font-size: 18px;
@@ -881,6 +882,23 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--ap-gray-800);
   margin-top: 12px;
   letter-spacing: 0.5px;
+  line-height: 1.2;
+}
+
+/* "by ArgoPlane" subtitle */
+.login__logo .logo-image {
+  margin-bottom: 0 !important;
+}
+
+.login__logo.width-control::before {
+  content: "by ArgoPlane";
+  display: block;
+  font-family: var(--ap-font-body);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ap-gray-400);
+  letter-spacing: 0.3px;
+  order: 3;
 }
 
 /* Login buttons: orange accent */
