@@ -72,9 +72,9 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
       appNamespace, appName, project, podNames
     ).catch(() => [] as PerPodSeries[]);
 
-    // Pod breakdown: use first deployment from tree, or app name
+    // Pod breakdown: use all tree pods if available, otherwise fall back to first deployment
     const deployName = treeDeployments.length > 0 ? treeDeployments[0] : appName;
-    const podsP = fetchPodBreakdown(namespace, deployName, 'Deployment', appNamespace, appName, project)
+    const podsP = fetchPodBreakdown(namespace, deployName, 'Deployment', appNamespace, appName, project, podNames)
       .catch(() => [] as PodMetric[]);
 
     Promise.all([metricsP, perPodP, podsP])

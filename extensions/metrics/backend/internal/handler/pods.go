@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/natrontech/argoplane/extensions/metrics/backend/internal/prometheus"
 )
@@ -33,9 +34,14 @@ func (h *Pods) Handle(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
 	name := r.URL.Query().Get("name")
 	kind := r.URL.Query().Get("kind")
+	podsParam := r.URL.Query().Get("pods")
 
-	if namespace == "" || name == "" {
-		http.Error(w, `{"error":"namespace and name are required"}`, http.StatusBadRequest)
+	if namespace == "" {
+		http.Error(w, `{"error":"namespace is required"}`, http.StatusBadRequest)
+		return
+	}
+	if name == "" && podsParam == "" {
+		http.Error(w, `{"error":"name or pods parameter is required"}`, http.StatusBadRequest)
 		return
 	}
 	if kind == "" {
@@ -43,9 +49,15 @@ func (h *Pods) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	username := r.Header.Get("Argocd-Username")
-	slog.Debug("pod breakdown request", "namespace", namespace, "name", name, "kind", kind, "user", username)
+	slog.Debug("pod breakdown request", "namespace", namespace, "name", name, "kind", kind, "pods", podsParam, "user", username)
 
-	podSelector := podSelectorForKind(namespace, name, kind)
+	var podSelector string
+	if podsParam != "" {
+		pods := strings.Split(podsParam, ",")
+		podSelector = fmt.Sprintf(`namespace="%s",pod=~"%s"`, namespace, strings.Join(pods, "|"))
+	} else {
+		podSelector = podSelectorForKind(namespace, name, kind)
+	}
 
 	// Query per-pod CPU
 	cpuQuery := fmt.Sprintf(`sum by (pod) (rate(container_cpu_usage_seconds_total{%s,container!=""}[5m])) * 1000`, podSelector)
