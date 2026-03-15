@@ -1,3 +1,6 @@
+# App-owned policy: restricts ingress to guestbook-ui.
+# Only pods with role=frontend-client can reach port 80.
+# Egress allows DNS, kube-apiserver, and HTTPS.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -33,3 +36,33 @@ spec:
         - ports:
             - port: "443"
               protocol: TCP
+---
+# App-owned policy: restrict egress for traffic generators.
+# traffic-allowed can reach guestbook + DNS only.
+# This demonstrates a second app-owned policy with different selectors.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: traffic-generator-egress
+  annotations:
+    description: "Restrict traffic-allowed egress to guestbook-ui:80 and DNS. Prevents lateral movement."
+spec:
+  endpointSelector:
+    matchLabels:
+      role: frontend-client
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            app: guestbook-ui
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
