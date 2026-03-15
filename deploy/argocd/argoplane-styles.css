@@ -469,38 +469,229 @@ i.fa.fa-heart {
 
 /* =================================================================
    13. FORMS & INPUTS
-   Monospace, thin borders, orange focus.
+   Matches ap-input / ap-select / ap-textarea from design system.
+   Monospace for data, 6px 12px padding, 2px radius, orange focus.
    ================================================================= */
 
+/* --- Text inputs, textareas, selects --- */
 .argo-field input,
 .argo-field textarea,
 .argo-field select,
+.argo-form-row input,
+.argo-form-row textarea,
+.argo-form-row select,
 input.argo-input,
-textarea.argo-textarea {
+textarea.argo-textarea,
+select.argo-select,
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="url"],
+input[type="number"],
+input[type="search"] {
   border: 1px solid var(--ap-gray-200) !important;
   border-radius: var(--ap-radius-sm) !important;
   font-family: var(--ap-font-mono) !important;
   font-size: 13px !important;
+  padding: 6px 12px !important;
+  background: white !important;
+  color: var(--ap-gray-800) !important;
+  outline: none !important;
   transition: border-color 100ms ease !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
 }
 
+/* Placeholders */
+.argo-field input::placeholder,
+.argo-form-row input::placeholder,
+input.argo-input::placeholder,
+input[type="text"]::placeholder,
+input[type="password"]::placeholder,
+input[type="search"]::placeholder {
+  color: var(--ap-gray-400) !important;
+  opacity: 1 !important;
+}
+
+/* Focus state: orange border */
 .argo-field input:focus,
 .argo-field textarea:focus,
 .argo-field select:focus,
+.argo-form-row input:focus,
+.argo-form-row textarea:focus,
+.argo-form-row select:focus,
 input.argo-input:focus,
-textarea.argo-textarea:focus {
+textarea.argo-textarea:focus,
+select.argo-select:focus,
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+input[type="url"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus {
   border-color: var(--ap-orange-500) !important;
   outline: none !important;
 }
 
-/* Labels */
+/* Error state */
+.argo-field--error input,
+.argo-form-row--error input,
+input.argo-input--error {
+  border-color: var(--ap-red) !important;
+}
+
+.argo-field--error input:focus,
+.argo-form-row--error input:focus {
+  border-color: var(--ap-red-text) !important;
+}
+
+/* Disabled state */
+.argo-field input:disabled,
+.argo-form-row input:disabled,
+input.argo-input:disabled,
+select:disabled,
+textarea:disabled {
+  background: var(--ap-gray-100) !important;
+  color: var(--ap-gray-400) !important;
+  cursor: not-allowed !important;
+  border-color: var(--ap-gray-200) !important;
+}
+
+/* --- Select dropdowns: custom arrow --- */
+.argo-field select,
+.argo-form-row select,
+select.argo-select {
+  padding-right: 32px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2378716C' d='M3 4.5L6 8l3-3.5H3z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 10px center !important;
+  cursor: pointer !important;
+}
+
+/* --- Textareas --- */
+.argo-field textarea,
+.argo-form-row textarea,
+textarea.argo-textarea {
+  resize: vertical !important;
+  min-height: 80px !important;
+  padding: 8px 12px !important;
+}
+
+/* --- Labels --- */
 .argo-field label,
-.argo-form-row__label {
+.argo-form-row__label,
+.argo-form-row label {
+  display: block !important;
+  font-family: var(--ap-font-body) !important;
   font-size: 11px !important;
   font-weight: 600 !important;
   text-transform: uppercase !important;
   letter-spacing: 0.5px !important;
   color: var(--ap-gray-500) !important;
+  margin-bottom: 4px !important;
+}
+
+/* --- Error messages --- */
+.argo-form-row__error-msg {
+  font-family: var(--ap-font-mono) !important;
+  font-size: 11px !important;
+  color: var(--ap-red-text) !important;
+  margin-top: 4px !important;
+}
+
+/* --- Checkboxes: pixel-art squares --- */
+input[type="checkbox"] {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 16px !important;
+  height: 16px !important;
+  border: 1px solid var(--ap-gray-300) !important;
+  border-radius: 1px !important;
+  background: white !important;
+  cursor: pointer !important;
+  position: relative !important;
+  vertical-align: middle !important;
+  padding: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+input[type="checkbox"]:checked {
+  background: var(--ap-orange-500) !important;
+  border-color: var(--ap-orange-600) !important;
+}
+
+/* Checkmark: pixel-style */
+input[type="checkbox"]:checked::after {
+  content: "" !important;
+  position: absolute !important;
+  left: 3px !important;
+  top: 0px !important;
+  width: 6px !important;
+  height: 10px !important;
+  border: solid white !important;
+  border-width: 0 2px 2px 0 !important;
+  transform: rotate(45deg) !important;
+}
+
+input[type="checkbox"]:disabled {
+  background: var(--ap-gray-100) !important;
+  border-color: var(--ap-gray-200) !important;
+  cursor: not-allowed !important;
+}
+
+/* --- Radio buttons: square (not circles, pixel-art) --- */
+input[type="radio"] {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 16px !important;
+  height: 16px !important;
+  border: 1px solid var(--ap-gray-300) !important;
+  border-radius: 1px !important;
+  background: white !important;
+  cursor: pointer !important;
+  position: relative !important;
+  vertical-align: middle !important;
+  padding: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+input[type="radio"]:checked {
+  border-color: var(--ap-orange-600) !important;
+}
+
+/* Inner square for selected radio */
+input[type="radio"]:checked::after {
+  content: "" !important;
+  position: absolute !important;
+  top: 3px !important;
+  left: 3px !important;
+  width: 8px !important;
+  height: 8px !important;
+  background: var(--ap-orange-500) !important;
+  border-radius: 1px !important;
+}
+
+/* --- Toggle switches --- */
+.argo-field .toggle-button,
+.toggle-button {
+  border-radius: var(--ap-radius-sm) !important;
+}
+
+.argo-field .toggle-button.active,
+.toggle-button.active {
+  background: var(--ap-orange-500) !important;
+}
+
+/* --- Form row spacing --- */
+.argo-form-row {
+  margin-bottom: 16px !important;
+}
+
+/* --- Inline form help text --- */
+.argo-form-row__help-text {
+  font-size: 11px !important;
+  color: var(--ap-gray-400) !important;
+  margin-top: 4px !important;
 }
 
 
@@ -914,16 +1105,103 @@ h1, h2, h3, h4, h5, h6 {
 .theme-dark .argo-field input,
 .theme-dark .argo-field textarea,
 .theme-dark .argo-field select,
-.theme-dark input.argo-input {
+.theme-dark .argo-form-row input,
+.theme-dark .argo-form-row textarea,
+.theme-dark .argo-form-row select,
+.theme-dark input.argo-input,
+.theme-dark textarea.argo-textarea,
+.theme-dark input[type="text"],
+.theme-dark input[type="password"],
+.theme-dark input[type="email"],
+.theme-dark input[type="url"],
+.theme-dark input[type="number"],
+.theme-dark input[type="search"] {
   border-color: var(--ap-gray-600) !important;
   background: var(--ap-gray-900) !important;
   color: var(--ap-gray-100) !important;
 }
 
+.theme-dark .argo-field input::placeholder,
+.theme-dark .argo-form-row input::placeholder,
+.theme-dark input.argo-input::placeholder,
+.theme-dark input[type="text"]::placeholder,
+.theme-dark input[type="password"]::placeholder,
+.theme-dark input[type="search"]::placeholder {
+  color: var(--ap-gray-500) !important;
+}
+
 .theme-dark .argo-field input:focus,
 .theme-dark .argo-field textarea:focus,
-.theme-dark input.argo-input:focus {
+.theme-dark .argo-field select:focus,
+.theme-dark .argo-form-row input:focus,
+.theme-dark .argo-form-row textarea:focus,
+.theme-dark input.argo-input:focus,
+.theme-dark input[type="text"]:focus,
+.theme-dark input[type="password"]:focus,
+.theme-dark input[type="search"]:focus {
   border-color: var(--ap-orange-400) !important;
+}
+
+/* Dark labels */
+.theme-dark .argo-field label,
+.theme-dark .argo-form-row__label,
+.theme-dark .argo-form-row label {
+  color: var(--ap-gray-400) !important;
+}
+
+/* Dark error messages */
+.theme-dark .argo-form-row__error-msg {
+  color: var(--ap-red-solid) !important;
+}
+
+/* Dark disabled */
+.theme-dark .argo-field input:disabled,
+.theme-dark .argo-form-row input:disabled,
+.theme-dark input:disabled {
+  background: var(--ap-gray-800) !important;
+  color: var(--ap-gray-500) !important;
+  border-color: var(--ap-gray-700) !important;
+}
+
+/* Dark checkboxes */
+.theme-dark input[type="checkbox"] {
+  background: var(--ap-gray-900) !important;
+  border-color: var(--ap-gray-600) !important;
+}
+
+.theme-dark input[type="checkbox"]:checked {
+  background: var(--ap-orange-400) !important;
+  border-color: var(--ap-orange-500) !important;
+}
+
+/* Dark radio buttons */
+.theme-dark input[type="radio"] {
+  background: var(--ap-gray-900) !important;
+  border-color: var(--ap-gray-600) !important;
+}
+
+.theme-dark input[type="radio"]:checked {
+  border-color: var(--ap-orange-500) !important;
+}
+
+.theme-dark input[type="radio"]:checked::after {
+  background: var(--ap-orange-400) !important;
+}
+
+/* Dark select arrow */
+.theme-dark .argo-field select,
+.theme-dark .argo-form-row select,
+.theme-dark select.argo-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23A8A29E' d='M3 4.5L6 8l3-3.5H3z'/%3E%3C/svg%3E") !important;
+}
+
+/* Dark toggle */
+.theme-dark .toggle-button {
+  background: var(--ap-gray-700) !important;
+}
+
+.theme-dark .toggle-button.active {
+  background: var(--ap-orange-400) !important;
 }
 
 /* Buttons */
