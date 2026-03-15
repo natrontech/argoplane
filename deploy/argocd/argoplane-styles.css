@@ -161,8 +161,11 @@ body {
 .sidebar__nav-item {
   border-radius: 0 !important;
   border-left: 3px solid transparent !important;
-  padding-left: 12px !important;
+  padding-left: 8px !important;
   transition: background 100ms ease !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 .sidebar__nav-item--active {
@@ -237,14 +240,9 @@ body {
   filter: brightness(0.88) !important;
 }
 
-/* Outlined / secondary buttons */
-.argo-button--base:not(.argo-button--base-o) {
-  border-color: var(--ap-gray-200) !important;
-}
-
+/* Outlined / secondary buttons: subtle hover, don't override background */
 .argo-button--base:not(.argo-button--base-o):hover {
-  border-color: var(--ap-orange-300) !important;
-  background: rgba(232, 147, 90, 0.08) !important;
+  filter: brightness(0.95) !important;
 }
 
 /* Small buttons */
@@ -629,7 +627,16 @@ textarea.argo-textarea {
    Custom pixel-art checkboxes live in @argoplane/shared for extensions. */
 input[type="checkbox"],
 input[type="radio"] {
-  /* Don't restyle: ArgoCD has its own visual component */
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  opacity: 0 !important;
+  position: absolute !important;
+  pointer-events: none !important;
 }
 
 /* --- Toggle switches --- */
@@ -1200,8 +1207,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .theme-dark .argo-button--base:not(.argo-button--base-o):hover {
-  border-color: var(--ap-orange-400) !important;
-  background: rgba(232, 147, 90, 0.1) !important;
+  filter: brightness(1.15) !important;
 }
 
 /* Login */
