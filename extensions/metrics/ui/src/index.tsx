@@ -1,22 +1,40 @@
 import * as React from 'react';
 import { MetricsPanel } from './components/MetricsPanel';
+import { MetricsDashboard } from './components/MetricsDashboard';
 
 ((window: any) => {
-  // Register as a resource tab extension for Deployments
+  // Resource tab: Deployments
   window.extensionsAPI.registerResourceExtension(
     MetricsPanel,
-    'apps',          // API group
-    'Deployment',    // Resource kind
-    'Metrics',       // Tab title
+    'apps',
+    'Deployment',
+    'Metrics',
     { icon: 'fa-chart-line' }
   );
 
-  // Also register for StatefulSets
+  // Resource tab: StatefulSets
   window.extensionsAPI.registerResourceExtension(
     MetricsPanel,
     'apps',
     'StatefulSet',
     'Metrics',
     { icon: 'fa-chart-line' }
+  );
+
+  // Resource tab: Pods (core API group = empty string)
+  window.extensionsAPI.registerResourceExtension(
+    MetricsPanel,
+    '',
+    'Pod',
+    'Metrics',
+    { icon: 'fa-chart-line' }
+  );
+
+  // System-level sidebar page: Cluster Metrics Dashboard
+  window.extensionsAPI.registerSystemLevelExtension(
+    MetricsDashboard,
+    'Metrics',
+    'metrics',
+    'fa-chart-line'
   );
 })(window);

@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+
+	"github.com/natrontech/argoplane/extensions/metrics/backend/internal/handler"
+	"github.com/natrontech/argoplane/extensions/metrics/backend/internal/prometheus"
 )
 
 type Config struct {
@@ -27,8 +30,13 @@ func main() {
 
 	setupLogging(config.LogLevel)
 
+	promClient := prometheus.NewClient(config.PrometheusURL)
+	resourceHandler := handler.NewResource(promClient)
+	clusterHandler := handler.NewCluster(promClient)
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/v1/resource-metrics", handleResourceMetrics(config.PrometheusURL))
+	mux.HandleFunc("GET /api/v1/resource-metrics", resourceHandler.Handle)
+	mux.HandleFunc("GET /api/v1/cluster-metrics", clusterHandler.Handle)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -75,29 +83,4 @@ func setupLogging(level string) {
 		logLevel = slog.LevelInfo
 	}
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel})))
-}
-
-func handleResourceMetrics(prometheusURL string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		namespace := r.URL.Query().Get("namespace")
-		name := r.URL.Query().Get("name")
-
-		if namespace == "" || name == "" {
-			http.Error(w, `{"error":"namespace and name are required"}`, http.StatusBadRequest)
-			return
-		}
-
-		username := r.Header.Get("Argocd-Username")
-		slog.Debug("metrics request", "namespace", namespace, "name", name, "user", username, "datasource", prometheusURL)
-
-		// TODO: Query metrics datasource for actual resource metrics
-		// For now, return stub data to validate the extension pipeline
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `[
-			{"name": "CPU Usage", "value": "12.5", "unit": "millicores"},
-			{"name": "Memory Usage", "value": "64.2", "unit": "MiB"},
-			{"name": "Network RX", "value": "1.2", "unit": "MB/s"},
-			{"name": "Network TX", "value": "0.8", "unit": "MB/s"}
-		]`)
-	}
 }
