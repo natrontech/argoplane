@@ -12,7 +12,7 @@ import {
   spacing,
   panel,
 } from '@argoplane/shared';
-import { fetchOverview, fetchBackups, fetchRestores, createBackup, createRestore } from '../api';
+import { fetchOverview, fetchBackups, fetchRestores, createBackup, createRestore, fetchLogs } from '../api';
 import {
   ScheduleSummary,
   BackupSummary,
@@ -20,6 +20,7 @@ import {
   StorageLocationSummary,
   OverviewResponse,
   ResourceRef,
+  RestoreOptions,
 } from '../types';
 
 // ============================================================
@@ -186,17 +187,35 @@ const CreateBackupPanel: React.FC<{
 // Restore Confirmation Panel
 // ============================================================
 
+const RESOURCE_POLICY_OPTIONS = [
+  { label: 'Skip existing', value: 'none' as const },
+  { label: 'Overwrite existing', value: 'update' as const },
+];
+
 const RestoreConfirmPanel: React.FC<{
   backup: BackupSummary;
   namespace: string;
   onCancel: () => void;
-  onConfirm: () => Promise<void>;
+  onConfirm: (options: RestoreOptions) => Promise<void>;
 }> = ({ backup, namespace, onCancel, onConfirm }) => {
   const [restoring, setRestoring] = React.useState(false);
+  const [showAdvanced, setShowAdvanced] = React.useState(false);
+  const [existingPolicy, setExistingPolicy] = React.useState<'none' | 'update'>('none');
+  const [includedResources, setIncludedResources] = React.useState('');
+  const [excludedResources, setExcludedResources] = React.useState('');
+  const [restorePVs, setRestorePVs] = React.useState(false);
 
   const handleConfirm = async () => {
     setRestoring(true);
-    await onConfirm();
+    const opts: RestoreOptions = {
+      existingResourcePolicy: existingPolicy,
+      restorePVs,
+    };
+    const incl = includedResources.split(',').map(s => s.trim()).filter(Boolean);
+    if (incl.length > 0) opts.includedResources = incl;
+    const excl = excludedResources.split(',').map(s => s.trim()).filter(Boolean);
+    if (excl.length > 0) opts.excludedResources = excl;
+    await onConfirm(opts);
     setRestoring(false);
   };
 
@@ -211,8 +230,82 @@ const RestoreConfirmPanel: React.FC<{
       {backup.scheduleName && <KV label="Schedule" value={backup.scheduleName} />}
       {backup.errors > 0 && <KV label="Errors" value={<span style={{ color: colors.redText }}>{backup.errors} errors during backup</span>} />}
       {backup.warnings > 0 && <KV label="Warnings" value={<span style={{ color: colors.yellowText }}>{backup.warnings} warnings during backup</span>} />}
+      {backup.failureReason && (
+        <div style={alertBox('red')}>
+          <span style={{ fontWeight: fontWeight.semibold }}>Backup failure:</span> {backup.failureReason}
+        </div>
+      )}
+
+      {/* Advanced options toggle */}
+      <div
+        style={{ marginTop: spacing[3], cursor: 'pointer', fontSize: fontSize.sm, color: colors.orange500, fontFamily: fonts.mono, display: 'flex', alignItems: 'center', gap: 6 }}
+        onClick={() => setShowAdvanced(!showAdvanced)}
+      >
+        <span style={chevron(showAdvanced)} />
+        Advanced options
+      </div>
+
+      {showAdvanced && (
+        <div style={{ marginTop: spacing[2], padding: spacing[3], border: `1px solid ${colors.gray200}`, borderRadius: 4 }}>
+          {/* Existing resource policy */}
+          <div style={{ marginBottom: spacing[3] }}>
+            <span style={fieldLabel}>Existing resource policy</span>
+            <div style={{ display: 'flex', gap: spacing[1], marginTop: spacing[1] }}>
+              {RESOURCE_POLICY_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setExistingPolicy(opt.value)}
+                  style={{
+                    padding: `4px ${spacing[3]}px`, border: `1px solid ${existingPolicy === opt.value ? colors.orange500 : colors.gray200}`,
+                    borderRadius: 4, background: existingPolicy === opt.value ? colors.orange50 : colors.white,
+                    color: existingPolicy === opt.value ? colors.orange600 : colors.gray600, fontSize: fontSize.sm,
+                    fontFamily: fonts.mono, cursor: 'pointer', fontWeight: existingPolicy === opt.value ? fontWeight.semibold : fontWeight.normal,
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Include/exclude resources */}
+          <div style={{ marginBottom: spacing[3] }}>
+            <span style={fieldLabel}>Include resources (comma-separated, e.g. deployments,services)</span>
+            <input
+              type="text"
+              value={includedResources}
+              onChange={(e) => setIncludedResources(e.target.value)}
+              placeholder="Leave empty to restore all"
+              style={inputStyle}
+            />
+          </div>
+          <div style={{ marginBottom: spacing[3] }}>
+            <span style={fieldLabel}>Exclude resources (comma-separated)</span>
+            <input
+              type="text"
+              value={excludedResources}
+              onChange={(e) => setExcludedResources(e.target.value)}
+              placeholder="e.g. secrets,configmaps"
+              style={inputStyle}
+            />
+          </div>
+
+          {/* Restore PVs */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing[2] }}>
+            <input
+              type="checkbox"
+              checked={restorePVs}
+              onChange={(e) => setRestorePVs(e.target.checked)}
+              style={{ accentColor: colors.orange500 }}
+            />
+            <span style={{ fontSize: fontSize.sm, fontFamily: fonts.mono, color: colors.gray600 }}>Restore persistent volumes</span>
+          </div>
+        </div>
+      )}
+
       <div style={{ marginTop: spacing[3], padding: spacing[3], background: colors.yellowLight, border: `1px solid ${colors.yellow}`, borderRadius: 4, fontSize: fontSize.sm, color: colors.yellowText }}>
-        This will restore resources from backup "{backup.name}" into namespace "{namespace}". Existing resources may be overwritten.
+        This will restore resources from backup "{backup.name}" into namespace "{namespace}".
+        {existingPolicy === 'update' ? ' Existing resources WILL be overwritten.' : ' Existing resources will be skipped.'}
       </div>
       <div style={{ display: 'flex', gap: spacing[2], justifyContent: 'flex-end', marginTop: spacing[3] }}>
         <Button onClick={onCancel} disabled={restoring}>Cancel</Button>
@@ -258,28 +351,140 @@ const ScheduleDetail: React.FC<{ schedule: ScheduleSummary }> = ({ schedule: s }
 // Backup Detail (expandable row)
 // ============================================================
 
-const BackupDetail: React.FC<{ backup: BackupSummary }> = ({ backup: b }) => (
-  <tr>
-    <td colSpan={8} style={{ padding: 0, borderBottom: `1px solid ${colors.gray200}` }}>
-      <div style={{ padding: `${spacing[3]}px ${spacing[4]}px`, background: colors.gray50 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: `${spacing[1]}px ${spacing[6]}px`, maxWidth: 600 }}>
-          <KV label="Backup" value={b.name} />
-          <KV label="Phase" value={<Tag variant={phaseToVariant(b.phase)}>{b.phase}</Tag>} />
-          <KV label="Started" value={formatDate(b.startTimestamp)} />
-          <KV label="Completed" value={formatDate(b.completionTimestamp)} />
-          <KV label="Duration" value={duration(b.startTimestamp, b.completionTimestamp)} />
-          <KV label="Items" value={`${b.itemsBackedUp} / ${b.totalItems}`} />
-          {b.scheduleName && <KV label="Schedule" value={b.scheduleName} />}
-          <KV label="Namespaces" value={(b.includedNamespaces || []).join(', ') || 'all'} />
-          {b.expiresAt && <KV label="Expires" value={formatDate(b.expiresAt)} />}
-          <KV label="Snapshots" value={`${b.volumeSnapshotsCompleted} / ${b.volumeSnapshotsAttempted}`} />
-          {b.errors > 0 && <KV label="Errors" value={<span style={{ color: colors.redText }}>{b.errors}</span>} />}
-          {b.warnings > 0 && <KV label="Warnings" value={<span style={{ color: colors.yellowText }}>{b.warnings}</span>} />}
+const BackupDetail: React.FC<{ backup: BackupSummary; appNamespace: string; appName: string; project: string }> = ({ backup: b, appNamespace, appName, project }) => {
+  const [logsLoading, setLogsLoading] = React.useState(false);
+
+  const openLogs = async (kind: 'BackupLog' | 'BackupResults') => {
+    setLogsLoading(true);
+    try {
+      const result = await fetchLogs(b.name, kind, appNamespace, appName, project);
+      window.open(result.downloadURL, '_blank');
+    } catch {
+      // silently fail, logs may not be available
+    }
+    setLogsLoading(false);
+  };
+
+  return (
+    <tr>
+      <td colSpan={8} style={{ padding: 0, borderBottom: `1px solid ${colors.gray200}` }}>
+        <div style={{ padding: `${spacing[3]}px ${spacing[4]}px`, background: colors.gray50 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: `${spacing[1]}px ${spacing[6]}px`, maxWidth: 600 }}>
+            <KV label="Backup" value={b.name} />
+            <KV label="Phase" value={<Tag variant={phaseToVariant(b.phase)}>{b.phase}</Tag>} />
+            <KV label="Started" value={formatDate(b.startTimestamp)} />
+            <KV label="Completed" value={formatDate(b.completionTimestamp)} />
+            <KV label="Duration" value={duration(b.startTimestamp, b.completionTimestamp)} />
+            <KV label="Items" value={`${b.itemsBackedUp} / ${b.totalItems}`} />
+            {b.scheduleName && <KV label="Schedule" value={b.scheduleName} />}
+            <KV label="Namespaces" value={(b.includedNamespaces || []).join(', ') || 'all'} />
+            {b.includedResources && b.includedResources.length > 0 && <KV label="Resources" value={b.includedResources.join(', ')} />}
+            {b.excludedResources && b.excludedResources.length > 0 && <KV label="Excluded" value={b.excludedResources.join(', ')} />}
+            {b.expiresAt && <KV label="Expires" value={formatDate(b.expiresAt)} />}
+            <KV label="Snapshots" value={`${b.volumeSnapshotsCompleted} / ${b.volumeSnapshotsAttempted}`} />
+            {b.errors > 0 && <KV label="Errors" value={<span style={{ color: colors.redText }}>{b.errors}</span>} />}
+            {b.warnings > 0 && <KV label="Warnings" value={<span style={{ color: colors.yellowText }}>{b.warnings}</span>} />}
+          </div>
+          {b.failureReason && (
+            <div style={alertBox('red')}>
+              <span style={{ fontWeight: fontWeight.semibold }}>Failure:</span> {b.failureReason}
+            </div>
+          )}
+          {b.validationErrors && b.validationErrors.length > 0 && (
+            <div style={alertBox('red')}>
+              <span style={{ fontWeight: fontWeight.semibold }}>Validation errors:</span>
+              <ul style={{ margin: `${spacing[1]}px 0 0 ${spacing[4]}px`, padding: 0 }}>
+                {b.validationErrors.map((e, i) => <li key={i} style={{ fontSize: fontSize.sm }}>{e}</li>)}
+              </ul>
+            </div>
+          )}
+          {(b.phase === 'Completed' || b.phase === 'PartiallyFailed' || b.phase === 'Failed') && (
+            <div style={{ display: 'flex', gap: spacing[2], marginTop: spacing[3] }}>
+              <Button onClick={() => openLogs('BackupLog')} disabled={logsLoading}>
+                {logsLoading ? 'Loading...' : 'View Logs'}
+              </Button>
+              {(b.errors > 0 || b.warnings > 0) && (
+                <Button onClick={() => openLogs('BackupResults')} disabled={logsLoading}>
+                  View Results
+                </Button>
+              )}
+            </div>
+          )}
         </div>
-      </div>
-    </td>
-  </tr>
-);
+      </td>
+    </tr>
+  );
+};
+
+// ============================================================
+// Restore Detail (expandable row)
+// ============================================================
+
+const RestoreDetail: React.FC<{ restore: RestoreSummary; appNamespace: string; appName: string; project: string }> = ({ restore: r, appNamespace, appName, project }) => {
+  const [logsLoading, setLogsLoading] = React.useState(false);
+
+  const openLogs = async (kind: 'RestoreLog' | 'RestoreResults') => {
+    setLogsLoading(true);
+    try {
+      const result = await fetchLogs(r.name, kind, appNamespace, appName, project);
+      window.open(result.downloadURL, '_blank');
+    } catch {
+      // silently fail
+    }
+    setLogsLoading(false);
+  };
+
+  return (
+    <tr>
+      <td colSpan={7} style={{ padding: 0, borderBottom: `1px solid ${colors.gray200}` }}>
+        <div style={{ padding: `${spacing[3]}px ${spacing[4]}px`, background: colors.gray50 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: `${spacing[1]}px ${spacing[6]}px`, maxWidth: 600 }}>
+            <KV label="Restore" value={r.name} />
+            <KV label="Phase" value={<Tag variant={phaseToVariant(r.phase)}>{r.phase}</Tag>} />
+            <KV label="Backup" value={r.backupName} />
+            <KV label="Started" value={formatDate(r.startTimestamp)} />
+            <KV label="Completed" value={formatDate(r.completionTimestamp)} />
+            <KV label="Duration" value={duration(r.startTimestamp, r.completionTimestamp)} />
+            <KV label="Items" value={`${r.itemsRestored} / ${r.totalItems}`} />
+            {r.includedResources && r.includedResources.length > 0 && <KV label="Resources" value={r.includedResources.join(', ')} />}
+            {r.excludedResources && r.excludedResources.length > 0 && <KV label="Excluded" value={r.excludedResources.join(', ')} />}
+            {r.existingResourcePolicy && <KV label="Policy" value={r.existingResourcePolicy === 'update' ? 'Overwrite existing' : 'Skip existing'} />}
+            {r.namespaceMapping && Object.keys(r.namespaceMapping).length > 0 && (
+              <KV label="NS Mapping" value={Object.entries(r.namespaceMapping).map(([k, v]) => `${k} → ${v}`).join(', ')} />
+            )}
+            {r.errors > 0 && <KV label="Errors" value={<span style={{ color: colors.redText }}>{r.errors}</span>} />}
+            {r.warnings > 0 && <KV label="Warnings" value={<span style={{ color: colors.yellowText }}>{r.warnings}</span>} />}
+          </div>
+          {r.failureReason && (
+            <div style={alertBox('red')}>
+              <span style={{ fontWeight: fontWeight.semibold }}>Failure:</span> {r.failureReason}
+            </div>
+          )}
+          {r.validationErrors && r.validationErrors.length > 0 && (
+            <div style={alertBox('red')}>
+              <span style={{ fontWeight: fontWeight.semibold }}>Validation errors:</span>
+              <ul style={{ margin: `${spacing[1]}px 0 0 ${spacing[4]}px`, padding: 0 }}>
+                {r.validationErrors.map((e, i) => <li key={i} style={{ fontSize: fontSize.sm }}>{e}</li>)}
+              </ul>
+            </div>
+          )}
+          {(r.phase === 'Completed' || r.phase === 'PartiallyFailed' || r.phase === 'Failed') && (
+            <div style={{ display: 'flex', gap: spacing[2], marginTop: spacing[3] }}>
+              <Button onClick={() => openLogs('RestoreLog')} disabled={logsLoading}>
+                {logsLoading ? 'Loading...' : 'View Logs'}
+              </Button>
+              {(r.errors > 0 || r.warnings > 0) && (
+                <Button onClick={() => openLogs('RestoreResults')} disabled={logsLoading}>
+                  View Results
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+};
 
 // ============================================================
 // Main component
@@ -301,6 +506,7 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
   const [restoreTarget, setRestoreTarget] = React.useState<BackupSummary | null>(null);
   const [expandedSchedule, setExpandedSchedule] = React.useState<string | null>(null);
   const [expandedBackup, setExpandedBackup] = React.useState<string | null>(null);
+  const [expandedRestore, setExpandedRestore] = React.useState<string | null>(null);
   const [banner, setBanner] = React.useState<{ variant: 'success' | 'error'; message: string } | null>(null);
 
   const namespace = application?.spec?.destination?.namespace || '';
@@ -361,10 +567,10 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
     }
   }, [namespace, appNamespace, appName, project, fetchAll]);
 
-  const handleRestore = React.useCallback(async () => {
+  const handleRestore = React.useCallback(async (options: RestoreOptions) => {
     if (!restoreTarget) return;
     try {
-      const result = await createRestore(restoreTarget.name, namespace, appNamespace, appName, project);
+      const result = await createRestore(restoreTarget.name, namespace, appNamespace, appName, project, options);
       setRestoreTarget(null);
       setBanner({ variant: 'success', message: `Restore "${result.name}" started from backup "${restoreTarget.name}". It will appear in the Restores tab.` });
       setActiveTab('restores');
@@ -561,7 +767,7 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
                             )}
                           </td>
                         </tr>
-                        {isExpanded && <BackupDetail backup={b} />}
+                        {isExpanded && <BackupDetail backup={b} appNamespace={appNamespace} appName={appName} project={project} />}
                       </React.Fragment>
                     );
                   })}
@@ -593,29 +799,41 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
                   {allRestores.map((r) => {
                     const inProgress = r.phase === 'InProgress' || r.phase === 'New';
                     const itemPercent = r.totalItems > 0 ? Math.round((r.itemsRestored / r.totalItems) * 100) : 0;
+                    const isExpanded = expandedRestore === r.name;
                     return (
-                      <tr key={r.name}>
-                        <td style={{ ...tdStyle, fontWeight: fontWeight.semibold }}>{r.name}</td>
-                        <td style={tdStyle}><Tag variant={phaseToVariant(r.phase)}>{r.phase}</Tag></td>
-                        <td style={tdStyle}>{r.backupName}</td>
-                        <td style={tdStyle}>{timeAgo(r.startTimestamp)}</td>
-                        <td style={tdStyle}>{duration(r.startTimestamp, r.completionTimestamp)}</td>
-                        <td style={tdStyle}>
-                          {inProgress && r.totalItems > 0 ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: spacing[2], minWidth: 100 }}>
-                              <ProgressBar percent={itemPercent} />
-                              <span style={{ fontSize: fontSize.xs, color: colors.gray500 }}>{r.itemsRestored}/{r.totalItems}</span>
-                            </div>
-                          ) : (
-                            <span>{r.itemsRestored}/{r.totalItems}</span>
-                          )}
-                        </td>
-                        <td style={tdStyle}>
-                          {r.errors > 0 && <Tag variant="red">{r.errors} err</Tag>}
-                          {r.warnings > 0 && <Tag variant="gray">{r.warnings} warn</Tag>}
-                          {r.errors === 0 && r.warnings === 0 && <span style={{ color: colors.gray400 }}>-</span>}
-                        </td>
-                      </tr>
+                      <React.Fragment key={r.name}>
+                        <tr
+                          style={{ cursor: 'pointer', background: isExpanded ? colors.gray50 : undefined }}
+                          onClick={() => setExpandedRestore(isExpanded ? null : r.name)}
+                        >
+                          <td style={{ ...tdStyle, fontWeight: fontWeight.semibold }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={chevron(isExpanded)} />
+                              {r.name}
+                            </span>
+                          </td>
+                          <td style={tdStyle}><Tag variant={phaseToVariant(r.phase)}>{r.phase}</Tag></td>
+                          <td style={tdStyle}>{r.backupName}</td>
+                          <td style={tdStyle}>{timeAgo(r.startTimestamp)}</td>
+                          <td style={tdStyle}>{duration(r.startTimestamp, r.completionTimestamp)}</td>
+                          <td style={tdStyle}>
+                            {inProgress && r.totalItems > 0 ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: spacing[2], minWidth: 100 }}>
+                                <ProgressBar percent={itemPercent} />
+                                <span style={{ fontSize: fontSize.xs, color: colors.gray500 }}>{r.itemsRestored}/{r.totalItems}</span>
+                              </div>
+                            ) : (
+                              <span>{r.itemsRestored}/{r.totalItems}</span>
+                            )}
+                          </td>
+                          <td style={tdStyle}>
+                            {r.errors > 0 && <Tag variant="red">{r.errors} err</Tag>}
+                            {r.warnings > 0 && <Tag variant="gray">{r.warnings} warn</Tag>}
+                            {r.errors === 0 && r.warnings === 0 && <span style={{ color: colors.gray400 }}>-</span>}
+                          </td>
+                        </tr>
+                        {isExpanded && <RestoreDetail restore={r} appNamespace={appNamespace} appName={appName} project={project} />}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
@@ -654,3 +872,12 @@ const chevron = (expanded: boolean): React.CSSProperties => ({
   borderBottom: expanded ? 'none' : '4px solid transparent',
   marginRight: 2,
 });
+const alertBox = (color: 'red' | 'yellow'): React.CSSProperties => ({
+  marginTop: spacing[3], padding: spacing[3],
+  background: color === 'red' ? colors.redLight : colors.yellowLight,
+  border: `1px solid ${color === 'red' ? colors.red : colors.yellow}`,
+  borderRadius: 4, fontSize: fontSize.sm, fontFamily: fonts.mono,
+  color: color === 'red' ? colors.redText : colors.yellowText,
+});
+const fieldLabel: React.CSSProperties = { fontSize: fontSize.xs, color: colors.gray500, fontFamily: fonts.mono, textTransform: 'uppercase', letterSpacing: '0.3px', display: 'block', marginBottom: 2 };
+const inputStyle: React.CSSProperties = { width: '100%', padding: `${spacing[1]}px ${spacing[2]}px`, border: `1px solid ${colors.gray200}`, borderRadius: 4, fontSize: fontSize.sm, fontFamily: fonts.mono, color: colors.gray800, marginTop: 2, boxSizing: 'border-box' };

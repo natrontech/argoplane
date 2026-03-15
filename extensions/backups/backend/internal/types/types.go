@@ -23,6 +23,11 @@ var (
 		Version:  "v1",
 		Resource: "backupstoragelocations",
 	}
+	DownloadRequestGVR = schema.GroupVersionResource{
+		Group:    "velero.io",
+		Version:  "v1",
+		Resource: "downloadrequests",
+	}
 )
 
 // ResourceRef identifies a resource from the ArgoCD resource tree.
@@ -63,7 +68,11 @@ type BackupSummary struct {
 	TotalItems                int               `json:"totalItems"`
 	Errors                    int               `json:"errors"`
 	Warnings                  int               `json:"warnings"`
+	FailureReason             string            `json:"failureReason,omitempty"`
+	ValidationErrors          []string          `json:"validationErrors,omitempty"`
 	IncludedNamespaces        []string          `json:"includedNamespaces"`
+	IncludedResources         []string          `json:"includedResources,omitempty"`
+	ExcludedResources         []string          `json:"excludedResources,omitempty"`
 	VolumeSnapshotsAttempted  int               `json:"volumeSnapshotsAttempted"`
 	VolumeSnapshotsCompleted  int               `json:"volumeSnapshotsCompleted"`
 	Labels                    map[string]string `json:"labels,omitempty"`
@@ -71,16 +80,33 @@ type BackupSummary struct {
 
 // RestoreSummary is the JSON response for a Velero restore.
 type RestoreSummary struct {
-	Name                string `json:"name"`
-	Namespace           string `json:"namespace"`
-	Phase               string `json:"phase"`
-	BackupName          string `json:"backupName"`
-	StartTimestamp      string `json:"startTimestamp,omitempty"`
-	CompletionTimestamp string `json:"completionTimestamp,omitempty"`
-	ItemsRestored       int    `json:"itemsRestored"`
-	TotalItems          int    `json:"totalItems"`
-	Errors              int    `json:"errors"`
-	Warnings            int    `json:"warnings"`
+	Name                   string            `json:"name"`
+	Namespace              string            `json:"namespace"`
+	Phase                  string            `json:"phase"`
+	BackupName             string            `json:"backupName"`
+	StartTimestamp         string            `json:"startTimestamp,omitempty"`
+	CompletionTimestamp    string            `json:"completionTimestamp,omitempty"`
+	ItemsRestored          int               `json:"itemsRestored"`
+	TotalItems             int               `json:"totalItems"`
+	Errors                 int               `json:"errors"`
+	Warnings               int               `json:"warnings"`
+	FailureReason          string            `json:"failureReason,omitempty"`
+	ValidationErrors       []string          `json:"validationErrors,omitempty"`
+	IncludedResources      []string          `json:"includedResources,omitempty"`
+	ExcludedResources      []string          `json:"excludedResources,omitempty"`
+	NamespaceMapping       map[string]string `json:"namespaceMapping,omitempty"`
+	ExistingResourcePolicy string            `json:"existingResourcePolicy,omitempty"`
+}
+
+// RestoreCreateRequest is the request body for creating a restore.
+type RestoreCreateRequest struct {
+	BackupName             string            `json:"backupName"`
+	Namespace              string            `json:"namespace"`
+	IncludedResources      []string          `json:"includedResources,omitempty"`
+	ExcludedResources      []string          `json:"excludedResources,omitempty"`
+	NamespaceMapping       map[string]string `json:"namespaceMapping,omitempty"`
+	ExistingResourcePolicy string            `json:"existingResourcePolicy,omitempty"`
+	RestorePVs             *bool             `json:"restorePVs,omitempty"`
 }
 
 // StorageLocationSummary is the JSON response for a Velero backup storage location.

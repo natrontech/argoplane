@@ -64,12 +64,9 @@ func (h *RestoresHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, restores)
 }
 
-// HandleCreate creates a restore from a backup.
+// HandleCreate creates a restore from a backup with granular options.
 func (h *RestoresHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		BackupName string `json:"backupName"`
-		Namespace  string `json:"namespace"`
-	}
+	var req types.RestoreCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -90,6 +87,39 @@ func (h *RestoresHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 
 	restoreName := fmt.Sprintf("restore-%s-%d", req.BackupName, time.Now().Unix())
 
+	spec := map[string]interface{}{
+		"backupName":         req.BackupName,
+		"includedNamespaces": []interface{}{req.Namespace},
+	}
+
+	if len(req.IncludedResources) > 0 {
+		included := make([]interface{}, len(req.IncludedResources))
+		for i, r := range req.IncludedResources {
+			included[i] = r
+		}
+		spec["includedResources"] = included
+	}
+	if len(req.ExcludedResources) > 0 {
+		excluded := make([]interface{}, len(req.ExcludedResources))
+		for i, r := range req.ExcludedResources {
+			excluded[i] = r
+		}
+		spec["excludedResources"] = excluded
+	}
+	if len(req.NamespaceMapping) > 0 {
+		mapping := make(map[string]interface{}, len(req.NamespaceMapping))
+		for k, v := range req.NamespaceMapping {
+			mapping[k] = v
+		}
+		spec["namespaceMapping"] = mapping
+	}
+	if req.ExistingResourcePolicy != "" {
+		spec["existingResourcePolicy"] = req.ExistingResourcePolicy
+	}
+	if req.RestorePVs != nil {
+		spec["restorePVs"] = *req.RestorePVs
+	}
+
 	restore := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "velero.io/v1",
@@ -101,10 +131,7 @@ func (h *RestoresHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 					"argoplane.io/triggered-by": username,
 				},
 			},
-			"spec": map[string]interface{}{
-				"backupName":         req.BackupName,
-				"includedNamespaces": []interface{}{req.Namespace},
-			},
+			"spec": spec,
 		},
 	}
 
@@ -129,17 +156,37 @@ func parseRestore(obj unstructured.Unstructured) types.RestoreSummary {
 	backupName, _, _ := unstructured.NestedString(obj.Object, "spec", "backupName")
 	startTs, _, _ := unstructured.NestedString(obj.Object, "status", "startTimestamp")
 	completionTs, _, _ := unstructured.NestedString(obj.Object, "status", "completionTimestamp")
+	failureReason, _, _ := unstructured.NestedString(obj.Object, "status", "failureReason")
+	validationErrors := nestedStringSlice(obj.Object, "status", "validationErrors")
+	includedResources := nestedStringSlice(obj.Object, "spec", "includedResources")
+	excludedResources := nestedStringSlice(obj.Object, "spec", "excludedResources")
+	existingPolicy, _, _ := unstructured.NestedString(obj.Object, "spec", "existingResourcePolicy")
+
+	nsMapping := make(map[string]string)
+	if raw, ok, _ := unstructured.NestedMap(obj.Object, "spec", "namespaceMapping"); ok {
+		for k, v := range raw {
+			if s, ok := v.(string); ok {
+				nsMapping[k] = s
+			}
+		}
+	}
 
 	return types.RestoreSummary{
-		Name:                obj.GetName(),
-		Namespace:           obj.GetNamespace(),
-		Phase:               phase,
-		BackupName:          backupName,
-		StartTimestamp:      startTs,
-		CompletionTimestamp: completionTs,
-		ItemsRestored:       nestedInt(obj.Object, "status", "progress", "itemsRestored"),
-		TotalItems:          nestedInt(obj.Object, "status", "progress", "totalItems"),
-		Errors:              nestedInt(obj.Object, "status", "errors"),
-		Warnings:            nestedInt(obj.Object, "status", "warnings"),
+		Name:                   obj.GetName(),
+		Namespace:              obj.GetNamespace(),
+		Phase:                  phase,
+		BackupName:             backupName,
+		StartTimestamp:         startTs,
+		CompletionTimestamp:    completionTs,
+		ItemsRestored:          nestedInt(obj.Object, "status", "progress", "itemsRestored"),
+		TotalItems:             nestedInt(obj.Object, "status", "progress", "totalItems"),
+		Errors:                 nestedInt(obj.Object, "status", "errors"),
+		Warnings:               nestedInt(obj.Object, "status", "warnings"),
+		FailureReason:          failureReason,
+		ValidationErrors:       validationErrors,
+		IncludedResources:      includedResources,
+		ExcludedResources:      excludedResources,
+		NamespaceMapping:       nsMapping,
+		ExistingResourcePolicy: existingPolicy,
 	}
 }

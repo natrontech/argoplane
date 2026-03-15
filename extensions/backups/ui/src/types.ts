@@ -26,7 +26,11 @@ export interface BackupSummary {
   totalItems: number;
   errors: number;
   warnings: number;
+  failureReason?: string;
+  validationErrors?: string[];
   includedNamespaces: string[];
+  includedResources?: string[];
+  excludedResources?: string[];
   volumeSnapshotsAttempted: number;
   volumeSnapshotsCompleted: number;
   labels?: Record<string, string>;
@@ -43,6 +47,20 @@ export interface RestoreSummary {
   totalItems: number;
   errors: number;
   warnings: number;
+  failureReason?: string;
+  validationErrors?: string[];
+  includedResources?: string[];
+  excludedResources?: string[];
+  namespaceMapping?: Record<string, string>;
+  existingResourcePolicy?: string;
+}
+
+export interface RestoreOptions {
+  includedResources?: string[];
+  excludedResources?: string[];
+  namespaceMapping?: Record<string, string>;
+  existingResourcePolicy?: 'none' | 'update';
+  restorePVs?: boolean;
 }
 
 export interface StorageLocationSummary {

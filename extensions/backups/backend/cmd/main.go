@@ -49,6 +49,7 @@ func main() {
 	backupsHandler := handler.NewBackupsHandler(dynClient, config.VeleroNamespace)
 	restoresHandler := handler.NewRestoresHandler(dynClient, config.VeleroNamespace)
 	overviewHandler := handler.NewOverviewHandler(dynClient, config.VeleroNamespace)
+	logsHandler := handler.NewLogsHandler(dynClient, config.VeleroNamespace)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/storage-locations", storageHandler.Handle)
@@ -58,6 +59,7 @@ func main() {
 	mux.HandleFunc("GET /api/v1/restores", restoresHandler.Handle)
 	mux.HandleFunc("POST /api/v1/restores", restoresHandler.HandleCreate)
 	mux.HandleFunc("POST /api/v1/overview", overviewHandler.Handle)
+	mux.HandleFunc("GET /api/v1/logs", logsHandler.Handle)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})

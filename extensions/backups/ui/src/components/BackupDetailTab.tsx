@@ -12,22 +12,8 @@ import {
   spacing,
   panel,
 } from '@argoplane/shared';
-import { fetchRestores, createRestore } from '../api';
+import { fetchRestores, createRestore, fetchLogs } from '../api';
 import { RestoreSummary } from '../types';
-
-// ============================================================
-// ArgoCD SPA-safe navigation
-// ============================================================
-
-function resourceNodeUrl(appNs: string, appName: string, group: string, kind: string, ns: string, name: string): string {
-  const nodeKey = `${group}/${kind}/${ns}/${name}/0`;
-  return `/applications/${appNs}/${appName}?${new URLSearchParams({ node: nodeKey }).toString()}`;
-}
-
-function navigateSPA(url: string) {
-  window.history.pushState(null, '', url);
-  window.dispatchEvent(new PopStateEvent('popstate'));
-}
 
 // ============================================================
 // Helpers
@@ -106,13 +92,27 @@ export const BackupDetailTab: React.FC<{ resource: any; tree?: any; application:
   const volumeSnapshotsCompleted = resource?.status?.volumeSnapshotsCompleted || 0;
   const errors = resource?.status?.errors || 0;
   const warnings = resource?.status?.warnings || 0;
+  const failureReason = resource?.status?.failureReason || '';
+  const validationErrors: string[] = resource?.status?.validationErrors || [];
 
   const appName = application?.metadata?.name || '';
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
 
+  const [logsLoading, setLogsLoading] = React.useState(false);
   const inProgress = phase === 'InProgress' || phase === 'New';
   const itemPercent = totalItems > 0 ? Math.round((itemsBackedUp / totalItems) * 100) : 0;
+
+  const openLogs = React.useCallback(async (kind: 'BackupLog' | 'BackupResults') => {
+    setLogsLoading(true);
+    try {
+      const result = await fetchLogs(backupName, kind, appNamespace, appName, project);
+      window.open(result.downloadURL, '_blank');
+    } catch {
+      // silently fail
+    }
+    setLogsLoading(false);
+  }, [backupName, appNamespace, appName, project]);
 
   const loadRestores = React.useCallback(() => {
     if (!backupNs) return;
@@ -188,14 +188,41 @@ export const BackupDetailTab: React.FC<{ resource: any; tree?: any; application:
         </div>
       </div>
 
-      {/* Restore button */}
-      {phase === 'Completed' && (
-        <div style={{ marginBottom: spacing[4] }}>
+      {/* Errors & warnings detail */}
+      {failureReason && (
+        <div style={alertBoxStyle}>
+          <span style={{ fontWeight: fontWeight.semibold }}>Failure:</span> {failureReason}
+        </div>
+      )}
+      {validationErrors.length > 0 && (
+        <div style={alertBoxStyle}>
+          <span style={{ fontWeight: fontWeight.semibold }}>Validation errors:</span>
+          <ul style={{ margin: `${spacing[1]}px 0 0 ${spacing[4]}px`, padding: 0 }}>
+            {validationErrors.map((e: string, i: number) => <li key={i} style={{ fontSize: fontSize.sm }}>{e}</li>)}
+          </ul>
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div style={{ display: 'flex', gap: spacing[2], marginBottom: spacing[4], flexWrap: 'wrap' }}>
+        {phase === 'Completed' && (
           <Button primary onClick={handleRestore} disabled={restoring}>
             {restoring ? 'Restoring...' : 'Restore from this Backup'}
           </Button>
-        </div>
-      )}
+        )}
+        {(phase === 'Completed' || phase === 'PartiallyFailed' || phase === 'Failed') && (
+          <>
+            <Button onClick={() => openLogs('BackupLog')} disabled={logsLoading}>
+              {logsLoading ? 'Loading...' : 'View Logs'}
+            </Button>
+            {(errors > 0 || warnings > 0) && (
+              <Button onClick={() => openLogs('BackupResults')} disabled={logsLoading}>
+                View Results
+              </Button>
+            )}
+          </>
+        )}
+      </div>
 
       {/* Restores from this backup */}
       <div style={sectionTitle}>RESTORES FROM THIS BACKUP</div>
@@ -267,3 +294,4 @@ const tableWrap: React.CSSProperties = { overflowX: 'auto' };
 const tableStyle: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', borderSpacing: 0 };
 const thStyle: React.CSSProperties = { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: '0.5px', color: colors.gray500, padding: `${spacing[2]}px ${spacing[2]}px`, borderBottom: `2px solid ${colors.gray200}`, textAlign: 'left', whiteSpace: 'nowrap' };
 const tdStyle: React.CSSProperties = { fontSize: fontSize.sm, padding: `${spacing[1]}px ${spacing[2]}px`, borderBottom: `1px solid ${colors.gray100}`, fontFamily: fonts.mono, whiteSpace: 'nowrap' };
+const alertBoxStyle: React.CSSProperties = { marginBottom: spacing[4], padding: spacing[3], background: colors.redLight, border: `1px solid ${colors.red}`, borderRadius: 4, fontSize: fontSize.sm, fontFamily: fonts.mono, color: colors.redText };

@@ -3,6 +3,7 @@ import {
   BackupSummary,
   RestoreSummary,
   ResourceRef,
+  RestoreOptions,
 } from './types';
 
 function proxyHeaders(appNamespace: string, appName: string, project: string) {
@@ -99,15 +100,39 @@ export async function createRestore(
   namespace: string,
   appNamespace: string,
   appName: string,
-  project: string
+  project: string,
+  options?: RestoreOptions
 ): Promise<{ name: string }> {
+  const body: Record<string, unknown> = { backupName, namespace };
+  if (options?.includedResources?.length) body.includedResources = options.includedResources;
+  if (options?.excludedResources?.length) body.excludedResources = options.excludedResources;
+  if (options?.namespaceMapping && Object.keys(options.namespaceMapping).length > 0) body.namespaceMapping = options.namespaceMapping;
+  if (options?.existingResourcePolicy) body.existingResourcePolicy = options.existingResourcePolicy;
+  if (options?.restorePVs !== undefined) body.restorePVs = options.restorePVs;
   const response = await fetch('/extensions/backups/api/v1/restores', {
     method: 'POST',
     headers: {
       ...proxyHeaders(appNamespace, appName, project),
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ backupName, namespace }),
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchLogs(
+  name: string,
+  kind: 'BackupLog' | 'RestoreLog' | 'BackupResults' | 'RestoreResults',
+  appNamespace: string,
+  appName: string,
+  project: string
+): Promise<{ downloadURL: string }> {
+  const params = new URLSearchParams({ name, kind });
+  const response = await fetch(`/extensions/backups/api/v1/logs?${params}`, {
+    headers: proxyHeaders(appNamespace, appName, project),
   });
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
