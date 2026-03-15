@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"compress/gzip"
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -16,19 +18,25 @@ import (
 	"github.com/natrontech/argoplane/extensions/backups/backend/internal/types"
 )
 
-// LogsHandler creates Velero DownloadRequests and returns the pre-signed URL.
+// LogsHandler creates Velero DownloadRequests, fetches the content, and returns it inline.
 type LogsHandler struct {
 	client          dynamic.Interface
 	veleroNamespace string
+	httpClient      *http.Client
 }
 
 // NewLogsHandler creates a new LogsHandler.
 func NewLogsHandler(client dynamic.Interface, veleroNamespace string) *LogsHandler {
-	return &LogsHandler{client: client, veleroNamespace: veleroNamespace}
+	return &LogsHandler{
+		client:          client,
+		veleroNamespace: veleroNamespace,
+		httpClient:      &http.Client{Timeout: 30 * time.Second},
+	}
 }
 
-// Handle creates a DownloadRequest for a backup or restore's logs/results and
-// polls until the download URL is available.
+// Handle creates a DownloadRequest for a backup or restore's logs/results,
+// fetches the content from the pre-signed URL, decompresses if gzipped,
+// and returns the text content inline.
 //
 // Query params:
 //   - name: the backup or restore name (required)
@@ -55,7 +63,6 @@ func (h *LogsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	slog.Info("creating download request", "name", name, "kind", kind, "user", username)
 
 	// Build a DNS-safe name: lowercase, max 63 chars (Kubernetes name limit).
-	// Use a short hash of the full name to avoid collisions.
 	ts := time.Now().Unix()
 	raw := fmt.Sprintf("%s-%s-%d", name, strings.ToLower(kind), ts)
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(raw)))[:8]
@@ -89,7 +96,7 @@ func (h *LogsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Poll for the download URL (Velero fills it in status.downloadURL).
-	url, err := h.pollDownloadURL(r.Context(), created.GetName())
+	downloadURL, err := h.pollDownloadURL(r.Context(), created.GetName())
 	if err != nil {
 		slog.Error("download request timed out", "error", err, "name", drName)
 		WriteError(w, http.StatusGatewayTimeout, "download request timed out waiting for URL")
@@ -103,9 +110,62 @@ func (h *LogsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		_ = h.client.Resource(types.DownloadRequestGVR).Namespace(h.veleroNamespace).Delete(ctx, drName, metav1.DeleteOptions{})
 	}()
 
+	// Fetch the content from the pre-signed URL and return it inline.
+	content, err := h.fetchContent(r.Context(), downloadURL)
+	if err != nil {
+		slog.Error("failed to fetch log content", "error", err, "url", downloadURL)
+		WriteError(w, http.StatusBadGateway, fmt.Sprintf("Failed to fetch log content: %v", err))
+		return
+	}
+
 	WriteJSON(w, map[string]string{
-		"downloadURL": url,
+		"content": content,
 	})
+}
+
+// fetchContent downloads from the pre-signed URL and decompresses gzip if needed.
+func (h *LogsHandler) fetchContent(ctx context.Context, url string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", fmt.Errorf("building request: %w", err)
+	}
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("fetching content: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected status %d", resp.StatusCode)
+	}
+
+	var reader io.Reader = resp.Body
+
+	// Decompress if gzip (Velero stores logs as .gz).
+	if strings.HasSuffix(url, ".gz") || resp.Header.Get("Content-Encoding") == "gzip" || resp.Header.Get("Content-Type") == "application/x-gzip" {
+		gz, gzErr := gzip.NewReader(resp.Body)
+		if gzErr != nil {
+			return "", fmt.Errorf("decompressing gzip: %w", gzErr)
+		}
+		defer gz.Close()
+		reader = gz
+	}
+
+	// Limit to 2MB to avoid blowing up memory.
+	const maxSize = 2 * 1024 * 1024
+	limited := io.LimitReader(reader, maxSize)
+	data, err := io.ReadAll(limited)
+	if err != nil {
+		return "", fmt.Errorf("reading content: %w", err)
+	}
+
+	result := string(data)
+	if len(data) == maxSize {
+		result += "\n\n... (truncated, content exceeds 2MB)"
+	}
+
+	return result, nil
 }
 
 func (h *LogsHandler) pollDownloadURL(ctx context.Context, name string) (string, error) {
