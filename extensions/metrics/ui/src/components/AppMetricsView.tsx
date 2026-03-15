@@ -147,7 +147,8 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
                 key={pps.metric}
                 title={pps.metric}
                 unit={pps.unit}
-                series={pps.pods.map((p) => ({ label: p.pod, series: p.series }))}
+                timestamps={pps.timestamps}
+                series={pps.pods.map((p) => ({ label: p.pod, values: p.values }))}
                 colors={SERIES_COLORS}
                 height={220}
                 timeRange={timeRange}

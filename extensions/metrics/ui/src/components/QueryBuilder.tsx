@@ -275,15 +275,30 @@ export const QueryBuilder: React.FC<QueryBuilderProps> = ({
               </div>
 
               {/* Graph view */}
-              {resultTab === 'graph' && hasSeries && (
-                <MultiSeriesChart
-                  series={result.multiSeries!}
-                  colors={SERIES_COLORS}
-                  height={220}
-                  timeRange={timeRange}
-                  formatValue={formatSmartValue}
-                />
-              )}
+              {resultTab === 'graph' && hasSeries && (() => {
+                // Convert NamedSeries to aligned format
+                const ms = result.multiSeries!;
+                const longest = ms.reduce((a, b) => a.series.length > b.series.length ? a : b, ms[0]);
+                const timestamps = longest.series.map((dp) => dp.time);
+                const aligned = ms.map((s) => {
+                  const valMap: Record<string, number> = {};
+                  for (const dp of s.series) valMap[dp.time] = dp.value;
+                  return {
+                    label: s.label,
+                    values: timestamps.map((t) => valMap[t] ?? NaN),
+                  };
+                });
+                return (
+                  <MultiSeriesChart
+                    timestamps={timestamps}
+                    series={aligned}
+                    colors={SERIES_COLORS}
+                    height={220}
+                    timeRange={timeRange}
+                    formatValue={formatSmartValue}
+                  />
+                );
+              })()}
 
               {/* Table view */}
               {resultTab === 'table' && hasSamples && (

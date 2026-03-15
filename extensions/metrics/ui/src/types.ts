@@ -46,7 +46,8 @@ export interface DiscoveredMetric {
 export interface PerPodSeries {
   metric: string;
   unit: string;
-  pods: Array<{ pod: string; series: DataPoint[] }>;
+  timestamps: string[];
+  pods: Array<{ pod: string; values: number[] }>;
 }
 
 export interface ExtensionProps {
