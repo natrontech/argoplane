@@ -23,20 +23,6 @@ import {
 } from '../types';
 
 // ============================================================
-// ArgoCD SPA-safe navigation
-// ============================================================
-
-function resourceNodeUrl(appNs: string, appName: string, group: string, kind: string, ns: string, name: string): string {
-  const nodeKey = `${group}/${kind}/${ns}/${name}/0`;
-  return `/applications/${appNs}/${appName}?${new URLSearchParams({ node: nodeKey }).toString()}`;
-}
-
-function navigateSPA(url: string) {
-  window.history.pushState(null, '', url);
-  window.dispatchEvent(new PopStateEvent('popstate'));
-}
-
-// ============================================================
 // Helpers
 // ============================================================
 
@@ -53,6 +39,11 @@ function timeAgo(iso?: string): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
+function formatDate(iso?: string): string {
+  if (!iso) return '-';
+  return new Date(iso).toLocaleString();
+}
+
 function duration(start?: string, end?: string): string {
   if (!start) return '-';
   const s = new Date(start).getTime();
@@ -66,6 +57,16 @@ function duration(start?: string, end?: string): string {
   const hours = Math.floor(mins / 60);
   const remMins = mins % 60;
   return `${hours}h ${remMins}m`;
+}
+
+function humanTTL(ttl: string): string {
+  if (!ttl) return '-';
+  const match = ttl.match(/^(\d+)h/);
+  if (!match) return ttl;
+  const hours = parseInt(match[1], 10);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
 }
 
 type PhaseVariant = 'green' | 'red' | 'orange' | 'gray';
@@ -90,18 +91,194 @@ function hasInProgress(backups: BackupSummary[], restores: RestoreSummary[]): bo
     restores.some((r) => r.phase === 'InProgress' || r.phase === 'New');
 }
 
+const TTL_OPTIONS = [
+  { label: '24 hours', value: '24h0m0s' },
+  { label: '3 days', value: '72h0m0s' },
+  { label: '7 days', value: '168h0m0s' },
+  { label: '30 days', value: '720h0m0s' },
+  { label: '90 days', value: '2160h0m0s' },
+];
+
 // ============================================================
 // Sub-components
 // ============================================================
-
-const ResourceLink: React.FC<{ onClick: () => void; children: React.ReactNode; title?: string }> = ({ onClick, children, title }) => (
-  <span onClick={(e) => { e.stopPropagation(); onClick(); }} title={title} style={linkStyle}>{children}</span>
-);
 
 const Sep: React.FC = () => <span style={{ width: 1, height: 16, background: colors.gray200, flexShrink: 0 }} />;
 
 const StatusDot: React.FC<{ ok: boolean }> = ({ ok }) => (
   <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 1, background: ok ? colors.greenSolid : colors.redSolid, marginRight: 6, flexShrink: 0 }} />
+);
+
+const KV: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
+  <div style={{ display: 'flex', gap: spacing[3], alignItems: 'baseline', marginBottom: 2 }}>
+    <span style={{ fontSize: fontSize.xs, color: colors.gray400, fontFamily: fonts.mono, minWidth: 100, textTransform: 'uppercase', letterSpacing: '0.3px' }}>{label}</span>
+    <span style={{ fontSize: fontSize.sm, color: colors.gray800, fontFamily: fonts.mono }}>{value}</span>
+  </div>
+);
+
+const Banner: React.FC<{ variant: 'success' | 'error'; message: string; onDismiss: () => void }> = ({ variant, message, onDismiss }) => (
+  <div style={{
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    padding: `${spacing[2]}px ${spacing[3]}px`, marginBottom: spacing[3],
+    background: variant === 'success' ? colors.greenLight : colors.redLight,
+    border: `1px solid ${variant === 'success' ? colors.green : colors.red}`,
+    borderRadius: 4, fontSize: fontSize.sm, fontFamily: fonts.mono,
+    color: variant === 'success' ? colors.greenText : colors.redText,
+  }}>
+    <span>{message}</span>
+    <span onClick={onDismiss} style={{ cursor: 'pointer', fontWeight: fontWeight.semibold, marginLeft: spacing[3] }}>x</span>
+  </div>
+);
+
+// ============================================================
+// Create Backup Panel
+// ============================================================
+
+const CreateBackupPanel: React.FC<{
+  namespace: string;
+  onCancel: () => void;
+  onCreate: (ttl: string) => Promise<void>;
+}> = ({ namespace, onCancel, onCreate }) => {
+  const [ttl, setTtl] = React.useState('72h0m0s');
+  const [creating, setCreating] = React.useState(false);
+
+  const handleCreate = async () => {
+    setCreating(true);
+    await onCreate(ttl);
+    setCreating(false);
+  };
+
+  return (
+    <div style={panelBox}>
+      <div style={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.gray800, marginBottom: spacing[3] }}>Create On-Demand Backup</div>
+      <KV label="Namespace" value={<Tag variant="orange">{namespace}</Tag>} />
+      <KV label="Type" value="On-demand (not tied to a schedule)" />
+      <div style={{ marginTop: spacing[3], marginBottom: spacing[2] }}>
+        <span style={{ fontSize: fontSize.xs, color: colors.gray400, fontFamily: fonts.mono, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Retention</span>
+      </div>
+      <div style={{ display: 'flex', gap: spacing[1], flexWrap: 'wrap', marginBottom: spacing[4] }}>
+        {TTL_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => setTtl(opt.value)}
+            style={{
+              padding: `4px ${spacing[3]}px`, border: `1px solid ${ttl === opt.value ? colors.orange500 : colors.gray200}`,
+              borderRadius: 4, background: ttl === opt.value ? colors.orange50 : colors.white,
+              color: ttl === opt.value ? colors.orange600 : colors.gray600, fontSize: fontSize.sm,
+              fontFamily: fonts.mono, cursor: 'pointer', fontWeight: ttl === opt.value ? fontWeight.semibold : fontWeight.normal,
+            }}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: spacing[2], justifyContent: 'flex-end' }}>
+        <Button onClick={onCancel} disabled={creating}>Cancel</Button>
+        <Button primary onClick={handleCreate} disabled={creating}>
+          {creating ? 'Creating...' : 'Create Backup'}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// Restore Confirmation Panel
+// ============================================================
+
+const RestoreConfirmPanel: React.FC<{
+  backup: BackupSummary;
+  namespace: string;
+  onCancel: () => void;
+  onConfirm: () => Promise<void>;
+}> = ({ backup, namespace, onCancel, onConfirm }) => {
+  const [restoring, setRestoring] = React.useState(false);
+
+  const handleConfirm = async () => {
+    setRestoring(true);
+    await onConfirm();
+    setRestoring(false);
+  };
+
+  return (
+    <div style={panelBox}>
+      <div style={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.gray800, marginBottom: spacing[3] }}>Confirm Restore</div>
+      <KV label="Backup" value={backup.name} />
+      <KV label="Phase" value={<Tag variant={phaseToVariant(backup.phase)}>{backup.phase}</Tag>} />
+      <KV label="Created" value={formatDate(backup.startTimestamp)} />
+      <KV label="Items" value={`${backup.itemsBackedUp} resources backed up`} />
+      <KV label="Namespaces" value={(backup.includedNamespaces || []).join(', ') || 'all'} />
+      {backup.scheduleName && <KV label="Schedule" value={backup.scheduleName} />}
+      {backup.errors > 0 && <KV label="Errors" value={<span style={{ color: colors.redText }}>{backup.errors} errors during backup</span>} />}
+      {backup.warnings > 0 && <KV label="Warnings" value={<span style={{ color: colors.yellowText }}>{backup.warnings} warnings during backup</span>} />}
+      <div style={{ marginTop: spacing[3], padding: spacing[3], background: colors.yellowLight, border: `1px solid ${colors.yellow}`, borderRadius: 4, fontSize: fontSize.sm, color: colors.yellowText }}>
+        This will restore resources from backup "{backup.name}" into namespace "{namespace}". Existing resources may be overwritten.
+      </div>
+      <div style={{ display: 'flex', gap: spacing[2], justifyContent: 'flex-end', marginTop: spacing[3] }}>
+        <Button onClick={onCancel} disabled={restoring}>Cancel</Button>
+        <Button danger onClick={handleConfirm} disabled={restoring}>
+          {restoring ? 'Restoring...' : 'Confirm Restore'}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// Schedule Detail (expandable row)
+// ============================================================
+
+const ScheduleDetail: React.FC<{ schedule: ScheduleSummary }> = ({ schedule: s }) => (
+  <tr>
+    <td colSpan={7} style={{ padding: 0, borderBottom: `1px solid ${colors.gray200}` }}>
+      <div style={{ padding: `${spacing[3]}px ${spacing[4]}px`, background: colors.gray50 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: `${spacing[1]}px ${spacing[6]}px`, maxWidth: 600 }}>
+          <KV label="Schedule" value={s.name} />
+          <KV label="Namespace" value={s.namespace} />
+          <KV label="Cron" value={s.cron} />
+          <KV label="TTL" value={s.ttl ? humanTTL(s.ttl) : '-'} />
+          <KV label="Created" value={formatDate(s.creationTimestamp)} />
+          <KV label="Status" value={s.paused ? <Tag variant="orange">Paused</Tag> : <Tag variant="green">Active</Tag>} />
+          {s.includedNamespaces && s.includedNamespaces.length > 0 && (
+            <KV label="Includes" value={s.includedNamespaces.join(', ')} />
+          )}
+          {(!s.includedNamespaces || s.includedNamespaces.length === 0) && (
+            <KV label="Includes" value={<span style={{ color: colors.gray400 }}>all namespaces</span>} />
+          )}
+          {s.excludedNamespaces && s.excludedNamespaces.length > 0 && (
+            <KV label="Excludes" value={s.excludedNamespaces.join(', ')} />
+          )}
+        </div>
+      </div>
+    </td>
+  </tr>
+);
+
+// ============================================================
+// Backup Detail (expandable row)
+// ============================================================
+
+const BackupDetail: React.FC<{ backup: BackupSummary }> = ({ backup: b }) => (
+  <tr>
+    <td colSpan={8} style={{ padding: 0, borderBottom: `1px solid ${colors.gray200}` }}>
+      <div style={{ padding: `${spacing[3]}px ${spacing[4]}px`, background: colors.gray50 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: `${spacing[1]}px ${spacing[6]}px`, maxWidth: 600 }}>
+          <KV label="Backup" value={b.name} />
+          <KV label="Phase" value={<Tag variant={phaseToVariant(b.phase)}>{b.phase}</Tag>} />
+          <KV label="Started" value={formatDate(b.startTimestamp)} />
+          <KV label="Completed" value={formatDate(b.completionTimestamp)} />
+          <KV label="Duration" value={duration(b.startTimestamp, b.completionTimestamp)} />
+          <KV label="Items" value={`${b.itemsBackedUp} / ${b.totalItems}`} />
+          {b.scheduleName && <KV label="Schedule" value={b.scheduleName} />}
+          <KV label="Namespaces" value={(b.includedNamespaces || []).join(', ') || 'all'} />
+          {b.expiresAt && <KV label="Expires" value={formatDate(b.expiresAt)} />}
+          <KV label="Snapshots" value={`${b.volumeSnapshotsCompleted} / ${b.volumeSnapshotsAttempted}`} />
+          {b.errors > 0 && <KV label="Errors" value={<span style={{ color: colors.redText }}>{b.errors}</span>} />}
+          {b.warnings > 0 && <KV label="Warnings" value={<span style={{ color: colors.yellowText }}>{b.warnings}</span>} />}
+        </div>
+      </div>
+    </td>
+  </tr>
 );
 
 // ============================================================
@@ -118,7 +295,13 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [activeTab, setActiveTab] = React.useState<'schedules' | 'backups' | 'restores'>('schedules');
-  const [creating, setCreating] = React.useState(false);
+
+  // UI state
+  const [showCreatePanel, setShowCreatePanel] = React.useState(false);
+  const [restoreTarget, setRestoreTarget] = React.useState<BackupSummary | null>(null);
+  const [expandedSchedule, setExpandedSchedule] = React.useState<string | null>(null);
+  const [expandedBackup, setExpandedBackup] = React.useState<string | null>(null);
+  const [banner, setBanner] = React.useState<{ variant: 'success' | 'error'; message: string } | null>(null);
 
   const namespace = application?.spec?.destination?.namespace || '';
   const appName = application?.metadata?.name || '';
@@ -149,40 +332,50 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
 
   React.useEffect(() => { setLoading(true); fetchAll(); }, [fetchAll]);
 
-  // Auto-refresh: fast when in-progress, normal otherwise
   const refreshInterval = React.useMemo(
     () => hasInProgress(allBackups, allRestores) ? REFRESH_FAST : REFRESH_NORMAL,
     [allBackups, allRestores]
   );
   React.useEffect(() => { const i = setInterval(fetchAll, refreshInterval); return () => clearInterval(i); }, [fetchAll, refreshInterval]);
 
+  // Auto-dismiss banner after 6s
+  React.useEffect(() => {
+    if (!banner) return;
+    const t = setTimeout(() => setBanner(null), 6000);
+    return () => clearTimeout(t);
+  }, [banner]);
+
   const schedules = overview?.schedules || [];
   const storageLocations = overview?.storageLocations || [];
   const bsl = React.useMemo(() => bslStatus(storageLocations), [storageLocations]);
 
-  const handleCreateBackup = React.useCallback(async () => {
-    setCreating(true);
+  const handleCreateBackup = React.useCallback(async (ttl: string) => {
     try {
-      await createBackup(namespace, appNamespace, appName, project);
+      const result = await createBackup(namespace, appNamespace, appName, project, ttl);
+      setShowCreatePanel(false);
+      setBanner({ variant: 'success', message: `Backup "${result.name}" created. It will appear in the Backups tab shortly.` });
+      setActiveTab('backups');
       setTimeout(fetchAll, 2000);
-    } catch {
-      // silently fail, user can retry
-    } finally {
-      setCreating(false);
+    } catch (err: any) {
+      setBanner({ variant: 'error', message: `Failed to create backup: ${err.message || 'unknown error'}` });
     }
   }, [namespace, appNamespace, appName, project, fetchAll]);
 
-  const handleRestore = React.useCallback(async (backupName: string) => {
+  const handleRestore = React.useCallback(async () => {
+    if (!restoreTarget) return;
     try {
-      await createRestore(backupName, namespace, appNamespace, appName, project);
+      const result = await createRestore(restoreTarget.name, namespace, appNamespace, appName, project);
+      setRestoreTarget(null);
+      setBanner({ variant: 'success', message: `Restore "${result.name}" started from backup "${restoreTarget.name}". It will appear in the Restores tab.` });
+      setActiveTab('restores');
       setTimeout(fetchAll, 2000);
-    } catch {
-      // silently fail
+    } catch (err: any) {
+      setBanner({ variant: 'error', message: `Failed to create restore: ${err.message || 'unknown error'}` });
     }
-  }, [namespace, appNamespace, appName, project, fetchAll]);
+  }, [restoreTarget, namespace, appNamespace, appName, project, fetchAll]);
 
   if (loading) return <div style={panel}><Loading /></div>;
-  if (error) return (
+  if (error && !overview) return (
     <div style={panel}>
       <div style={{ color: colors.redText, marginBottom: spacing[2] }}>Failed to load: {error}</div>
       <Button onClick={() => { setLoading(true); fetchAll(); }}>Retry</Button>
@@ -191,6 +384,9 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
 
   return (
     <div style={rootStyle}>
+      {/* Banner */}
+      {banner && <Banner variant={banner.variant} message={banner.message} onDismiss={() => setBanner(null)} />}
+
       {/* Top bar */}
       <div style={topBar}>
         <div style={topLeft}>
@@ -203,11 +399,30 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
           </span>
         </div>
         <div style={topRight}>
-          <Button primary onClick={handleCreateBackup} disabled={creating}>
-            {creating ? 'Creating...' : 'Create Backup'}
-          </Button>
+          {!showCreatePanel && !restoreTarget && (
+            <Button primary onClick={() => setShowCreatePanel(true)}>Create Backup</Button>
+          )}
         </div>
       </div>
+
+      {/* Create Backup Panel */}
+      {showCreatePanel && (
+        <CreateBackupPanel
+          namespace={namespace}
+          onCancel={() => setShowCreatePanel(false)}
+          onCreate={handleCreateBackup}
+        />
+      )}
+
+      {/* Restore Confirmation Panel */}
+      {restoreTarget && (
+        <RestoreConfirmPanel
+          backup={restoreTarget}
+          namespace={namespace}
+          onCancel={() => setRestoreTarget(null)}
+          onConfirm={handleRestore}
+        />
+      )}
 
       {/* Tabs */}
       <div style={tabBar}>
@@ -217,11 +432,9 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
         <button style={tab(activeTab === 'backups')} onClick={() => setActiveTab('backups')}>
           Backups ({allBackups.length})
         </button>
-        {allRestores.length > 0 && (
-          <button style={tab(activeTab === 'restores')} onClick={() => setActiveTab('restores')}>
-            Restores ({allRestores.length})
-          </button>
-        )}
+        <button style={tab(activeTab === 'restores')} onClick={() => setActiveTab('restores')}>
+          Restores ({allRestores.length})
+        </button>
       </div>
 
       {/* === Schedules tab === */}
@@ -243,39 +456,43 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
                 </tr></thead>
                 <tbody>
                   {schedules.map((s) => (
-                    <tr key={s.name}>
-                      <td style={{ ...tdStyle, fontWeight: fontWeight.semibold }}>
-                        <ResourceLink
-                          onClick={() => navigateSPA(resourceNodeUrl(appNamespace, appName, 'velero.io', 'Schedule', s.namespace, s.name))}
-                          title={`Open ${s.name}`}
-                        >
-                          {s.name}
-                        </ResourceLink>
-                      </td>
-                      <td style={tdStyle}>{s.cron}</td>
-                      <td style={tdStyle}>{s.paused ? <Tag variant="orange">Yes</Tag> : <span style={{ color: colors.gray400 }}>No</span>}</td>
-                      <td style={tdStyle}>
-                        {s.lastBackupTime ? (
-                          <span>
-                            {timeAgo(s.lastBackupTime)}
-                            {s.lastBackupStatus && (
-                              <span style={{ marginLeft: 6 }}>
-                                <Tag variant={phaseToVariant(s.lastBackupStatus)}>{s.lastBackupStatus}</Tag>
-                              </span>
-                            )}
+                    <React.Fragment key={s.name}>
+                      <tr
+                        style={{ cursor: 'pointer', background: expandedSchedule === s.name ? colors.gray50 : undefined }}
+                        onClick={() => setExpandedSchedule(expandedSchedule === s.name ? null : s.name)}
+                      >
+                        <td style={{ ...tdStyle, fontWeight: fontWeight.semibold }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={chevron(expandedSchedule === s.name)} />
+                            {s.name}
                           </span>
-                        ) : (
-                          <span style={{ color: colors.gray400 }}>-</span>
-                        )}
-                      </td>
-                      <td style={tdStyle}>{s.ttl || '-'}</td>
-                      <td style={tdStyle}>
-                        <Tag variant={s.ownership === 'app' ? 'green' : 'gray'}>
-                          {s.ownership === 'app' ? 'App' : 'Platform'}
-                        </Tag>
-                      </td>
-                      <td style={tdStyle}>{s.backupCount}</td>
-                    </tr>
+                        </td>
+                        <td style={tdStyle}>{s.cron}</td>
+                        <td style={tdStyle}>{s.paused ? <Tag variant="orange">Yes</Tag> : <span style={{ color: colors.gray400 }}>No</span>}</td>
+                        <td style={tdStyle}>
+                          {s.lastBackupTime ? (
+                            <span>
+                              {timeAgo(s.lastBackupTime)}
+                              {s.lastBackupStatus && (
+                                <span style={{ marginLeft: 6 }}>
+                                  <Tag variant={phaseToVariant(s.lastBackupStatus)}>{s.lastBackupStatus}</Tag>
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span style={{ color: colors.gray400 }}>never</span>
+                          )}
+                        </td>
+                        <td style={tdStyle}>{s.ttl ? humanTTL(s.ttl) : '-'}</td>
+                        <td style={tdStyle}>
+                          <Tag variant={s.ownership === 'app' ? 'green' : 'gray'}>
+                            {s.ownership === 'app' ? 'App' : 'Platform'}
+                          </Tag>
+                        </td>
+                        <td style={tdStyle}>{s.backupCount}</td>
+                      </tr>
+                      {expandedSchedule === s.name && <ScheduleDetail schedule={s} />}
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
@@ -299,46 +516,53 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
                   <th style={thStyle}>Started</th>
                   <th style={thStyle}>Duration</th>
                   <th style={thStyle}>Items</th>
-                  <th style={thStyle}>Errors</th>
-                  <th style={thStyle}>Warnings</th>
+                  <th style={thStyle}>Issues</th>
                   <th style={thStyle}>Actions</th>
                 </tr></thead>
                 <tbody>
                   {allBackups.map((b) => {
                     const inProgress = b.phase === 'InProgress' || b.phase === 'New';
                     const itemPercent = b.totalItems > 0 ? Math.round((b.itemsBackedUp / b.totalItems) * 100) : 0;
+                    const isExpanded = expandedBackup === b.name;
                     return (
-                      <tr key={b.name}>
-                        <td style={{ ...tdStyle, fontWeight: fontWeight.semibold }}>
-                          <ResourceLink
-                            onClick={() => navigateSPA(resourceNodeUrl(appNamespace, appName, 'velero.io', 'Backup', b.namespace, b.name))}
-                            title={`Open ${b.name}`}
-                          >
-                            {b.name}
-                          </ResourceLink>
-                        </td>
-                        <td style={tdStyle}><Tag variant={phaseToVariant(b.phase)}>{b.phase}</Tag></td>
-                        <td style={tdStyle}>{b.scheduleName || '-'}</td>
-                        <td style={tdStyle}>{timeAgo(b.startTimestamp)}</td>
-                        <td style={tdStyle}>{duration(b.startTimestamp, b.completionTimestamp)}</td>
-                        <td style={tdStyle}>
-                          {inProgress && b.totalItems > 0 ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: spacing[2], minWidth: 100 }}>
-                              <ProgressBar percent={itemPercent} />
-                              <span style={{ fontSize: fontSize.xs, color: colors.gray500 }}>{b.itemsBackedUp}/{b.totalItems}</span>
-                            </div>
-                          ) : (
-                            <span>{b.itemsBackedUp}/{b.totalItems}</span>
-                          )}
-                        </td>
-                        <td style={{ ...tdStyle, color: b.errors > 0 ? colors.redText : colors.gray400 }}>{b.errors}</td>
-                        <td style={{ ...tdStyle, color: b.warnings > 0 ? colors.yellowText : colors.gray400 }}>{b.warnings}</td>
-                        <td style={tdStyle}>
-                          {b.phase === 'Completed' && (
-                            <Button onClick={() => handleRestore(b.name)}>Restore</Button>
-                          )}
-                        </td>
-                      </tr>
+                      <React.Fragment key={b.name}>
+                        <tr
+                          style={{ cursor: 'pointer', background: isExpanded ? colors.gray50 : undefined }}
+                          onClick={() => setExpandedBackup(isExpanded ? null : b.name)}
+                        >
+                          <td style={{ ...tdStyle, fontWeight: fontWeight.semibold }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={chevron(isExpanded)} />
+                              {b.name}
+                            </span>
+                          </td>
+                          <td style={tdStyle}><Tag variant={phaseToVariant(b.phase)}>{b.phase}</Tag></td>
+                          <td style={tdStyle}>{b.scheduleName || <span style={{ color: colors.gray400 }}>on-demand</span>}</td>
+                          <td style={tdStyle}>{timeAgo(b.startTimestamp)}</td>
+                          <td style={tdStyle}>{duration(b.startTimestamp, b.completionTimestamp)}</td>
+                          <td style={tdStyle}>
+                            {inProgress && b.totalItems > 0 ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: spacing[2], minWidth: 100 }}>
+                                <ProgressBar percent={itemPercent} />
+                                <span style={{ fontSize: fontSize.xs, color: colors.gray500 }}>{b.itemsBackedUp}/{b.totalItems}</span>
+                              </div>
+                            ) : (
+                              <span>{b.itemsBackedUp}/{b.totalItems}</span>
+                            )}
+                          </td>
+                          <td style={tdStyle}>
+                            {b.errors > 0 && <Tag variant="red">{b.errors} err</Tag>}
+                            {b.warnings > 0 && <Tag variant="gray">{b.warnings} warn</Tag>}
+                            {b.errors === 0 && b.warnings === 0 && <span style={{ color: colors.gray400 }}>-</span>}
+                          </td>
+                          <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
+                            {b.phase === 'Completed' && (
+                              <Button onClick={() => setRestoreTarget(b)}>Restore</Button>
+                            )}
+                          </td>
+                        </tr>
+                        {isExpanded && <BackupDetail backup={b} />}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
@@ -352,7 +576,7 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
       {activeTab === 'restores' && (
         <div style={tabContent}>
           {allRestores.length === 0 ? (
-            <EmptyState message="No restores found" />
+            <EmptyState message="No restores found for this namespace" />
           ) : (
             <div style={tableWrap}>
               <table style={tableStyle}>
@@ -363,8 +587,7 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
                   <th style={thStyle}>Started</th>
                   <th style={thStyle}>Duration</th>
                   <th style={thStyle}>Items</th>
-                  <th style={thStyle}>Errors</th>
-                  <th style={thStyle}>Warnings</th>
+                  <th style={thStyle}>Issues</th>
                 </tr></thead>
                 <tbody>
                   {allRestores.map((r) => {
@@ -374,14 +597,7 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
                       <tr key={r.name}>
                         <td style={{ ...tdStyle, fontWeight: fontWeight.semibold }}>{r.name}</td>
                         <td style={tdStyle}><Tag variant={phaseToVariant(r.phase)}>{r.phase}</Tag></td>
-                        <td style={tdStyle}>
-                          <ResourceLink
-                            onClick={() => navigateSPA(resourceNodeUrl(appNamespace, appName, 'velero.io', 'Backup', r.namespace, r.backupName))}
-                            title={`Open ${r.backupName}`}
-                          >
-                            {r.backupName}
-                          </ResourceLink>
-                        </td>
+                        <td style={tdStyle}>{r.backupName}</td>
                         <td style={tdStyle}>{timeAgo(r.startTimestamp)}</td>
                         <td style={tdStyle}>{duration(r.startTimestamp, r.completionTimestamp)}</td>
                         <td style={tdStyle}>
@@ -394,8 +610,11 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
                             <span>{r.itemsRestored}/{r.totalItems}</span>
                           )}
                         </td>
-                        <td style={{ ...tdStyle, color: r.errors > 0 ? colors.redText : colors.gray400 }}>{r.errors}</td>
-                        <td style={{ ...tdStyle, color: r.warnings > 0 ? colors.yellowText : colors.gray400 }}>{r.warnings}</td>
+                        <td style={tdStyle}>
+                          {r.errors > 0 && <Tag variant="red">{r.errors} err</Tag>}
+                          {r.warnings > 0 && <Tag variant="gray">{r.warnings} warn</Tag>}
+                          {r.errors === 0 && r.warnings === 0 && <span style={{ color: colors.gray400 }}>-</span>}
+                        </td>
                       </tr>
                     );
                   })}
@@ -410,7 +629,7 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
 };
 
 // ============================================================
-// Styles (matching networking extension pattern)
+// Styles
 // ============================================================
 
 const rootStyle: React.CSSProperties = { ...panel, overflow: 'hidden', maxWidth: '100%', display: 'flex', flexDirection: 'column', height: '100%' };
@@ -426,4 +645,12 @@ const tableWrap: React.CSSProperties = { overflowX: 'auto' };
 const tableStyle: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', borderSpacing: 0 };
 const thStyle: React.CSSProperties = { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: '0.5px', color: colors.gray500, padding: `${spacing[2]}px ${spacing[2]}px`, borderBottom: `2px solid ${colors.gray200}`, textAlign: 'left', whiteSpace: 'nowrap' };
 const tdStyle: React.CSSProperties = { fontSize: fontSize.sm, padding: `${spacing[1]}px ${spacing[2]}px`, borderBottom: `1px solid ${colors.gray100}`, fontFamily: fonts.mono, whiteSpace: 'nowrap' };
-const linkStyle: React.CSSProperties = { fontFamily: fonts.mono, fontSize: fontSize.sm, color: colors.blueText, cursor: 'pointer', borderBottom: `1px dotted ${colors.blueText}` };
+const panelBox: React.CSSProperties = { margin: `${spacing[3]}px 0`, padding: spacing[4], border: `1px solid ${colors.gray200}`, borderRadius: 4, background: colors.white };
+const chevron = (expanded: boolean): React.CSSProperties => ({
+  display: 'inline-block', width: 0, height: 0, flexShrink: 0,
+  borderLeft: expanded ? '4px solid transparent' : `5px solid ${colors.gray400}`,
+  borderRight: expanded ? '4px solid transparent' : 'none',
+  borderTop: expanded ? `5px solid ${colors.gray400}` : '4px solid transparent',
+  borderBottom: expanded ? 'none' : '4px solid transparent',
+  marginRight: 2,
+});
