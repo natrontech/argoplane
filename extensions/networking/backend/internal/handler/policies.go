@@ -176,14 +176,143 @@ func ParsePolicySummary(obj unstructured.Unstructured) types.PolicySummary {
 	if ingress, ok, _ := unstructured.NestedSlice(spec, "ingress"); ok {
 		ps.HasIngress = true
 		ps.IngressRuleCount = len(ingress)
+		ps.IngressRules = parseRules(ingress, "from")
 	}
 
 	if egress, ok, _ := unstructured.NestedSlice(spec, "egress"); ok {
 		ps.HasEgress = true
 		ps.EgressRuleCount = len(egress)
+		ps.EgressRules = parseRules(egress, "to")
 	}
 
 	return ps
+}
+
+// parseRules extracts PolicyRule slices from unstructured ingress or egress rule lists.
+// direction is "from" for ingress rules and "to" for egress rules.
+func parseRules(rules []interface{}, direction string) []types.PolicyRule {
+	result := make([]types.PolicyRule, 0, len(rules))
+	for _, raw := range rules {
+		ruleMap, ok := raw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		peers := parsePeers(ruleMap, direction)
+		if len(peers) == 0 {
+			peers = []string{"any"}
+		}
+
+		ports := parsePorts(ruleMap)
+		if len(ports) == 0 {
+			ports = []string{"any"}
+		}
+
+		result = append(result, types.PolicyRule{
+			Peers: peers,
+			Ports: ports,
+		})
+	}
+	return result
+}
+
+// parsePeers extracts peer descriptions from a rule map.
+func parsePeers(ruleMap map[string]interface{}, direction string) []string {
+	var peers []string
+
+	// Endpoints: fromEndpoints / toEndpoints
+	endpointsKey := direction + "Endpoints"
+	if eps, ok := ruleMap[endpointsKey].([]interface{}); ok {
+		for _, ep := range eps {
+			epMap, ok := ep.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			if ml, ok := epMap["matchLabels"].(map[string]interface{}); ok {
+				var labels []string
+				for k, v := range ml {
+					labels = append(labels, fmt.Sprintf("%s=%v", k, v))
+				}
+				if len(labels) > 0 {
+					peers = append(peers, strings.Join(labels, ", "))
+				}
+			}
+		}
+	}
+
+	// CIDR: fromCIDR / toCIDR
+	cidrKey := direction + "CIDR"
+	if cidrs, ok := ruleMap[cidrKey].([]interface{}); ok {
+		for _, c := range cidrs {
+			if s, ok := c.(string); ok {
+				peers = append(peers, s)
+			}
+		}
+	}
+
+	// Entities: fromEntities / toEntities
+	entitiesKey := direction + "Entities"
+	if entities, ok := ruleMap[entitiesKey].([]interface{}); ok {
+		for _, e := range entities {
+			if s, ok := e.(string); ok {
+				peers = append(peers, s)
+			}
+		}
+	}
+
+	// FQDNs: toFQDNs (egress only, but parse defensively)
+	if fqdns, ok := ruleMap["toFQDNs"].([]interface{}); ok {
+		for _, f := range fqdns {
+			fMap, ok := f.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			if name, ok := fMap["matchName"].(string); ok && name != "" {
+				peers = append(peers, name)
+			} else if pattern, ok := fMap["matchPattern"].(string); ok && pattern != "" {
+				peers = append(peers, pattern)
+			}
+		}
+	}
+
+	return peers
+}
+
+// parsePorts extracts port descriptions from a rule map's toPorts field.
+func parsePorts(ruleMap map[string]interface{}) []string {
+	var ports []string
+
+	toPorts, ok := ruleMap["toPorts"].([]interface{})
+	if !ok {
+		return nil
+	}
+
+	for _, tp := range toPorts {
+		tpMap, ok := tp.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		portList, ok := tpMap["ports"].([]interface{})
+		if !ok {
+			continue
+		}
+		for _, p := range portList {
+			pMap, ok := p.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			port, _ := pMap["port"].(string)
+			protocol, _ := pMap["protocol"].(string)
+			if protocol == "" {
+				protocol = "TCP"
+			}
+			if port != "" {
+				ports = append(ports, protocol+":"+port)
+			}
+		}
+	}
+
+	return ports
 }
 
 func resourceKey(kind, namespace, name string) string {

@@ -25,6 +25,12 @@ var (
 	}
 )
 
+// PolicyRule describes a single ingress or egress rule in human-readable form.
+type PolicyRule struct {
+	Peers []string `json:"peers"` // e.g., "app=frontend", "10.0.0.0/8", "world", "*.google.com"
+	Ports []string `json:"ports"` // e.g., "TCP:80", "UDP:53", "any"
+}
+
 // PolicySummary is the JSON response for a network policy.
 type PolicySummary struct {
 	Name              string            `json:"name"`
@@ -35,6 +41,8 @@ type PolicySummary struct {
 	HasEgress         bool              `json:"hasEgress"`
 	IngressRuleCount  int               `json:"ingressRuleCount"`
 	EgressRuleCount   int               `json:"egressRuleCount"`
+	IngressRules      []PolicyRule      `json:"ingressRules,omitempty"`
+	EgressRules       []PolicyRule      `json:"egressRules,omitempty"`
 	Labels            map[string]string `json:"labels,omitempty"`
 	CreationTimestamp string            `json:"creationTimestamp"`
 	Ownership         string            `json:"ownership"` // "app" or "platform"

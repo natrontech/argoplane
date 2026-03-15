@@ -1,3 +1,8 @@
+export interface PolicyRule {
+  peers: string[];
+  ports: string[];
+}
+
 export interface PolicySummary {
   name: string;
   namespace?: string;
@@ -7,6 +12,8 @@ export interface PolicySummary {
   hasEgress: boolean;
   ingressRuleCount: number;
   egressRuleCount: number;
+  ingressRules?: PolicyRule[];
+  egressRules?: PolicyRule[];
   labels?: Record<string, string>;
   creationTimestamp: string;
   ownership: 'app' | 'platform';
