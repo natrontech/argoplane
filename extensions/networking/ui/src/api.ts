@@ -30,6 +30,36 @@ export interface IdentitySummary {
   labels: Record<string, string>;
 }
 
+export interface FlowSummary {
+  time: string;
+  verdict: string;
+  direction: string;
+  sourceNamespace: string;
+  sourcePod: string;
+  sourceIP?: string;
+  destNamespace: string;
+  destPod: string;
+  destIP?: string;
+  destDNS?: string;
+  protocol: string;
+  destPort: number;
+  dropReason?: string;
+  summary: string;
+  isReply: boolean;
+}
+
+export interface FlowsResponse {
+  flows: FlowSummary[];
+  hubble: boolean;
+  message?: string;
+  summary?: {
+    total: number;
+    forwarded: number;
+    dropped: number;
+    error: number;
+  };
+}
+
 function headers(appNamespace: string, appName: string, project: string) {
   return {
     'Argocd-Application-Name': `${appNamespace}:${appName}`,
@@ -91,6 +121,25 @@ export async function fetchIdentities(
 ): Promise<IdentitySummary[]> {
   const params = new URLSearchParams({ namespace });
   const response = await fetch(`/extensions/networking/api/v1/identities?${params}`, {
+    headers: headers(appNamespace, appName, project),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchFlows(
+  namespace: string,
+  appNamespace: string,
+  appName: string,
+  project: string,
+  since: string = '5m',
+  limit: number = 100,
+  verdict: string = 'all'
+): Promise<FlowsResponse> {
+  const params = new URLSearchParams({ namespace, since, limit: String(limit), verdict });
+  const response = await fetch(`/extensions/networking/api/v1/flows?${params}`, {
     headers: headers(appNamespace, appName, project),
   });
   if (!response.ok) {
