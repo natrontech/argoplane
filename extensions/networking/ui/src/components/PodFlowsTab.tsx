@@ -28,12 +28,10 @@ import {
 // ArgoCD resource linking
 // ============================================================
 
-function podUrl(appNs: string, appName: string, podNs: string, podName: string, tab?: string): string {
+function podUrl(appNs: string, appName: string, podNs: string, podName: string): string {
   const nodeKey = `/Pod/${podNs}/${podName}/0`;
   const base = `/applications/${appNs}/${appName}`;
-  const params = new URLSearchParams({ node: nodeKey });
-  if (tab) params.set('tab', tab);
-  return `${base}?${params.toString()}`;
+  return `${base}?${new URLSearchParams({ node: nodeKey }).toString()}`;
 }
 
 function policyNodeUrl(appNs: string, appName: string, policy: PolicySummary): string {
@@ -267,7 +265,7 @@ export const PodFlowsTab: React.FC<{ resource: any; tree?: any; application: any
                         <td style={{ ...tdStyle, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={peerDisplay}>
                           {peerLinkable ? (
                             <a
-                              href={podUrl(appNamespace, appName, peerNs, peerPod, 'extension:Flows')}
+                              href={podUrl(appNamespace, appName, peerNs, peerPod)}
                               style={peerLinkStyle}
                               title={`Open ${peerPod} flows`}
                             >
