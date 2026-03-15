@@ -12,7 +12,7 @@ import {
   spacing,
   panel,
 } from '@argoplane/shared';
-import { fetchOverview, fetchBackups, fetchRestores, createBackup, createRestore, fetchLogs } from '../api';
+import { fetchOverview, fetchBackups, fetchRestores, createBackup, createRestore, fetchLogs, toggleSchedulePause, deleteBackup, fetchPodVolumeBackups } from '../api';
 import {
   ScheduleSummary,
   BackupSummary,
@@ -21,6 +21,7 @@ import {
   OverviewResponse,
   ResourceRef,
   RestoreOptions,
+  PodVolumeBackupSummary,
 } from '../types';
 import { LogViewer } from './LogViewer';
 
@@ -44,6 +45,13 @@ function timeAgo(iso?: string): string {
 function formatDate(iso?: string): string {
   if (!iso) return '-';
   return new Date(iso).toLocaleString();
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
 }
 
 function duration(start?: string, end?: string): string {
@@ -398,48 +406,81 @@ const RestoreConfirmPanel: React.FC<{
 const ScheduleDetail: React.FC<{
   schedule: ScheduleSummary;
   namespace: string;
+  appNamespace: string;
+  appName: string;
+  project: string;
   onTrigger: (scheduleName: string, ttl?: string) => void;
-}> = ({ schedule: s, namespace, onTrigger }) => (
-  <tr>
-    <td colSpan={7} style={{ padding: 0, borderBottom: `1px solid ${colors.gray200}` }}>
-      <div style={{ padding: `${spacing[3]}px ${spacing[4]}px`, background: colors.gray50 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: `${spacing[1]}px ${spacing[6]}px`, maxWidth: 600 }}>
-          <KV label="Schedule" value={s.name} />
-          <KV label="Namespace" value={s.namespace} />
-          <KV label="Cron" value={s.cron} />
-          <KV label="TTL" value={s.ttl ? humanTTL(s.ttl) : '-'} />
-          <KV label="Created" value={formatDate(s.creationTimestamp)} />
-          <KV label="Status" value={s.paused ? <Tag variant="orange">Paused</Tag> : <Tag variant="green">Active</Tag>} />
-          {s.includedNamespaces && s.includedNamespaces.length > 0 && (
-            <KV label="Includes" value={s.includedNamespaces.join(', ')} />
-          )}
-          {(!s.includedNamespaces || s.includedNamespaces.length === 0) && (
-            <KV label="Includes" value={<span style={{ color: colors.gray400 }}>all namespaces</span>} />
-          )}
-          {s.excludedNamespaces && s.excludedNamespaces.length > 0 && (
-            <KV label="Excludes" value={s.excludedNamespaces.join(', ')} />
-          )}
+  onPauseToggled: () => void;
+}> = ({ schedule: s, namespace, appNamespace, appName, project, onTrigger, onPauseToggled }) => {
+  const [toggling, setToggling] = React.useState(false);
+
+  const handleTogglePause = async () => {
+    setToggling(true);
+    try {
+      await toggleSchedulePause(s.name, !s.paused, appNamespace, appName, project);
+      onPauseToggled();
+    } catch { /* banner will be shown by parent */ }
+    setToggling(false);
+  };
+
+  return (
+    <tr>
+      <td colSpan={7} style={{ padding: 0, borderBottom: `1px solid ${colors.gray200}` }}>
+        <div style={{ padding: `${spacing[3]}px ${spacing[4]}px`, background: colors.gray50 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: `${spacing[1]}px ${spacing[6]}px`, maxWidth: 600 }}>
+            <KV label="Schedule" value={s.name} />
+            <KV label="Namespace" value={s.namespace} />
+            <KV label="Cron" value={s.cron} />
+            <KV label="TTL" value={s.ttl ? humanTTL(s.ttl) : '-'} />
+            <KV label="Created" value={formatDate(s.creationTimestamp)} />
+            <KV label="Status" value={s.paused ? <Tag variant="orange">Paused</Tag> : <Tag variant="green">Active</Tag>} />
+            {s.includedNamespaces && s.includedNamespaces.length > 0 && (
+              <KV label="Includes" value={s.includedNamespaces.join(', ')} />
+            )}
+            {(!s.includedNamespaces || s.includedNamespaces.length === 0) && (
+              <KV label="Includes" value={<span style={{ color: colors.gray400 }}>all namespaces</span>} />
+            )}
+            {s.excludedNamespaces && s.excludedNamespaces.length > 0 && (
+              <KV label="Excludes" value={s.excludedNamespaces.join(', ')} />
+            )}
+          </div>
+          <div style={{ marginTop: spacing[3], display: 'flex', gap: spacing[2], alignItems: 'center', flexWrap: 'wrap' }}>
+            <Button primary onClick={() => onTrigger(s.name, s.ttl)} disabled={s.paused || s.ownership === 'platform'}>
+              Trigger Backup
+            </Button>
+            {s.ownership !== 'platform' && (
+              <Button onClick={handleTogglePause} disabled={toggling}>
+                {toggling ? 'Updating...' : s.paused ? 'Resume Schedule' : 'Pause Schedule'}
+              </Button>
+            )}
+            {s.paused && <span style={{ fontSize: fontSize.sm, color: colors.gray400 }}>Schedule is paused</span>}
+            {s.ownership === 'platform' && !s.paused && <span style={{ fontSize: fontSize.sm, color: colors.gray400 }}>Cannot trigger platform schedules (may affect other namespaces)</span>}
+          </div>
         </div>
-        <div style={{ marginTop: spacing[3] }}>
-          <Button primary onClick={() => onTrigger(s.name, s.ttl)} disabled={s.paused || s.ownership === 'platform'}>
-            Trigger Backup
-          </Button>
-          {s.paused && <span style={{ marginLeft: spacing[2], fontSize: fontSize.sm, color: colors.gray400 }}>Schedule is paused</span>}
-          {s.ownership === 'platform' && !s.paused && <span style={{ marginLeft: spacing[2], fontSize: fontSize.sm, color: colors.gray400 }}>Cannot trigger platform schedules (may affect other namespaces)</span>}
-        </div>
-      </div>
-    </td>
-  </tr>
-);
+      </td>
+    </tr>
+  );
+};
 
 // ============================================================
 // Backup Detail (expandable row)
 // ============================================================
 
-const BackupDetail: React.FC<{ backup: BackupSummary; appNamespace: string; appName: string; project: string }> = ({ backup: b, appNamespace, appName, project }) => {
+const BackupDetail: React.FC<{ backup: BackupSummary; appNamespace: string; appName: string; project: string; onDeleted: () => void }> = ({ backup: b, appNamespace, appName, project, onDeleted }) => {
   const [logsLoading, setLogsLoading] = React.useState(false);
   const [logsError, setLogsError] = React.useState<string | null>(null);
   const [logsContent, setLogsContent] = React.useState<{ title: string; text: string } | null>(null);
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
+  const [pvbs, setPvbs] = React.useState<PodVolumeBackupSummary[]>([]);
+  const [pvbsLoaded, setPvbsLoaded] = React.useState(false);
+
+  React.useEffect(() => {
+    fetchPodVolumeBackups(b.name, appNamespace, appName, project)
+      .then(setPvbs)
+      .catch(() => setPvbs([]))
+      .finally(() => setPvbsLoaded(true));
+  }, [b.name, appNamespace, appName, project]);
 
   const openLogs = async (kind: 'BackupLog' | 'BackupResults') => {
     setLogsLoading(true);
@@ -451,6 +492,16 @@ const BackupDetail: React.FC<{ backup: BackupSummary; appNamespace: string; appN
       setLogsError(`Could not fetch ${kind === 'BackupLog' ? 'logs' : 'results'}: ${err.message || 'unknown error'}. Velero DownloadRequest CRD may not be installed.`);
     }
     setLogsLoading(false);
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteBackup(b.name, appNamespace, appName, project);
+      onDeleted();
+    } catch { /* parent handles */ }
+    setDeleting(false);
+    setConfirmDelete(false);
   };
 
   return (
@@ -473,6 +524,30 @@ const BackupDetail: React.FC<{ backup: BackupSummary; appNamespace: string; appN
             {b.errors > 0 && <KV label="Errors" value={<span style={{ color: colors.redText }}>{b.errors}</span>} />}
             {b.warnings > 0 && <KV label="Warnings" value={<span style={{ color: colors.yellowText }}>{b.warnings}</span>} />}
           </div>
+
+          {/* PodVolumeBackups */}
+          {pvbsLoaded && pvbs.length > 0 && (
+            <div style={{ marginTop: spacing[3] }}>
+              <div style={{ fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.gray500, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: spacing[2] }}>
+                File-System Backups ({pvbs.length})
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing[1] }}>
+                {pvbs.map((pvb) => (
+                  <div key={pvb.name} style={{ display: 'flex', alignItems: 'center', gap: spacing[3], fontSize: fontSize.sm, fontFamily: fonts.mono, padding: `${spacing[1]}px 0` }}>
+                    <Tag variant={phaseToVariant(pvb.phase)}>{pvb.phase}</Tag>
+                    <span style={{ color: colors.gray600 }}>{pvb.podNamespace}/{pvb.podName}</span>
+                    <span style={{ color: colors.gray400 }}>vol: {pvb.volume}</span>
+                    {pvb.uploaderType && <span style={{ color: colors.gray400 }}>({pvb.uploaderType})</span>}
+                    {pvb.totalBytes > 0 && (
+                      <span style={{ color: colors.gray500 }}>{formatBytes(pvb.bytesDone)}/{formatBytes(pvb.totalBytes)}</span>
+                    )}
+                    {pvb.message && <span style={{ color: colors.redText, fontSize: fontSize.xs }}>{pvb.message}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {b.failureReason && (
             <div style={alertBox('red')}>
               <span style={{ fontWeight: fontWeight.semibold }}>Failure:</span> {b.failureReason}
@@ -487,7 +562,7 @@ const BackupDetail: React.FC<{ backup: BackupSummary; appNamespace: string; appN
             </div>
           )}
           {(b.phase === 'Completed' || b.phase === 'PartiallyFailed' || b.phase === 'Failed') && (
-            <div style={{ display: 'flex', gap: spacing[2], marginTop: spacing[3] }}>
+            <div style={{ display: 'flex', gap: spacing[2], marginTop: spacing[3], flexWrap: 'wrap' }}>
               <Button onClick={() => openLogs('BackupLog')} disabled={logsLoading}>
                 {logsLoading ? 'Loading...' : 'View Logs'}
               </Button>
@@ -495,6 +570,15 @@ const BackupDetail: React.FC<{ backup: BackupSummary; appNamespace: string; appN
                 <Button onClick={() => openLogs('BackupResults')} disabled={logsLoading}>
                   View Results
                 </Button>
+              )}
+              {!confirmDelete ? (
+                <Button danger onClick={() => setConfirmDelete(true)}>Delete Backup</Button>
+              ) : (
+                <span style={{ display: 'flex', alignItems: 'center', gap: spacing[2] }}>
+                  <span style={{ fontSize: fontSize.sm, color: colors.redText }}>Delete "{b.name}"?</span>
+                  <Button danger onClick={handleDelete} disabled={deleting}>{deleting ? 'Deleting...' : 'Confirm'}</Button>
+                  <Button onClick={() => setConfirmDelete(false)} disabled={deleting}>Cancel</Button>
+                </span>
               )}
             </div>
           )}
@@ -832,7 +916,7 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
                         </td>
                         <td style={tdStyle}>{s.backupCount}</td>
                       </tr>
-                      {expandedSchedule === s.name && <ScheduleDetail schedule={s} namespace={namespace} onTrigger={handleTriggerFromSchedule} />}
+                      {expandedSchedule === s.name && <ScheduleDetail schedule={s} namespace={namespace} appNamespace={appNamespace} appName={appName} project={project} onTrigger={handleTriggerFromSchedule} onPauseToggled={() => setTimeout(fetchAll, 1000)} />}
                     </React.Fragment>
                   ))}
                 </tbody>
@@ -905,7 +989,7 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
                             )}
                           </td>
                         </tr>
-                        {isExpanded && <BackupDetail backup={b} appNamespace={appNamespace} appName={appName} project={project} />}
+                        {isExpanded && <BackupDetail backup={b} appNamespace={appNamespace} appName={appName} project={project} onDeleted={() => { setBanner({ variant: 'success', message: `Delete request created for backup "${b.name}".` }); setTimeout(fetchAll, 2000); }} />}
                       </React.Fragment>
                     );
                   })}

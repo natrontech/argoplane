@@ -28,6 +28,21 @@ var (
 		Version:  "v1",
 		Resource: "downloadrequests",
 	}
+	PodVolumeBackupGVR = schema.GroupVersionResource{
+		Group:    "velero.io",
+		Version:  "v1",
+		Resource: "podvolumebackups",
+	}
+	PodVolumeRestoreGVR = schema.GroupVersionResource{
+		Group:    "velero.io",
+		Version:  "v1",
+		Resource: "podvolumerestores",
+	}
+	DeleteBackupRequestGVR = schema.GroupVersionResource{
+		Group:    "velero.io",
+		Version:  "v1",
+		Resource: "deletebackuprequests",
+	}
 )
 
 // ResourceRef identifies a resource from the ArgoCD resource tree.
@@ -117,6 +132,40 @@ type StorageLocationSummary struct {
 	Bucket             string `json:"bucket,omitempty"`
 	Phase              string `json:"phase"`
 	LastValidationTime string `json:"lastValidationTime,omitempty"`
+}
+
+// PodVolumeBackupSummary is the JSON response for a Velero PodVolumeBackup.
+type PodVolumeBackupSummary struct {
+	Name                string `json:"name"`
+	Namespace           string `json:"namespace"`
+	Phase               string `json:"phase"`
+	BackupName          string `json:"backupName"`
+	PodName             string `json:"podName"`
+	PodNamespace        string `json:"podNamespace"`
+	Volume              string `json:"volume"`
+	UploaderType        string `json:"uploaderType,omitempty"`
+	StartTimestamp      string `json:"startTimestamp,omitempty"`
+	CompletionTimestamp string `json:"completionTimestamp,omitempty"`
+	BytesDone           int64  `json:"bytesDone"`
+	TotalBytes          int64  `json:"totalBytes"`
+	Message             string `json:"message,omitempty"`
+}
+
+// PodVolumeRestoreSummary is the JSON response for a Velero PodVolumeRestore.
+type PodVolumeRestoreSummary struct {
+	Name                string `json:"name"`
+	Namespace           string `json:"namespace"`
+	Phase               string `json:"phase"`
+	RestoreName         string `json:"restoreName"`
+	PodName             string `json:"podName"`
+	PodNamespace        string `json:"podNamespace"`
+	Volume              string `json:"volume"`
+	UploaderType        string `json:"uploaderType,omitempty"`
+	StartTimestamp      string `json:"startTimestamp,omitempty"`
+	CompletionTimestamp string `json:"completionTimestamp,omitempty"`
+	BytesDone           int64  `json:"bytesDone"`
+	TotalBytes          int64  `json:"totalBytes"`
+	Message             string `json:"message,omitempty"`
 }
 
 // OverviewResponse is the combined response for the overview endpoint.

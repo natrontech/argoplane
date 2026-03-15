@@ -149,6 +149,52 @@ func (h *BackupsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// HandleDelete creates a DeleteBackupRequest to asynchronously delete a backup.
+func (h *BackupsHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if name == "" {
+		WriteError(w, http.StatusBadRequest, "backup name is required")
+		return
+	}
+
+	username := r.Header.Get("Argocd-Username")
+	slog.Info("deleting backup", "name", name, "user", username)
+
+	deleteReqName := fmt.Sprintf("delete-%s-%d", name, time.Now().Unix())
+
+	deleteReq := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "velero.io/v1",
+			"kind":       "DeleteBackupRequest",
+			"metadata": map[string]interface{}{
+				"name":      deleteReqName,
+				"namespace": h.veleroNamespace,
+				"labels": map[string]interface{}{
+					"argoplane.io/triggered-by": username,
+				},
+			},
+			"spec": map[string]interface{}{
+				"backupName": name,
+			},
+		},
+	}
+
+	created, err := h.client.Resource(types.DeleteBackupRequestGVR).Namespace(h.veleroNamespace).Create(r.Context(), deleteReq, metav1.CreateOptions{})
+	if err != nil {
+		slog.Error("failed to create delete backup request", "error", err, "name", name)
+		WriteError(w, http.StatusInternalServerError, "failed to delete backup")
+		return
+	}
+
+	slog.Info("delete backup request created", "name", created.GetName(), "backup", name)
+	w.WriteHeader(http.StatusAccepted)
+	WriteJSON(w, map[string]string{
+		"name":    created.GetName(),
+		"status":  "accepted",
+		"message": fmt.Sprintf("Delete request created for backup %s", name),
+	})
+}
+
 // includesNamespace returns true if the backup's included namespaces list
 // is empty (all namespaces) or contains the target namespace.
 func includesNamespace(included []string, namespace string) bool {

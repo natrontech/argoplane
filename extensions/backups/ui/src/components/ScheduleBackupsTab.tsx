@@ -12,7 +12,7 @@ import {
   spacing,
   panel,
 } from '@argoplane/shared';
-import { fetchBackups, createBackup } from '../api';
+import { fetchBackups, createBackup, toggleSchedulePause } from '../api';
 import { BackupSummary } from '../types';
 
 // ============================================================
@@ -80,11 +80,13 @@ export const ScheduleBackupsTab: React.FC<{ resource: any; tree?: any; applicati
   const [loading, setLoading] = React.useState(true);
   const [triggering, setTriggering] = React.useState(false);
   const [triggerError, setTriggerError] = React.useState<string | null>(null);
+  const [toggling, setToggling] = React.useState(false);
+  const [currentPaused, setCurrentPaused] = React.useState(resource?.spec?.paused || false);
 
   const scheduleName = resource?.metadata?.name || '';
   const cron = resource?.spec?.schedule || '-';
   const ttl = resource?.spec?.template?.ttl || resource?.spec?.ttl || '-';
-  const paused = resource?.spec?.paused || false;
+  const paused = currentPaused;
   const includedNs = resource?.spec?.template?.includedNamespaces || resource?.spec?.includedNamespaces || [];
   const excludedNs = resource?.spec?.template?.excludedNamespaces || resource?.spec?.excludedNamespaces || [];
 
@@ -105,6 +107,19 @@ export const ScheduleBackupsTab: React.FC<{ resource: any; tree?: any; applicati
 
   React.useEffect(() => { setLoading(true); loadBackups(); }, [loadBackups]);
   React.useEffect(() => { const i = setInterval(loadBackups, REFRESH_INTERVAL); return () => clearInterval(i); }, [loadBackups]);
+
+  const handleTogglePause = React.useCallback(async () => {
+    setToggling(true);
+    setTriggerError(null);
+    try {
+      await toggleSchedulePause(scheduleName, !currentPaused, appNamespace, appName, project);
+      setCurrentPaused(!currentPaused);
+    } catch (err: any) {
+      setTriggerError(`Failed to ${currentPaused ? 'resume' : 'pause'} schedule: ${err.message || 'unknown error'}`);
+    } finally {
+      setToggling(false);
+    }
+  }, [scheduleName, currentPaused, appNamespace, appName, project]);
 
   const handleTriggerBackup = React.useCallback(async () => {
     setTriggering(true);
@@ -140,6 +155,11 @@ export const ScheduleBackupsTab: React.FC<{ resource: any; tree?: any; applicati
                 <Button primary onClick={handleTriggerBackup} disabled={triggering || paused || isPlatformLike}>
                   {triggering ? 'Triggering...' : 'Trigger Backup'}
                 </Button>
+                {!isPlatformLike && (
+                  <Button onClick={handleTogglePause} disabled={toggling}>
+                    {toggling ? 'Updating...' : paused ? 'Resume Schedule' : 'Pause Schedule'}
+                  </Button>
+                )}
                 {paused && <span style={{ marginLeft: spacing[2], fontSize: fontSize.sm, color: colors.gray400 }}>Schedule is paused</span>}
                 {isPlatformLike && !paused && <span style={{ marginLeft: spacing[2], fontSize: fontSize.sm, color: colors.gray400 }}>Cannot trigger: schedule covers {includedNs.length === 0 ? 'all namespaces' : 'multiple namespaces'}</span>}
               </>
