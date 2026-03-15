@@ -380,11 +380,13 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
                     {(pageFlows as AggregatedFlow[]).map((a) => {
                       const srcDisplay = a.sourcePod || a.sourceIP || 'unknown';
                       const dstDisplay = a.destPod || a.destDNS || a.destIP || 'unknown';
+                      const srcLinkable = a.sourcePod && isPodInTree(a.sourceNamespace, a.sourcePod);
+                      const dstLinkable = a.destPod && isPodInTree(a.destNamespace, a.destPod);
                       const hasDrop = a.dropped > 0;
                       return (
                         <tr key={a.key} style={hasDrop ? dropRowStyle : undefined}>
-                          <td style={ellipsisTd}><Filterable value={srcDisplay} onFilter={applyFilter} /></td>
-                          <td style={ellipsisTd}><Filterable value={dstDisplay} onFilter={applyFilter} /></td>
+                          <td style={ellipsisTd}>{srcLinkable ? <ResourceLink onClick={() => openPod(appNamespace, appName, a.sourceNamespace, a.sourcePod)} title={`Open ${a.sourcePod}`}>{srcDisplay}</ResourceLink> : <Filterable value={srcDisplay} onFilter={applyFilter} />}</td>
+                          <td style={ellipsisTd}>{dstLinkable ? <ResourceLink onClick={() => openPod(appNamespace, appName, a.destNamespace, a.destPod)} title={`Open ${a.destPod}`}>{dstDisplay}</ResourceLink> : <Filterable value={dstDisplay} onFilter={applyFilter} />}</td>
                           <td style={tdStyle}><Filterable value={a.protocol} onFilter={applyFilter} /></td>
                           <td style={tdStyle}>{a.destPort || '-'}</td>
                           <td style={{ ...tdStyle, color: colors.greenText }}>{a.forwarded}</td>
