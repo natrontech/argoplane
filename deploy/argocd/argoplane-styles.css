@@ -623,17 +623,7 @@ textarea.argo-textarea {
 }
 
 /* --- Checkboxes & radios ---
-   Keep native behavior intact. Only apply accent color and sizing
-   so they match the ArgoPlane palette without breaking click handling. */
-input[type="checkbox"],
-input[type="radio"] {
-  accent-color: var(--ap-orange-500) !important;
-  cursor: pointer !important;
-  width: 16px !important;
-  height: 16px !important;
-  margin: 4px 6px 4px 0 !important;
-  vertical-align: middle !important;
-}
+   Leave completely untouched. ArgoCD handles its own checkbox UI. */
 
 /* --- Toggle switches --- */
 .argo-field .toggle-button,
