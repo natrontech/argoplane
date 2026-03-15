@@ -35,17 +35,15 @@ function resourceNodeUrl(
   kind: string,
   namespace: string,
   name: string,
-  tab?: string,
 ): string {
   const nodeKey = `${group}/${kind}/${namespace}/${name}/0`;
   const base = `/applications/${appNamespace}/${appName}`;
   const params = new URLSearchParams({ node: nodeKey });
-  if (tab) params.set('tab', tab);
   return `${base}?${params.toString()}`;
 }
 
-function podUrl(appNs: string, appName: string, podNamespace: string, podName: string, tab?: string): string {
-  return resourceNodeUrl(appNs, appName, '', 'Pod', podNamespace, podName, tab);
+function podUrl(appNs: string, appName: string, podNamespace: string, podName: string): string {
+  return resourceNodeUrl(appNs, appName, '', 'Pod', podNamespace, podName);
 }
 
 function policyUrl(appNs: string, appName: string, policy: PolicySummary): string {
@@ -531,7 +529,7 @@ const FlowRow: React.FC<{
       <td style={ellipsisTd} title={srcDisplay}>
         {srcLinkable ? (
           <ResourceLink
-            href={podUrl(appNamespace, appName, f.sourceNamespace, f.sourcePod, 'extension:Flows')}
+            href={podUrl(appNamespace, appName, f.sourceNamespace, f.sourcePod)}
             title={`Open ${f.sourcePod} flows`}
           >
             {srcDisplay}
@@ -541,7 +539,7 @@ const FlowRow: React.FC<{
       <td style={ellipsisTd} title={dstDisplay}>
         {dstLinkable ? (
           <ResourceLink
-            href={podUrl(appNamespace, appName, f.destNamespace, f.destPod, 'extension:Flows')}
+            href={podUrl(appNamespace, appName, f.destNamespace, f.destPod)}
             title={`Open ${f.destPod} flows`}
           >
             {dstDisplay}
