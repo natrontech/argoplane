@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ARGOCD_NS="${ARGOCD_NS:-argocd}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 log() { echo "==> $*"; }
 
@@ -16,16 +18,47 @@ kubectl -n "${ARGOCD_NS}" patch configmap argocd-cmd-params-cm --type merge \
         --from-literal=server.insecure=true \
         --from-literal=server.enable.proxy.extension=true
 
-# Dev-friendly settings (merge into existing argocd-cm)
+# Dev-friendly settings + custom CSS URL (merge into existing argocd-cm)
 # Note: ArgoCD v3 uses annotation-based tracking by default (no instanceLabelKey needed)
 kubectl -n "${ARGOCD_NS}" patch configmap argocd-cm --type merge \
-    -p '{"data":{"exec.enabled":"true","statusbadge.enabled":"true"}}' \
+    -p '{"data":{"exec.enabled":"true","statusbadge.enabled":"true","ui.cssurl":"./custom/argoplane.css"}}' \
     2>/dev/null || \
     kubectl -n "${ARGOCD_NS}" create configmap argocd-cm \
         --from-literal=exec.enabled=true \
-        --from-literal=statusbadge.enabled=true
+        --from-literal=statusbadge.enabled=true \
+        --from-literal=ui.cssurl=./custom/argoplane.css
 
-# Restart argocd-server to pick up ConfigMap changes
+# Create ConfigMap from the ArgoPlane custom stylesheet
+log "Installing ArgoPlane custom styles"
+kubectl -n "${ARGOCD_NS}" create configmap argocd-styles-cm \
+    --from-file=argoplane.css="${PROJECT_ROOT}/deploy/argocd/argoplane-styles.css" \
+    --dry-run=client -o yaml | kubectl apply -f -
+
+# Patch argocd-server to mount the custom styles volume
+# This is idempotent: if the volume already exists, the patch is a no-op
+log "Mounting custom styles into argocd-server"
+kubectl -n "${ARGOCD_NS}" patch deployment argocd-server --type json -p '[
+  {
+    "op": "add",
+    "path": "/spec/template/spec/volumes/-",
+    "value": {
+      "name": "custom-styles",
+      "configMap": {
+        "name": "argocd-styles-cm"
+      }
+    }
+  },
+  {
+    "op": "add",
+    "path": "/spec/template/spec/containers/0/volumeMounts/-",
+    "value": {
+      "name": "custom-styles",
+      "mountPath": "/shared/app/custom"
+    }
+  }
+]' 2>/dev/null || log "Custom styles volume already mounted"
+
+# Restart argocd-server to pick up all changes
 kubectl -n "${ARGOCD_NS}" rollout restart deployment argocd-server
 kubectl -n "${ARGOCD_NS}" rollout status deployment argocd-server --timeout=180s
 
@@ -34,7 +67,7 @@ ADMIN_PASSWORD=$(kubectl -n "${ARGOCD_NS}" get secret argocd-initial-admin-secre
     -o jsonpath="{.data.password}" 2>/dev/null | base64 -d) || true
 
 if [ -n "${ADMIN_PASSWORD}" ]; then
-    log "ArgoCD configured for local development"
+    log "ArgoCD configured with ArgoPlane styles"
     log "Username: admin"
     log "Password: ${ADMIN_PASSWORD}"
     log "Run 'make argocd-portforward' to access the UI"

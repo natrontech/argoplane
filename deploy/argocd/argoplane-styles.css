@@ -1,0 +1,183 @@
+/* ================================================================
+   ArgoPlane Custom Styles for ArgoCD v3
+   Applied via ui.cssurl in argocd-cm ConfigMap
+   ================================================================ */
+
+/* --- Design tokens as CSS variables --- */
+:root {
+  --ap-orange-50:  #FFF7ED;
+  --ap-orange-100: #FFEDD5;
+  --ap-orange-200: #FDDCB0;
+  --ap-orange-300: #F5C28B;
+  --ap-orange-400: #F0A868;
+  --ap-orange-500: #E8935A;
+  --ap-orange-600: #D47A42;
+
+  --ap-gray-50:  #FAFAF9;
+  --ap-gray-100: #F5F5F4;
+  --ap-gray-200: #E7E5E4;
+  --ap-gray-300: #D6D3D1;
+  --ap-gray-400: #A8A29E;
+  --ap-gray-500: #78716C;
+  --ap-gray-600: #57534E;
+  --ap-gray-700: #44403C;
+  --ap-gray-800: #292524;
+  --ap-gray-900: #1C1917;
+
+  --ap-green-solid: #86EFAC;
+  --ap-red-solid:   #FCA5A5;
+  --ap-yellow-solid:#FDE047;
+  --ap-blue-solid:  #7DD3FC;
+
+  --ap-font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  --ap-radius-sm: 2px;
+  --ap-radius-md: 4px;
+}
+
+/* --- Sidebar: warm dark with orange accent --- */
+.sidebar {
+  background: var(--ap-gray-900) !important;
+}
+
+.sidebar__nav-item--active {
+  background: var(--ap-gray-800) !important;
+  border-left: 3px solid var(--ap-orange-500) !important;
+}
+
+.sidebar__nav-item:hover {
+  background: var(--ap-gray-800) !important;
+}
+
+.sidebar__version {
+  color: var(--ap-gray-500) !important;
+  font-family: var(--ap-font-mono) !important;
+  font-size: 11px !important;
+}
+
+/* --- Top bar / header accents --- */
+.argo-button--base {
+  border-radius: var(--ap-radius-sm) !important;
+}
+
+/* --- Application tiles: crisp borders, no shadows --- */
+.applications-list__entry {
+  border: 1px solid var(--ap-gray-200) !important;
+  border-radius: var(--ap-radius-md) !important;
+  box-shadow: none !important;
+}
+
+.applications-list__entry:hover {
+  border-color: var(--ap-orange-300) !important;
+  box-shadow: none !important;
+}
+
+/* Health status accents on app tiles */
+.applications-list__entry--health-Healthy {
+  border-left: 3px solid var(--ap-green-solid) !important;
+}
+
+.applications-list__entry--health-Degraded {
+  border-left: 3px solid var(--ap-yellow-solid) !important;
+}
+
+.applications-list__entry--health-Progressing {
+  border-left: 3px solid var(--ap-blue-solid) !important;
+}
+
+.applications-list__entry--health-Suspended,
+.applications-list__entry--health-Unknown,
+.applications-list__entry--health-Missing {
+  border-left: 3px solid var(--ap-gray-300) !important;
+}
+
+/* --- Login page: orange accent --- */
+.login {
+  background: var(--ap-gray-50) !important;
+}
+
+.login__box {
+  border: 1px solid var(--ap-gray-200) !important;
+  border-radius: var(--ap-radius-md) !important;
+  box-shadow: none !important;
+}
+
+.login .argo-button--base-o {
+  background: var(--ap-orange-500) !important;
+  border-color: var(--ap-orange-600) !important;
+  color: white !important;
+  border-radius: var(--ap-radius-sm) !important;
+}
+
+.login .argo-button--base-o:hover {
+  background: var(--ap-orange-600) !important;
+}
+
+/* --- Data presentation: monospace for values --- */
+.application-details__header .application-status-panel__item-value,
+.application-details__header code,
+pre, code {
+  font-family: var(--ap-font-mono) !important;
+}
+
+/* --- Status indicators: crisp squares instead of circles --- */
+.application-status-panel__item .fa-circle,
+.application-status-panel__item .fa-heart,
+.health-status-icon {
+  border-radius: var(--ap-radius-sm) !important;
+}
+
+/* --- Buttons: ArgoPlane orange for primary actions --- */
+.argo-button--base {
+  transition: background 100ms ease, border-color 100ms ease !important;
+}
+
+/* --- Dark theme overrides --- */
+.theme-dark .sidebar {
+  background: var(--ap-gray-900) !important;
+}
+
+.theme-dark .applications-list__entry {
+  border-color: var(--ap-gray-700) !important;
+  background: var(--ap-gray-800) !important;
+}
+
+.theme-dark .applications-list__entry:hover {
+  border-color: var(--ap-orange-400) !important;
+}
+
+.theme-dark .login {
+  background: var(--ap-gray-900) !important;
+}
+
+.theme-dark .login__box {
+  border-color: var(--ap-gray-700) !important;
+  background: var(--ap-gray-800) !important;
+}
+
+/* --- General polish --- */
+* {
+  box-shadow: none !important;
+}
+
+.argo-table-list .argo-table-list__row {
+  border-bottom: 1px solid var(--ap-gray-100) !important;
+}
+
+/* Crisp, flat scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ap-gray-300);
+  border-radius: var(--ap-radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ap-gray-400);
+}

@@ -131,19 +131,19 @@ export const NetworkingPanel: React.FC<ExtensionProps> = ({ resource, applicatio
                 <Cell>{ep.identityId || '-'}</Cell>
                 <Cell mono={false}>
                   <StatusBadge
-                    status={ep.ingressEnforcement === 'true' ? 'healthy' : 'warning'}
+                    status={ep.ingressEnforcement === 'true' ? 'healthy' : 'degraded'}
                     label={ep.ingressEnforcement === 'true' ? 'enforced' : 'none'}
                   />
                 </Cell>
                 <Cell mono={false}>
                   <StatusBadge
-                    status={ep.egressEnforcement === 'true' ? 'healthy' : 'warning'}
+                    status={ep.egressEnforcement === 'true' ? 'healthy' : 'degraded'}
                     label={ep.egressEnforcement === 'true' ? 'enforced' : 'none'}
                   />
                 </Cell>
                 <Cell mono={false}>
                   <StatusBadge
-                    status={ep.state === 'ready' ? 'healthy' : ep.state === 'disconnected' ? 'failed' : 'progressing'}
+                    status={ep.state === 'ready' ? 'healthy' : ep.state === 'disconnected' ? 'failed' : 'in-progress'}
                     label={ep.state || 'unknown'}
                   />
                 </Cell>
