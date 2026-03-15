@@ -45,9 +45,11 @@ export function fetchAppMetrics(
 
 export function fetchPodBreakdown(
   namespace: string, name: string, kind: string,
-  appNamespace: string, appName: string, project: string
+  appNamespace: string, appName: string, project: string,
+  pods?: string[]
 ): Promise<PodMetric[]> {
   const params = new URLSearchParams({ namespace, name, kind });
+  if (pods && pods.length > 0) params.set('pods', pods.join(','));
   return jsonFetch(`/extensions/metrics/api/v1/pod-breakdown?${params}`, argoHeaders(appNamespace, appName, project));
 }
 
