@@ -1,0 +1,6 @@
+{
+  "data": {
+    "extension.config.metrics": "services:\n- url: http://argoplane-metrics-backend.argocd.svc:8080\n",
+    "extension.config.backups": "services:\n- url: http://argoplane-backups-backend.argocd.svc:8081\n"
+  }
+}

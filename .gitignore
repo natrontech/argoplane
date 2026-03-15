@@ -1,0 +1,51 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# Frontend
+node_modules/
+dist/
+.output/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Secrets
+*.pem
+*.key
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated
+*.gen.go
+
+# Build
+bin/
+tmp/
+
+# Kind
+kubeconfig-*.yaml
+
+# Extension build artifacts
+extensions/*/ui/dist/
+extensions/*/ui/node_modules/
+
+# Internal docs (not for public repo)
+docs/internal/

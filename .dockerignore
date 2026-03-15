@@ -1,0 +1,13 @@
+.git
+.github
+.claude
+tmp
+tests
+docs
+hack
+deploy
+*.md
+LICENSE
+Makefile
+node_modules
+dist
