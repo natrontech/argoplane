@@ -4,6 +4,10 @@
 	import Sidebar from '$lib/components/docs/Sidebar.svelte';
 	import TableOfContents from '$lib/components/docs/TableOfContents.svelte';
 	import PrevNext from '$lib/components/docs/PrevNext.svelte';
+	import PageMeta from '$lib/components/docs/PageMeta.svelte';
+	import Breadcrumbs from '$lib/components/docs/Breadcrumbs.svelte';
+	import BackToTop from '$lib/components/docs/BackToTop.svelte';
+	import ReadingTime from '$lib/components/docs/ReadingTime.svelte';
 	import type { Snippet } from 'svelte';
 	import { browser } from '$app/environment';
 	import { afterNavigate } from '$app/navigation';
@@ -11,10 +15,18 @@
 	let { children }: { children: Snippet } = $props();
 
 	let sidebarOpen = $state(false);
+	let sidebarCollapsed = $state(false);
 	let isDark = $state(false);
 
 	function toggleSidebar() {
 		sidebarOpen = !sidebarOpen;
+	}
+
+	function toggleSidebarCollapse() {
+		sidebarCollapsed = !sidebarCollapsed;
+		if (browser) {
+			localStorage.setItem('sidebar-collapsed', sidebarCollapsed ? '1' : '0');
+		}
 	}
 
 	function toggleTheme() {
@@ -31,6 +43,7 @@
 			const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 			isDark = stored === 'dark' || (!stored && prefersDark);
 			document.documentElement.classList.toggle('dark', isDark);
+			sidebarCollapsed = localStorage.getItem('sidebar-collapsed') === '1';
 		}
 	});
 
@@ -100,17 +113,23 @@
 </script>
 
 <div class="min-h-screen bg-white dark:bg-gray-900">
-	<Header onToggleSidebar={toggleSidebar} onToggleTheme={toggleTheme} {isDark} />
-	<Sidebar isOpen={sidebarOpen} />
+	<Header onToggleSidebar={toggleSidebar} onToggleSidebarCollapse={toggleSidebarCollapse} onToggleTheme={toggleTheme} {isDark} {sidebarCollapsed} />
+	<Sidebar isOpen={sidebarOpen} sidebarHidden={sidebarCollapsed} />
 
-	<main class="pt-12 lg:pl-60 xl:pr-50">
+	<main class="pt-12 xl:pr-50 {sidebarCollapsed ? '' : 'lg:pl-60'}" style="transition: padding-left 150ms;">
 		<div class="mx-auto max-w-3xl overflow-hidden px-6 py-8">
+			<Breadcrumbs />
+			<div class="mb-2 flex items-center gap-3">
+				<ReadingTime />
+			</div>
 			<article class="prose min-w-0">
 				{@render children()}
 			</article>
+			<PageMeta />
 			<PrevNext />
 		</div>
 	</main>
 
 	<TableOfContents />
+	<BackToTop />
 </div>

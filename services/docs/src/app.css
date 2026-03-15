@@ -427,3 +427,24 @@ body {
 .dark .heading-anchor.copied {
   color: var(--color-success);
 }
+
+/* Pagefind search result highlighting */
+mark {
+  background: var(--color-orange-100);
+  color: var(--color-orange-600);
+  padding: 0 2px;
+  border-radius: 1px;
+}
+
+.dark mark {
+  background: color-mix(in srgb, var(--color-orange-500) 20%, var(--color-gray-800));
+  color: var(--color-orange-400);
+}
+
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
