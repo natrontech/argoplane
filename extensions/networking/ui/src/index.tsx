@@ -2,6 +2,7 @@ import * as React from 'react';
 import { AppNetworkingView } from './components/AppNetworkingView';
 import { PodFlowsTab } from './components/PodFlowsTab';
 import { PolicyFlowsTab } from './components/PolicyFlowsTab';
+import { NetworkingStatusPanel } from './components/NetworkingStatusPanel';
 
 ((window: any) => {
   // App-level networking view (flows + policies + allowed traffic)
@@ -9,6 +10,13 @@ import { PolicyFlowsTab } from './components/PolicyFlowsTab';
     AppNetworkingView,
     'Networking',
     'fa-shield-alt'
+  );
+
+  // Status panel: compact flow stats in the app header
+  window.extensionsAPI.registerStatusPanelExtension(
+    NetworkingStatusPanel,
+    'Networking',
+    'networking'
   );
 
   // Pod-level flows tab (flows affecting a specific pod)
