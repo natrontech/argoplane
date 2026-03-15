@@ -1,0 +1,79 @@
+---
+title: Community
+description: Join the ArgoPlane community
+---
+
+<script>
+  import Callout from '$lib/components/docs/Callout.svelte';
+</script>
+
+# Community
+
+ArgoPlane is built in the open. Whether you're using it, building extensions, or just curious about platform engineering with ArgoCD, you're welcome here.
+
+## Get involved
+
+### GitHub
+
+The source of truth. All development happens here.
+
+- **Repository**: [github.com/natrontech/argoplane](https://github.com/natrontech/argoplane)
+- **Issues**: bug reports, feature requests, and discussions
+- **Pull requests**: contributions welcome (see [contributing guide](/contributing))
+- **Releases**: extension bundles and backend images
+
+Star the repo if you find ArgoPlane useful. It helps others discover the project.
+
+### Discussions
+
+Use [GitHub Discussions](https://github.com/natrontech/argoplane/discussions) for:
+
+- Questions about setup and configuration
+- Extension ideas and feature requests
+- Sharing how you're using ArgoPlane
+- Platform engineering patterns with ArgoCD
+
+### Issues
+
+Found a bug? Something doesn't work as expected? [Open an issue](https://github.com/natrontech/argoplane/issues/new).
+
+Good bug reports include:
+
+- ArgoCD version and ArgoPlane extension version
+- Steps to reproduce
+- Expected vs. actual behavior
+- Logs if available (backend service logs, browser console)
+
+## Contributing
+
+ArgoPlane is AGPL-3.0 licensed. Contributions of all kinds are welcome:
+
+- **Code**: new extensions, bug fixes, performance improvements
+- **Documentation**: typo fixes, new guides, better explanations
+- **Design**: UI improvements, design system contributions
+- **Testing**: integration tests, edge case coverage
+
+See the [contributing guide](/contributing) for the full workflow.
+
+## Built with
+
+ArgoPlane stands on the shoulders of excellent open-source projects:
+
+| Project | Role in ArgoPlane |
+|---------|-------------------|
+| [ArgoCD](https://argoproj.github.io/cd/) | GitOps engine, UI host, extension system |
+| [Prometheus](https://prometheus.io/) | Metrics backend for the metrics extension |
+| [Velero](https://velero.io/) | Backup/restore for the backups extension |
+| [Cilium](https://cilium.io/) | Network policies and Hubble flows |
+| [Crossplane](https://crossplane.io/) | Platform abstractions (planned) |
+| [SvelteKit](https://svelte.dev/docs/kit) | Documentation site |
+| [Go](https://go.dev/) | Extension backend services |
+| [React](https://react.dev/) | ArgoCD UI extension framework |
+
+## Code of conduct
+
+Be kind. Be constructive. Assume good intent. We don't have a formal code of conduct document yet, but the short version: treat others the way you'd want to be treated. If someone's new, help them. If someone makes a mistake, be patient. We're all here to build good tools.
+
+<Callout type="info">
+  ArgoPlane is maintained by <a href="https://natron.io">Natron Tech AG</a>, a platform engineering company based in Switzerland. See the <a href="/about">about page</a> for more.
+</Callout>

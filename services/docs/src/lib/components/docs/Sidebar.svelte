@@ -4,7 +4,7 @@
 	import type { NavItem } from '$lib/types';
 	import { browser } from '$app/environment';
 
-	let { isOpen }: { isOpen: boolean } = $props();
+	let { isOpen, sidebarHidden = false }: { isOpen: boolean; sidebarHidden?: boolean } = $props();
 
 	let collapsed: Record<string, boolean> = $state({});
 
@@ -41,7 +41,7 @@
 </script>
 
 <aside
-	class="fixed top-12 left-0 z-40 h-[calc(100vh-48px)] w-60 overflow-y-auto border-r border-gray-200 bg-white p-4 transition-transform duration-150 dark:border-gray-700 dark:bg-gray-900 {isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0"
+	class="fixed top-12 left-0 z-40 h-[calc(100vh-48px)] w-60 overflow-y-auto border-r border-gray-200 bg-white p-4 transition-transform duration-150 dark:border-gray-700 dark:bg-gray-900 {isOpen ? 'translate-x-0' : '-translate-x-full'} {sidebarHidden ? 'lg:-translate-x-full' : 'lg:translate-x-0'}"
 >
 	<nav class="flex flex-col gap-1">
 		{#each navigation as item}

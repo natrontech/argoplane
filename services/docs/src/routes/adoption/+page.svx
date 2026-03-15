@@ -1,0 +1,96 @@
+---
+title: Adoption
+description: Why teams adopt ArgoPlane and how to evaluate it
+---
+
+<script>
+  import Callout from '$lib/components/docs/Callout.svelte';
+  import Accordion from '$lib/components/docs/Accordion.svelte';
+</script>
+
+# Adoption
+
+ArgoPlane is for platform teams that already use ArgoCD and want to make their platform capabilities visible to developers without building a separate portal.
+
+## Is ArgoPlane right for you?
+
+ArgoPlane fits well if:
+
+- Your team uses **ArgoCD** as the primary deployment tool
+- Developers lack visibility into what the platform offers (storage classes, ingress options, CRDs, operators, scheduling constraints)
+- You want observability (metrics, backups, network policies) inside ArgoCD rather than scattered across dashboards
+- You prefer extending existing tools over adopting new platforms
+- Your team is small and wants minimal day-2 operations
+
+ArgoPlane might not be the best fit if:
+
+- You don't use ArgoCD
+- You need a full developer portal with service catalogs, scorecards, and TechDocs (consider [Backstage](https://backstage.io))
+- You need a commercial platform orchestrator with opinionated workflows (consider [Humanitec](https://humanitec.com) or [Port](https://getport.io))
+
+## How ArgoPlane compares
+
+| | ArgoPlane | Backstage | Port | Humanitec |
+|---|---|---|---|---|
+| **Approach** | Extend ArgoCD | Standalone portal | SaaS portal | Platform orchestrator |
+| **UI** | Inside ArgoCD | Separate app | Separate app | Separate app |
+| **Auth** | ArgoCD RBAC | Own auth | Own auth | Own auth |
+| **State** | Stateless | PostgreSQL | SaaS | SaaS |
+| **Ops burden** | Low | High | Low (SaaS) | Low (SaaS) |
+| **Cost** | Free (AGPL-3.0) | Free (Apache-2.0) | Commercial | Commercial |
+| **Best for** | ArgoCD-native teams | Large orgs with plugin needs | Teams wanting SaaS | Opinionated platform teams |
+
+The key difference: ArgoPlane doesn't ask developers to learn a new UI or maintain a separate catalog. The cluster is the catalog. ArgoCD is the interface.
+
+## Adoption path
+
+### Phase 1: Observe
+
+Start with the **metrics** extension. Deploy it alongside your existing ArgoCD setup. Developers get CPU/memory charts on their Deployments without any workflow change.
+
+```bash
+make deploy-extensions
+```
+
+This is the lowest-risk entry point. If it's useful, continue. If not, remove it with no side effects.
+
+### Phase 2: Protect
+
+Add the **backups** extension. Developers can see Velero schedules, trigger backups, and restore from the ArgoCD UI. Platform teams get fewer "can you restore my namespace?" tickets.
+
+### Phase 3: Secure
+
+Add the **networking** extension. Developers see CiliumNetworkPolicies applied to their apps and can inspect Hubble flow logs without kubectl access.
+
+### Phase 4: Discover
+
+The upcoming **platform** extension surfaces StorageClasses, IngressClasses, GatewayClasses, CRDs, operators, and node pools. This is where ArgoPlane's "discoverability first" principle really shines: developers stop asking "what can I use?" because the answer is right there.
+
+## Rollout tips
+
+- **Start with one team.** Pick a team that's already comfortable with ArgoCD and deploy metrics for their project. Gather feedback before rolling out org-wide.
+- **Use ArgoCD RBAC.** Grant `extensions, invoke, <name>, allow` only to teams that should see each extension. Roll out incrementally.
+- **Don't deploy everything at once.** Each extension is independent. Add them one at a time as the need arises.
+- **Keep it optional.** Extensions are passive. They show information. They don't change workflows or require migration.
+
+## FAQ
+
+<Accordion title="Do I need to modify my ArgoCD installation?">
+  Minimally. You add proxy extension configuration (a ConfigMap entry), deploy backend services, and copy UI bundles into the argocd-server pod. No forks, no patches. See the <a href="/deployment">deployment guide</a>.
+</Accordion>
+
+<Accordion title="Does ArgoPlane work with ArgoCD v2?">
+  ArgoPlane targets ArgoCD v3.x. Some extensions may work with v2.x proxy extensions, but v3 is required for full functionality (system-level extensions, status panels, app view extensions).
+</Accordion>
+
+<Accordion title="Can I write my own extensions?">
+  Yes. ArgoPlane is a collection of extensions, not a framework. You can add your own following the same pattern. See the <a href="/developing">developing guide</a>.
+</Accordion>
+
+<Accordion title="What happens if an extension backend goes down?">
+  The ArgoCD UI gracefully handles missing extensions. Tabs and panels won't render, but the rest of ArgoCD works normally. No blast radius.
+</Accordion>
+
+<Accordion title="Is there a hosted/SaaS version?">
+  No. ArgoPlane runs in your cluster, next to ArgoCD. That's the point: your data stays in your infrastructure.
+</Accordion>
