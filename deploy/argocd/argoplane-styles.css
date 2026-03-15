@@ -623,76 +623,13 @@ textarea.argo-textarea {
   margin-top: 4px !important;
 }
 
-/* --- Checkboxes: pixel-art squares --- */
-input[type="checkbox"] {
-  -webkit-appearance: none !important;
-  appearance: none !important;
-  width: 16px !important;
-  height: 16px !important;
-  border: 1px solid var(--ap-gray-300) !important;
-  border-radius: 1px !important;
-  background: white !important;
-  cursor: pointer !important;
-  position: relative !important;
-  vertical-align: middle !important;
-  padding: 0 !important;
-  flex-shrink: 0 !important;
-}
-
-input[type="checkbox"]:checked {
-  background: var(--ap-orange-500) !important;
-  border-color: var(--ap-orange-600) !important;
-}
-
-/* Checkmark: pixel-style */
-input[type="checkbox"]:checked::after {
-  content: "" !important;
-  position: absolute !important;
-  left: 3px !important;
-  top: 0px !important;
-  width: 6px !important;
-  height: 10px !important;
-  border: solid white !important;
-  border-width: 0 2px 2px 0 !important;
-  transform: rotate(45deg) !important;
-}
-
-input[type="checkbox"]:disabled {
-  background: var(--ap-gray-100) !important;
-  border-color: var(--ap-gray-200) !important;
-  cursor: not-allowed !important;
-}
-
-/* --- Radio buttons: square (not circles, pixel-art) --- */
+/* --- Checkboxes & radios ---
+   ArgoCD renders its own visual checkbox/radio components alongside
+   native inputs. Hide the native input so only ArgoCD's visual shows.
+   Custom pixel-art checkboxes live in @argoplane/shared for extensions. */
+input[type="checkbox"],
 input[type="radio"] {
-  -webkit-appearance: none !important;
-  appearance: none !important;
-  width: 16px !important;
-  height: 16px !important;
-  border: 1px solid var(--ap-gray-300) !important;
-  border-radius: 1px !important;
-  background: white !important;
-  cursor: pointer !important;
-  position: relative !important;
-  vertical-align: middle !important;
-  padding: 0 !important;
-  flex-shrink: 0 !important;
-}
-
-input[type="radio"]:checked {
-  border-color: var(--ap-orange-600) !important;
-}
-
-/* Inner square for selected radio */
-input[type="radio"]:checked::after {
-  content: "" !important;
-  position: absolute !important;
-  top: 3px !important;
-  left: 3px !important;
-  width: 8px !important;
-  height: 8px !important;
-  background: var(--ap-orange-500) !important;
-  border-radius: 1px !important;
+  /* Don't restyle: ArgoCD has its own visual component */
 }
 
 /* --- Toggle switches --- */
@@ -1238,31 +1175,6 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--ap-gray-800) !important;
   color: var(--ap-gray-500) !important;
   border-color: var(--ap-gray-700) !important;
-}
-
-/* Dark checkboxes */
-.theme-dark input[type="checkbox"] {
-  background: var(--ap-gray-900) !important;
-  border-color: var(--ap-gray-600) !important;
-}
-
-.theme-dark input[type="checkbox"]:checked {
-  background: var(--ap-orange-400) !important;
-  border-color: var(--ap-orange-500) !important;
-}
-
-/* Dark radio buttons */
-.theme-dark input[type="radio"] {
-  background: var(--ap-gray-900) !important;
-  border-color: var(--ap-gray-600) !important;
-}
-
-.theme-dark input[type="radio"]:checked {
-  border-color: var(--ap-orange-500) !important;
-}
-
-.theme-dark input[type="radio"]:checked::after {
-  background: var(--ap-orange-400) !important;
 }
 
 /* Dark select arrow */

@@ -45,6 +45,7 @@ export const CustomQuery: React.FC<CustomQueryProps> = ({
   appName,
   project,
 }) => {
+  const [expanded, setExpanded] = React.useState(false);
   const [query, setQuery] = React.useState('');
   const [timeRange, setTimeRange] = React.useState<TimeRange>('1h');
   const [result, setResult] = React.useState<CustomQueryResult | null>(null);
@@ -98,17 +99,32 @@ export const CustomQuery: React.FC<CustomQueryProps> = ({
     return result.series;
   }, [result]);
 
+  if (!expanded) {
+    return (
+      <div style={{ marginBottom: spacing[4] }}>
+        <button onClick={() => setExpanded(true)} style={expandButton}>
+          Custom Query
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div>
+    <div style={container}>
       <SectionHeader
         title="QUERY"
         action={
-          <button
-            onClick={() => { setShowDiscover(!showDiscover); if (!showDiscover) doDiscover(''); }}
-            style={discoverToggle}
-          >
-            {showDiscover ? 'Hide metrics' : 'Browse metrics'}
-          </button>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              onClick={() => { setShowDiscover(!showDiscover); if (!showDiscover) doDiscover(''); }}
+              style={discoverToggle}
+            >
+              {showDiscover ? 'Hide metrics' : 'Browse metrics'}
+            </button>
+            <button onClick={() => setExpanded(false)} style={discoverToggle}>
+              Hide
+            </button>
+          </div>
         }
       />
 
@@ -208,6 +224,26 @@ export const CustomQuery: React.FC<CustomQueryProps> = ({
 };
 
 // --- Styles ---
+
+const container: React.CSSProperties = {
+  background: colors.gray50,
+  border: `1px solid ${colors.gray200}`,
+  borderRadius: radius.md,
+  padding: spacing[4],
+  marginBottom: spacing[4],
+};
+
+const expandButton: React.CSSProperties = {
+  background: colors.gray50,
+  border: `1px solid ${colors.gray200}`,
+  borderRadius: radius.sm,
+  padding: '6px 12px',
+  fontSize: fontSize.sm,
+  fontWeight: fontWeight.medium,
+  color: colors.gray600,
+  cursor: 'pointer',
+  fontFamily: fonts.mono,
+};
 
 const discoverToggle: React.CSSProperties = {
   background: 'none',
