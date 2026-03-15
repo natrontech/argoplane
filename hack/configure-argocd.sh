@@ -21,21 +21,17 @@ kubectl -n "${ARGOCD_NS}" patch configmap argocd-cmd-params-cm --type merge \
 # Dev-friendly settings + custom CSS URL (merge into existing argocd-cm)
 # Note: ArgoCD v3 uses annotation-based tracking by default (no instanceLabelKey needed)
 kubectl -n "${ARGOCD_NS}" patch configmap argocd-cm --type merge \
-    -p '{"data":{"exec.enabled":"true","statusbadge.enabled":"true","ui.cssurl":"./custom/argoplane.css","ui.bannercontent":"<script src=\"./custom/argoplane-links.js\"></script>","ui.bannerposition":"bottom","ui.bannerpermanent":"true"}}' \
+    -p '{"data":{"exec.enabled":"true","statusbadge.enabled":"true","ui.cssurl":"./custom/argoplane.css"}}' \
     2>/dev/null || \
     kubectl -n "${ARGOCD_NS}" create configmap argocd-cm \
         --from-literal=exec.enabled=true \
         --from-literal=statusbadge.enabled=true \
-        --from-literal=ui.cssurl=./custom/argoplane.css \
-        --from-literal='ui.bannercontent=<script src="./custom/argoplane-links.js"></script>' \
-        --from-literal=ui.bannerposition=bottom \
-        --from-literal=ui.bannerpermanent=true
+        --from-literal=ui.cssurl=./custom/argoplane.css
 
 # Create ConfigMap from the ArgoPlane custom stylesheet + login wallpaper
 log "Installing ArgoPlane custom styles"
 kubectl -n "${ARGOCD_NS}" create configmap argocd-styles-cm \
     --from-file=argoplane.css="${PROJECT_ROOT}/deploy/argocd/argoplane-styles.css" \
-    --from-file=argoplane-links.js="${PROJECT_ROOT}/deploy/argocd/argoplane-links.js" \
     --from-file=login-wallpaper.jpg="${PROJECT_ROOT}/deploy/argocd/login-wallpaper.jpg" \
     --dry-run=client -o yaml | kubectl apply --server-side -f -
 
@@ -104,6 +100,18 @@ kubectl -n "${ARGOCD_NS}" patch configmap argocd-rbac-cm --type merge \
 # Restart argocd-server to pick up all changes
 kubectl -n "${ARGOCD_NS}" rollout restart deployment argocd-server
 kubectl -n "${ARGOCD_NS}" rollout status deployment argocd-server --timeout=180s
+
+# Copy branding link extension into the new pod's /tmp/extensions/
+# (must happen after restart since /tmp/ is ephemeral)
+log "Installing ArgoPlane branding link extension into new pod"
+ARGOCD_POD=$(kubectl -n "${ARGOCD_NS}" get pods -l app.kubernetes.io/name=argocd-server \
+    -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+if [ -n "${ARGOCD_POD}" ]; then
+    kubectl exec -n "${ARGOCD_NS}" "${ARGOCD_POD}" -- mkdir -p /tmp/extensions 2>/dev/null || true
+    kubectl cp "${PROJECT_ROOT}/deploy/argocd/argoplane-links.js" \
+        "${ARGOCD_NS}/${ARGOCD_POD}:/tmp/extensions/extension-argoplane-links.js"
+    log "Branding link extension installed"
+fi
 
 # Print access info
 ADMIN_PASSWORD=$(kubectl -n "${ARGOCD_NS}" get secret argocd-initial-admin-secret \

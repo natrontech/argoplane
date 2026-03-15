@@ -1,5 +1,5 @@
 // ArgoPlane: Add click-to-navigate for "by ArgoPlane" branding elements
-// Injected via a <script> tag in ui.bannercontent (hidden banner)
+// Loaded as an ArgoCD UI extension from /tmp/extensions/
 (function() {
   'use strict';
   var AP_URL = 'https://argoplane.io';
@@ -12,8 +12,8 @@
         // Only open if clicking in the pseudo-element area (lower part)
         var rect = el.getBoundingClientRect();
         var relY = e.clientY - rect.top;
-        // For sidebar: ::after is at the bottom (~30px+)
-        // For login: ::before with order:99 is at the bottom
+        // For sidebar: ::after is at the bottom (~50%+)
+        // For login: ::before with order:99 is at the bottom (~60%+)
         if (pseudo === 'after' && relY > rect.height * 0.5) {
           window.open(AP_URL, '_blank', 'noopener');
         } else if (pseudo === 'before' && relY > rect.height * 0.6) {
