@@ -174,7 +174,9 @@ deploy-example: ## Deploy demo app for visual testing of all extensions
 clean-example: ## Remove demo app and namespace
 	-@kubectl delete application -n $(ARGOCD_NS) argoplane-demo 2>/dev/null || true
 	-@kubectl delete ns argoplane-demo --wait=false 2>/dev/null || true
-	-@kubectl delete schedule -n velero argoplane-demo-daily 2>/dev/null || true
+	-@kubectl delete ns other-team --wait=false 2>/dev/null || true
+	-@kubectl delete ciliumclusterwidenetworkpolicy platform-allow-dns platform-allow-health-probes 2>/dev/null || true
+	-@kubectl delete schedule -n velero argoplane-demo-daily platform-nightly-all platform-weekly-compliance 2>/dev/null || true
 
 # --- Testing ---
 
