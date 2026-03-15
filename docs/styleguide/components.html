@@ -621,6 +621,594 @@ assets/argoplane_logo_mono_light.svg # Single color, light (for dark bg)</div>
 &lt;/div&gt;</div>
       </div>
 
+      <!-- TOAST -->
+      <div class="ap-section-header ap-mt-8" id="toast"><span>TOAST / NOTIFICATION</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        Feedback for async operations. Positioned bottom-right via <code>ap-toast-container</code>.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex-col ap-gap-2">
+          <div class="ap-toast ap-toast--success" style="position: relative; animation: none;">
+            <span class="ap-toast__icon"></span>
+            <span class="ap-toast__msg">Backup triggered successfully</span>
+            <button class="ap-toast__close">&times;</button>
+          </div>
+          <div class="ap-toast ap-toast--error" style="position: relative; animation: none;">
+            <span class="ap-toast__icon"></span>
+            <span class="ap-toast__msg">Failed to connect to cluster</span>
+            <button class="ap-toast__close">&times;</button>
+          </div>
+          <div class="ap-toast ap-toast--warning" style="position: relative; animation: none;">
+            <span class="ap-toast__icon"></span>
+            <span class="ap-toast__msg">Rate limit approaching (80%)</span>
+            <button class="ap-toast__close">&times;</button>
+          </div>
+          <div class="ap-toast ap-toast--info" style="position: relative; animation: none;">
+            <span class="ap-toast__icon"></span>
+            <span class="ap-toast__msg">Sync in progress for 3 applications</span>
+            <button class="ap-toast__close">&times;</button>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-toast-container"&gt;
+  &lt;div class="ap-toast ap-toast--success"&gt;
+    &lt;span class="ap-toast__icon"&gt;&lt;/span&gt;
+    &lt;span class="ap-toast__msg"&gt;Backup triggered&lt;/span&gt;
+    &lt;button class="ap-toast__close"&gt;&amp;times;&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</div>
+      </div>
+
+      <!-- DROPDOWN -->
+      <div class="ap-section-header ap-mt-8" id="dropdown"><span>DROPDOWN MENU</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        Context menus and action menus. Use <code>ap-dropdown__menu--open</code> to show.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex ap-gap-8">
+          <div class="ap-dropdown" style="position: relative;">
+            <button class="ap-btn">Actions</button>
+            <div class="ap-dropdown__menu ap-dropdown__menu--open" style="position: relative; top: 4px;">
+              <button class="ap-dropdown__item">Sync now</button>
+              <button class="ap-dropdown__item">View YAML</button>
+              <button class="ap-dropdown__item">View logs</button>
+              <div class="ap-dropdown__divider"></div>
+              <div class="ap-dropdown__label">Danger zone</div>
+              <button class="ap-dropdown__item ap-dropdown__item--danger">Delete resource</button>
+            </div>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-dropdown"&gt;
+  &lt;button class="ap-btn"&gt;Actions&lt;/button&gt;
+  &lt;div class="ap-dropdown__menu ap-dropdown__menu--open"&gt;
+    &lt;button class="ap-dropdown__item"&gt;Sync now&lt;/button&gt;
+    &lt;div class="ap-dropdown__divider"&gt;&lt;/div&gt;
+    &lt;div class="ap-dropdown__label"&gt;Danger zone&lt;/div&gt;
+    &lt;button class="ap-dropdown__item ap-dropdown__item--danger"&gt;Delete&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</div>
+      </div>
+
+      <!-- ACCORDION -->
+      <div class="ap-section-header ap-mt-8" id="accordion"><span>ACCORDION</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        Collapsible detail sections. Pure CSS using <code>&lt;details&gt;</code>. Stack them for grouped panels.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview">
+          <details class="ap-accordion" open>
+            <summary class="ap-accordion__trigger">Resource Details</summary>
+            <div class="ap-accordion__content">
+              <dl class="ap-kv">
+                <dt>Kind</dt><dd>Deployment</dd>
+                <dt>Namespace</dt><dd>production</dd>
+                <dt>Replicas</dt><dd>3/3</dd>
+              </dl>
+            </div>
+          </details>
+          <details class="ap-accordion">
+            <summary class="ap-accordion__trigger">Labels &amp; Annotations</summary>
+            <div class="ap-accordion__content">
+              <div class="ap-flex ap-gap-2 ap-flex-wrap">
+                <span class="ap-tag ap-tag--gray">app=guestbook</span>
+                <span class="ap-tag ap-tag--gray">tier=frontend</span>
+                <span class="ap-tag ap-tag--gray">env=prod</span>
+              </div>
+            </div>
+          </details>
+          <details class="ap-accordion">
+            <summary class="ap-accordion__trigger">Events</summary>
+            <div class="ap-accordion__content">No recent events.</div>
+          </details>
+        </div>
+        <div class="sg-example__code">&lt;details class="ap-accordion" open&gt;
+  &lt;summary class="ap-accordion__trigger"&gt;Resource Details&lt;/summary&gt;
+  &lt;div class="ap-accordion__content"&gt;Content&lt;/div&gt;
+&lt;/details&gt;
+&lt;details class="ap-accordion"&gt;
+  &lt;summary class="ap-accordion__trigger"&gt;Labels&lt;/summary&gt;
+  &lt;div class="ap-accordion__content"&gt;...&lt;/div&gt;
+&lt;/details&gt;</div>
+      </div>
+
+      <!-- TIMELINE -->
+      <div class="ap-section-header ap-mt-8" id="timeline"><span>TIMELINE</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        Vertical event history for sync logs, backup history, audit trails.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview">
+          <div class="ap-timeline">
+            <div class="ap-timeline__item">
+              <span class="ap-timeline__dot ap-timeline__dot--green"></span>
+              <div class="ap-timeline__body">
+                <div class="ap-timeline__title">Sync completed</div>
+                <div class="ap-timeline__desc">All 12 resources are healthy.</div>
+                <div class="ap-timeline__time">2m ago</div>
+              </div>
+            </div>
+            <div class="ap-timeline__item">
+              <span class="ap-timeline__dot ap-timeline__dot--blue"></span>
+              <div class="ap-timeline__body">
+                <div class="ap-timeline__title">Sync started</div>
+                <div class="ap-timeline__desc">Triggered by commit abc1234</div>
+                <div class="ap-timeline__time">3m ago</div>
+              </div>
+            </div>
+            <div class="ap-timeline__item">
+              <span class="ap-timeline__dot ap-timeline__dot--yellow"></span>
+              <div class="ap-timeline__body">
+                <div class="ap-timeline__title">Health degraded</div>
+                <div class="ap-timeline__desc">Pod guestbook-ui-7f4c9 CrashLoopBackOff</div>
+                <div class="ap-timeline__time">15m ago</div>
+              </div>
+            </div>
+            <div class="ap-timeline__item">
+              <span class="ap-timeline__dot ap-timeline__dot--red"></span>
+              <div class="ap-timeline__body">
+                <div class="ap-timeline__title">Sync failed</div>
+                <div class="ap-timeline__desc">Resource quota exceeded in namespace production</div>
+                <div class="ap-timeline__time">1h ago</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-timeline"&gt;
+  &lt;div class="ap-timeline__item"&gt;
+    &lt;span class="ap-timeline__dot ap-timeline__dot--green"&gt;&lt;/span&gt;
+    &lt;div class="ap-timeline__body"&gt;
+      &lt;div class="ap-timeline__title"&gt;Sync completed&lt;/div&gt;
+      &lt;div class="ap-timeline__desc"&gt;All resources healthy.&lt;/div&gt;
+      &lt;div class="ap-timeline__time"&gt;2m ago&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</div>
+      </div>
+
+      <!-- CODE BLOCK -->
+      <div class="ap-section-header ap-mt-8" id="code"><span>CODE BLOCK</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        YAML/JSON display with optional filename header, copy button, and diff highlighting.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex-col ap-gap-4">
+          <div class="ap-code">
+            <div class="ap-code__header">
+              <span>deployment.yaml</span>
+              <button class="ap-code__copy">Copy</button>
+            </div>
+            <pre class="ap-code__body"><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guestbook-ui
+  namespace: production
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: guestbook</code></pre>
+          </div>
+          <div class="ap-code">
+            <div class="ap-code__header">
+              <span>diff</span>
+            </div>
+            <pre class="ap-code__body"><code><span class="ap-code__line">  spec:</span>
+<span class="ap-code__line ap-code__line--removed">    replicas: 2</span>
+<span class="ap-code__line ap-code__line--added">    replicas: 3</span>
+<span class="ap-code__line">    selector:</span></code></pre>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-code"&gt;
+  &lt;div class="ap-code__header"&gt;
+    &lt;span&gt;deployment.yaml&lt;/span&gt;
+    &lt;button class="ap-code__copy"&gt;Copy&lt;/button&gt;
+  &lt;/div&gt;
+  &lt;pre class="ap-code__body"&gt;&lt;code&gt;...&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;!-- Diff lines --&gt;
+&lt;span class="ap-code__line ap-code__line--removed"&gt;old&lt;/span&gt;
+&lt;span class="ap-code__line ap-code__line--added"&gt;new&lt;/span&gt;</div>
+      </div>
+
+      <!-- SEARCH -->
+      <div class="ap-section-header ap-mt-8" id="search"><span>SEARCH INPUT</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex-col ap-gap-3" style="max-width: 360px;">
+          <div class="ap-search">
+            <span class="ap-search__icon"></span>
+            <input class="ap-search__input" type="text" placeholder="Filter resources..." />
+          </div>
+          <div class="ap-search ap-search--compact">
+            <span class="ap-search__icon"></span>
+            <input class="ap-search__input" type="text" placeholder="Search..." />
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-search"&gt;
+  &lt;span class="ap-search__icon"&gt;&lt;/span&gt;
+  &lt;input class="ap-search__input" placeholder="Filter resources..." /&gt;
+&lt;/div&gt;
+&lt;!-- Compact variant for toolbars --&gt;
+&lt;div class="ap-search ap-search--compact"&gt;...&lt;/div&gt;</div>
+      </div>
+
+      <!-- CHECKBOX / RADIO -->
+      <div class="ap-section-header ap-mt-8" id="checkbox"><span>CHECKBOX &amp; RADIO</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex-col ap-gap-3" style="max-width: 280px;">
+          <label class="ap-checkbox">
+            <input type="checkbox" checked />
+            <span class="ap-checkbox__box"></span>
+            <span>Auto-sync enabled</span>
+          </label>
+          <label class="ap-checkbox">
+            <input type="checkbox" />
+            <span class="ap-checkbox__box"></span>
+            <span>Prune orphaned resources</span>
+          </label>
+          <label class="ap-checkbox">
+            <input type="checkbox" disabled />
+            <span class="ap-checkbox__box"></span>
+            <span class="ap-text-muted">Self-heal (disabled)</span>
+          </label>
+          <div class="ap-divider"></div>
+          <label class="ap-radio">
+            <input type="radio" name="env" checked />
+            <span class="ap-radio__box"></span>
+            <span>Production</span>
+          </label>
+          <label class="ap-radio">
+            <input type="radio" name="env" />
+            <span class="ap-radio__box"></span>
+            <span>Staging</span>
+          </label>
+          <label class="ap-radio">
+            <input type="radio" name="env" />
+            <span class="ap-radio__box"></span>
+            <span>Development</span>
+          </label>
+        </div>
+        <div class="sg-example__code">&lt;label class="ap-checkbox"&gt;
+  &lt;input type="checkbox" checked /&gt;
+  &lt;span class="ap-checkbox__box"&gt;&lt;/span&gt;
+  &lt;span&gt;Auto-sync enabled&lt;/span&gt;
+&lt;/label&gt;
+
+&lt;label class="ap-radio"&gt;
+  &lt;input type="radio" name="env" /&gt;
+  &lt;span class="ap-radio__box"&gt;&lt;/span&gt;
+  &lt;span&gt;Production&lt;/span&gt;
+&lt;/label&gt;</div>
+      </div>
+
+      <!-- BANNER -->
+      <div class="ap-section-header ap-mt-8" id="banner"><span>BANNER</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        Full-width announcements for incidents, maintenance, and updates.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex-col ap-gap-2" style="margin: -16px; margin-bottom: 0;">
+          <div class="ap-banner ap-banner--info">
+            <span class="ap-banner__msg">ArgoPlane v0.2 is available. <a href="#" style="color: inherit; text-decoration: underline;">View changelog</a></span>
+            <button class="ap-banner__close">&times;</button>
+          </div>
+          <div class="ap-banner ap-banner--warning">
+            <span class="ap-banner__msg">Scheduled maintenance tonight 22:00-23:00 UTC</span>
+            <button class="ap-banner__close">&times;</button>
+          </div>
+          <div class="ap-banner ap-banner--error">
+            <span class="ap-banner__msg">Cluster us-east-1 is experiencing degraded performance</span>
+            <button class="ap-banner__close">&times;</button>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-banner ap-banner--warning"&gt;
+  &lt;span class="ap-banner__msg"&gt;Maintenance tonight 22:00 UTC&lt;/span&gt;
+  &lt;button class="ap-banner__close"&gt;&amp;times;&lt;/button&gt;
+&lt;/div&gt;</div>
+      </div>
+
+      <!-- RESOURCE LIST -->
+      <div class="ap-section-header ap-mt-8" id="resource-list"><span>RESOURCE LIST</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        Clickable resource items with type icon, name, metadata, and status. For extension panels and portal.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview">
+          <div class="ap-card" style="padding: 0; overflow: hidden;">
+            <div class="ap-resource-list">
+              <a class="ap-resource-list__item" href="#">
+                <span class="ap-resource-list__icon">D</span>
+                <div class="ap-resource-list__info">
+                  <span class="ap-resource-list__name">guestbook-ui</span>
+                  <span class="ap-resource-list__meta">Deployment / production / 3 replicas</span>
+                </div>
+                <span class="ap-badge ap-badge--healthy">Healthy</span>
+              </a>
+              <a class="ap-resource-list__item" href="#">
+                <span class="ap-resource-list__icon">SS</span>
+                <div class="ap-resource-list__info">
+                  <span class="ap-resource-list__name">cache-redis</span>
+                  <span class="ap-resource-list__meta">StatefulSet / production / 1 replica</span>
+                </div>
+                <span class="ap-badge ap-badge--in-progress">Progressing</span>
+              </a>
+              <a class="ap-resource-list__item" href="#">
+                <span class="ap-resource-list__icon">SC</span>
+                <div class="ap-resource-list__info">
+                  <span class="ap-resource-list__name">gp3-encrypted</span>
+                  <span class="ap-resource-list__meta">StorageClass / provisioner: ebs.csi.aws.com</span>
+                </div>
+                <span class="ap-tag ap-tag--green">default</span>
+              </a>
+              <a class="ap-resource-list__item" href="#">
+                <span class="ap-resource-list__icon">IC</span>
+                <div class="ap-resource-list__info">
+                  <span class="ap-resource-list__name">nginx</span>
+                  <span class="ap-resource-list__meta">IngressClass / controller: k8s.io/ingress-nginx</span>
+                </div>
+                <span class="ap-tag ap-tag--gray">available</span>
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-resource-list"&gt;
+  &lt;a class="ap-resource-list__item" href="#"&gt;
+    &lt;span class="ap-resource-list__icon"&gt;D&lt;/span&gt;
+    &lt;div class="ap-resource-list__info"&gt;
+      &lt;span class="ap-resource-list__name"&gt;guestbook-ui&lt;/span&gt;
+      &lt;span class="ap-resource-list__meta"&gt;Deployment / production&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;span class="ap-badge ap-badge--healthy"&gt;Healthy&lt;/span&gt;
+  &lt;/a&gt;
+&lt;/div&gt;</div>
+      </div>
+
+      <!-- STEPPER -->
+      <div class="ap-section-header ap-mt-8" id="stepper"><span>STEPPER</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        Multi-step provisioning flow. For self-service portal wizards.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview">
+          <div class="ap-stepper">
+            <div class="ap-stepper__step ap-stepper__step--done">
+              <span class="ap-stepper__num">1</span>
+              <span class="ap-stepper__label">Select type</span>
+            </div>
+            <div class="ap-stepper__connector ap-stepper__connector--done"></div>
+            <div class="ap-stepper__step ap-stepper__step--active">
+              <span class="ap-stepper__num">2</span>
+              <span class="ap-stepper__label">Configure</span>
+            </div>
+            <div class="ap-stepper__connector"></div>
+            <div class="ap-stepper__step">
+              <span class="ap-stepper__num">3</span>
+              <span class="ap-stepper__label">Review</span>
+            </div>
+            <div class="ap-stepper__connector"></div>
+            <div class="ap-stepper__step">
+              <span class="ap-stepper__num">4</span>
+              <span class="ap-stepper__label">Deploy</span>
+            </div>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-stepper"&gt;
+  &lt;div class="ap-stepper__step ap-stepper__step--done"&gt;
+    &lt;span class="ap-stepper__num"&gt;1&lt;/span&gt;
+    &lt;span class="ap-stepper__label"&gt;Select type&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class="ap-stepper__connector ap-stepper__connector--done"&gt;&lt;/div&gt;
+  &lt;div class="ap-stepper__step ap-stepper__step--active"&gt;
+    &lt;span class="ap-stepper__num"&gt;2&lt;/span&gt;
+    &lt;span class="ap-stepper__label"&gt;Configure&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class="ap-stepper__connector"&gt;&lt;/div&gt;
+  &lt;div class="ap-stepper__step"&gt;
+    &lt;span class="ap-stepper__num"&gt;3&lt;/span&gt;
+    &lt;span class="ap-stepper__label"&gt;Review&lt;/span&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</div>
+      </div>
+
+      <!-- PAGINATION -->
+      <div class="ap-section-header ap-mt-8" id="pagination"><span>PAGINATION</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex ap-gap-4 ap-items-center">
+          <nav class="ap-pagination">
+            <button class="ap-pagination__btn" disabled>&laquo;</button>
+            <button class="ap-pagination__btn ap-pagination__btn--active">1</button>
+            <button class="ap-pagination__btn">2</button>
+            <button class="ap-pagination__btn">3</button>
+            <span class="ap-pagination__ellipsis">...</span>
+            <button class="ap-pagination__btn">12</button>
+            <button class="ap-pagination__btn">&raquo;</button>
+          </nav>
+        </div>
+        <div class="sg-example__code">&lt;nav class="ap-pagination"&gt;
+  &lt;button class="ap-pagination__btn" disabled&gt;&amp;laquo;&lt;/button&gt;
+  &lt;button class="ap-pagination__btn ap-pagination__btn--active"&gt;1&lt;/button&gt;
+  &lt;button class="ap-pagination__btn"&gt;2&lt;/button&gt;
+  &lt;span class="ap-pagination__ellipsis"&gt;...&lt;/span&gt;
+  &lt;button class="ap-pagination__btn"&gt;&amp;raquo;&lt;/button&gt;
+&lt;/nav&gt;</div>
+      </div>
+
+      <!-- BUTTON GROUP -->
+      <div class="ap-section-header ap-mt-8" id="btn-group"><span>BUTTON GROUP</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex ap-gap-6 ap-items-center">
+          <div class="ap-btn-group">
+            <button class="ap-btn ap-btn--sm ap-btn--primary">List</button>
+            <button class="ap-btn ap-btn--sm">Grid</button>
+            <button class="ap-btn ap-btn--sm">Tree</button>
+          </div>
+          <div class="ap-btn-group">
+            <button class="ap-btn ap-btn--sm">1h</button>
+            <button class="ap-btn ap-btn--sm ap-btn--primary">6h</button>
+            <button class="ap-btn ap-btn--sm">24h</button>
+            <button class="ap-btn ap-btn--sm">7d</button>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-btn-group"&gt;
+  &lt;button class="ap-btn ap-btn--sm ap-btn--primary"&gt;List&lt;/button&gt;
+  &lt;button class="ap-btn ap-btn--sm"&gt;Grid&lt;/button&gt;
+  &lt;button class="ap-btn ap-btn--sm"&gt;Tree&lt;/button&gt;
+&lt;/div&gt;</div>
+      </div>
+
+      <!-- KBD -->
+      <div class="ap-section-header ap-mt-8" id="kbd"><span>KEYBOARD SHORTCUTS</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex ap-gap-6 ap-items-center">
+          <span class="ap-flex ap-gap-1 ap-items-center ap-text-sm ap-text-muted">
+            <kbd class="ap-kbd">Ctrl</kbd> + <kbd class="ap-kbd">K</kbd>
+            <span class="ap-ml-2">Command palette</span>
+          </span>
+          <span class="ap-flex ap-gap-1 ap-items-center ap-text-sm ap-text-muted">
+            <kbd class="ap-kbd">Esc</kbd>
+            <span class="ap-ml-2">Close</span>
+          </span>
+          <span class="ap-flex ap-gap-1 ap-items-center ap-text-sm ap-text-muted">
+            <kbd class="ap-kbd">?</kbd>
+            <span class="ap-ml-2">Help</span>
+          </span>
+        </div>
+        <div class="sg-example__code">&lt;kbd class="ap-kbd"&gt;Ctrl&lt;/kbd&gt; + &lt;kbd class="ap-kbd"&gt;K&lt;/kbd&gt;</div>
+      </div>
+
+      <!-- COPY BUTTON -->
+      <div class="ap-section-header ap-mt-8" id="copy"><span>COPY BUTTON</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        Click-to-copy for resource names, IDs, commands. Two overlapping squares as the copy icon.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex-col ap-gap-3">
+          <button class="ap-copy">
+            <span class="ap-copy__text">kubectl get pods -n production</span>
+            <span class="ap-copy__icon"></span>
+          </button>
+          <button class="ap-copy">
+            <span class="ap-copy__text">guestbook-ui-7f4c9b8d6-x2k4p</span>
+            <span class="ap-copy__icon"></span>
+          </button>
+        </div>
+        <div class="sg-example__code">&lt;button class="ap-copy"&gt;
+  &lt;span class="ap-copy__text"&gt;kubectl get pods&lt;/span&gt;
+  &lt;span class="ap-copy__icon"&gt;&lt;/span&gt;
+&lt;/button&gt;</div>
+      </div>
+
+      <!-- STAT INLINE -->
+      <div class="ap-section-header ap-mt-8" id="stat"><span>STAT INLINE</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        Compact inline metric with optional trend delta. For dashboards and summary rows.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex ap-gap-8 ap-items-center">
+          <span class="ap-stat">
+            <span class="ap-stat__value">42</span>
+            <span class="ap-stat__delta ap-stat__delta--up">+12%</span>
+          </span>
+          <span class="ap-stat">
+            <span class="ap-stat__value">1,247</span>
+            <span class="ap-stat__delta ap-stat__delta--down">-3%</span>
+          </span>
+          <span class="ap-stat">
+            <span class="ap-stat__value">99.9%</span>
+            <span class="ap-stat__delta ap-stat__delta--flat">0%</span>
+          </span>
+        </div>
+        <div class="sg-example__code">&lt;span class="ap-stat"&gt;
+  &lt;span class="ap-stat__value"&gt;42&lt;/span&gt;
+  &lt;span class="ap-stat__delta ap-stat__delta--up"&gt;+12%&lt;/span&gt;
+&lt;/span&gt;</div>
+      </div>
+
+      <!-- CHIP INPUT -->
+      <div class="ap-section-header ap-mt-8" id="chip-input"><span>CHIP INPUT</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        Multi-select tag entry for Kubernetes labels, selectors, filters.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview" style="max-width: 420px;">
+          <label class="ap-label">Label Selector</label>
+          <div class="ap-chip-input">
+            <span class="ap-chip-input__chip">
+              env=prod <button class="ap-chip-input__remove">&times;</button>
+            </span>
+            <span class="ap-chip-input__chip">
+              tier=frontend <button class="ap-chip-input__remove">&times;</button>
+            </span>
+            <input class="ap-chip-input__field" placeholder="Add label..." />
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-chip-input"&gt;
+  &lt;span class="ap-chip-input__chip"&gt;
+    env=prod &lt;button class="ap-chip-input__remove"&gt;&amp;times;&lt;/button&gt;
+  &lt;/span&gt;
+  &lt;input class="ap-chip-input__field" placeholder="Add label..." /&gt;
+&lt;/div&gt;</div>
+      </div>
+
+      <!-- DRAWER (static preview) -->
+      <div class="ap-section-header ap-mt-8" id="drawer"><span>DRAWER / FLYOUT</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        Slide-out detail panel. Matches ArgoCD's flyout pattern for status panels.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview">
+          <div style="position: relative; background: rgba(28,25,23,0.08); padding: 16px; border-radius: var(--ap-radius-md); display: flex; justify-content: flex-end;">
+            <div class="ap-card" style="width: 320px; padding: 0;">
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--ap-space-3) var(--ap-space-4); border-bottom: var(--ap-border);">
+                <span style="font-weight: var(--ap-weight-semibold); font-size: var(--ap-text-md);">Pod Details</span>
+                <span style="color: var(--ap-color-text-muted); cursor: pointer;">&times;</span>
+              </div>
+              <div style="padding: var(--ap-space-4);">
+                <dl class="ap-kv">
+                  <dt>Name</dt><dd>guestbook-ui-7f4c9</dd>
+                  <dt>Status</dt><dd><span class="ap-badge ap-badge--healthy">Running</span></dd>
+                  <dt>Node</dt><dd>worker-1</dd>
+                  <dt>IP</dt><dd>10.244.0.12</dd>
+                </dl>
+              </div>
+              <div style="padding: var(--ap-space-3) var(--ap-space-4); border-top: var(--ap-border); display: flex; justify-content: flex-end; gap: var(--ap-space-2);">
+                <button class="ap-btn ap-btn--sm">View logs</button>
+                <button class="ap-btn ap-btn--sm ap-btn--primary">Shell</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-drawer-overlay"&gt;
+  &lt;div class="ap-drawer"&gt;
+    &lt;div class="ap-drawer__header"&gt;
+      &lt;span&gt;Pod Details&lt;/span&gt;
+      &lt;button class="ap-drawer__close"&gt;&amp;times;&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;div class="ap-drawer__body"&gt;Content&lt;/div&gt;
+    &lt;div class="ap-drawer__footer"&gt;Actions&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</div>
+      </div>
+
     </div>
   </main>
 </div>
