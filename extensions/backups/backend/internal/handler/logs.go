@@ -74,7 +74,7 @@ func (h *LogsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	created, err := h.client.Resource(types.DownloadRequestGVR).Namespace(h.veleroNamespace).Create(r.Context(), dr, metav1.CreateOptions{})
 	if err != nil {
 		slog.Error("failed to create download request", "error", err, "name", drName)
-		WriteError(w, http.StatusInternalServerError, "failed to create download request")
+		WriteError(w, http.StatusServiceUnavailable, fmt.Sprintf("Logs not available: %v. Velero DownloadRequest CRD may not be installed or Velero server is not running.", err))
 		return
 	}
 

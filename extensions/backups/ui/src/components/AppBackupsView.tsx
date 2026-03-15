@@ -192,6 +192,11 @@ const RESOURCE_POLICY_OPTIONS = [
   { label: 'Overwrite existing', value: 'update' as const },
 ];
 
+const COMMON_RESOURCE_TYPES = [
+  'deployments', 'statefulsets', 'daemonsets', 'services', 'configmaps',
+  'secrets', 'persistentvolumeclaims', 'ingresses', 'jobs', 'cronjobs',
+];
+
 const RestoreConfirmPanel: React.FC<{
   backup: BackupSummary;
   namespace: string;
@@ -228,6 +233,12 @@ const RestoreConfirmPanel: React.FC<{
       <KV label="Items" value={`${backup.itemsBackedUp} resources backed up`} />
       <KV label="Namespaces" value={(backup.includedNamespaces || []).join(', ') || 'all'} />
       {backup.scheduleName && <KV label="Schedule" value={backup.scheduleName} />}
+      {backup.includedResources && backup.includedResources.length > 0 && (
+        <KV label="Backed-up resources" value={backup.includedResources.join(', ')} />
+      )}
+      {backup.excludedResources && backup.excludedResources.length > 0 && (
+        <KV label="Excluded resources" value={backup.excludedResources.join(', ')} />
+      )}
       {backup.errors > 0 && <KV label="Errors" value={<span style={{ color: colors.redText }}>{backup.errors} errors during backup</span>} />}
       {backup.warnings > 0 && <KV label="Warnings" value={<span style={{ color: colors.yellowText }}>{backup.warnings} warnings during backup</span>} />}
       {backup.failureReason && (
@@ -235,6 +246,22 @@ const RestoreConfirmPanel: React.FC<{
           <span style={{ fontWeight: fontWeight.semibold }}>Backup failure:</span> {backup.failureReason}
         </div>
       )}
+
+      {/* Backup contents summary */}
+      <div style={{ marginTop: spacing[3], padding: spacing[3], border: `1px solid ${colors.gray200}`, borderRadius: 4, background: colors.gray50 }}>
+        <div style={{ fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.gray500, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: spacing[2] }}>
+          Backup Contents
+        </div>
+        <div style={{ fontSize: fontSize.sm, fontFamily: fonts.mono, color: colors.gray600 }}>
+          {backup.itemsBackedUp} resources backed up
+          {backup.volumeSnapshotsCompleted !== undefined && backup.volumeSnapshotsCompleted > 0 && (
+            <span> + {backup.volumeSnapshotsCompleted} volume snapshot{backup.volumeSnapshotsCompleted !== 1 ? 's' : ''}</span>
+          )}
+          {(!backup.includedResources || backup.includedResources.length === 0) && (
+            <span style={{ color: colors.gray400 }}> (all resource types)</span>
+          )}
+        </div>
+      </div>
 
       {/* Advanced options toggle */}
       <div
@@ -271,6 +298,29 @@ const RestoreConfirmPanel: React.FC<{
           {/* Include/exclude resources */}
           <div style={{ marginBottom: spacing[3] }}>
             <span style={fieldLabel}>Include resources (comma-separated, e.g. deployments,services)</span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing[1], marginTop: spacing[1], marginBottom: spacing[1] }}>
+              {COMMON_RESOURCE_TYPES.map((rt) => {
+                const active = includedResources.split(',').map(s => s.trim()).filter(Boolean).includes(rt);
+                return (
+                  <button
+                    key={rt}
+                    onClick={() => {
+                      const current = includedResources.split(',').map(s => s.trim()).filter(Boolean);
+                      const next = active ? current.filter(c => c !== rt) : [...current, rt];
+                      setIncludedResources(next.join(', '));
+                    }}
+                    style={{
+                      padding: `2px ${spacing[2]}px`, border: `1px solid ${active ? colors.orange500 : colors.gray200}`,
+                      borderRadius: 4, background: active ? colors.orange50 : colors.white,
+                      color: active ? colors.orange600 : colors.gray500, fontSize: fontSize.xs,
+                      fontFamily: fonts.mono, cursor: 'pointer',
+                    }}
+                  >
+                    {rt}
+                  </button>
+                );
+              })}
+            </div>
             <input
               type="text"
               value={includedResources}
@@ -281,6 +331,29 @@ const RestoreConfirmPanel: React.FC<{
           </div>
           <div style={{ marginBottom: spacing[3] }}>
             <span style={fieldLabel}>Exclude resources (comma-separated)</span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing[1], marginTop: spacing[1], marginBottom: spacing[1] }}>
+              {COMMON_RESOURCE_TYPES.map((rt) => {
+                const active = excludedResources.split(',').map(s => s.trim()).filter(Boolean).includes(rt);
+                return (
+                  <button
+                    key={rt}
+                    onClick={() => {
+                      const current = excludedResources.split(',').map(s => s.trim()).filter(Boolean);
+                      const next = active ? current.filter(c => c !== rt) : [...current, rt];
+                      setExcludedResources(next.join(', '));
+                    }}
+                    style={{
+                      padding: `2px ${spacing[2]}px`, border: `1px solid ${active ? colors.orange500 : colors.gray200}`,
+                      borderRadius: 4, background: active ? colors.orange50 : colors.white,
+                      color: active ? colors.orange600 : colors.gray500, fontSize: fontSize.xs,
+                      fontFamily: fonts.mono, cursor: 'pointer',
+                    }}
+                  >
+                    {rt}
+                  </button>
+                );
+              })}
+            </div>
             <input
               type="text"
               value={excludedResources}
@@ -363,14 +436,16 @@ const ScheduleDetail: React.FC<{
 
 const BackupDetail: React.FC<{ backup: BackupSummary; appNamespace: string; appName: string; project: string }> = ({ backup: b, appNamespace, appName, project }) => {
   const [logsLoading, setLogsLoading] = React.useState(false);
+  const [logsError, setLogsError] = React.useState<string | null>(null);
 
   const openLogs = async (kind: 'BackupLog' | 'BackupResults') => {
     setLogsLoading(true);
+    setLogsError(null);
     try {
       const result = await fetchLogs(b.name, kind, appNamespace, appName, project);
       window.open(result.downloadURL, '_blank');
-    } catch {
-      // silently fail, logs may not be available
+    } catch (err: any) {
+      setLogsError(`Could not fetch ${kind === 'BackupLog' ? 'logs' : 'results'}: ${err.message || 'unknown error'}. Velero DownloadRequest CRD may not be installed.`);
     }
     setLogsLoading(false);
   };
@@ -420,6 +495,11 @@ const BackupDetail: React.FC<{ backup: BackupSummary; appNamespace: string; appN
               )}
             </div>
           )}
+          {logsError && (
+            <div style={alertBox('yellow')}>
+              {logsError}
+            </div>
+          )}
         </div>
       </td>
     </tr>
@@ -432,14 +512,16 @@ const BackupDetail: React.FC<{ backup: BackupSummary; appNamespace: string; appN
 
 const RestoreDetail: React.FC<{ restore: RestoreSummary; appNamespace: string; appName: string; project: string }> = ({ restore: r, appNamespace, appName, project }) => {
   const [logsLoading, setLogsLoading] = React.useState(false);
+  const [logsError, setLogsError] = React.useState<string | null>(null);
 
   const openLogs = async (kind: 'RestoreLog' | 'RestoreResults') => {
     setLogsLoading(true);
+    setLogsError(null);
     try {
       const result = await fetchLogs(r.name, kind, appNamespace, appName, project);
       window.open(result.downloadURL, '_blank');
-    } catch {
-      // silently fail
+    } catch (err: any) {
+      setLogsError(`Could not fetch ${kind === 'RestoreLog' ? 'logs' : 'results'}: ${err.message || 'unknown error'}. Velero DownloadRequest CRD may not be installed.`);
     }
     setLogsLoading(false);
   };
@@ -488,6 +570,11 @@ const RestoreDetail: React.FC<{ restore: RestoreSummary; appNamespace: string; a
                   View Results
                 </Button>
               )}
+            </div>
+          )}
+          {logsError && (
+            <div style={alertBox('yellow')}>
+              {logsError}
             </div>
           )}
         </div>

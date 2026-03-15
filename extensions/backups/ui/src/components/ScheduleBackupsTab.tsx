@@ -79,6 +79,7 @@ export const ScheduleBackupsTab: React.FC<{ resource: any; tree?: any; applicati
   const [backups, setBackups] = React.useState<BackupSummary[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [triggering, setTriggering] = React.useState(false);
+  const [triggerError, setTriggerError] = React.useState<string | null>(null);
 
   const scheduleName = resource?.metadata?.name || '';
   const cron = resource?.spec?.schedule || '-';
@@ -107,11 +108,12 @@ export const ScheduleBackupsTab: React.FC<{ resource: any; tree?: any; applicati
 
   const handleTriggerBackup = React.useCallback(async () => {
     setTriggering(true);
+    setTriggerError(null);
     try {
       await createBackup(targetNamespace, appNamespace, appName, project, ttl !== '-' ? ttl : undefined);
       setTimeout(loadBackups, 2000);
-    } catch {
-      // silently fail
+    } catch (err: any) {
+      setTriggerError(`Failed to trigger backup: ${err.message || 'unknown error'}`);
     } finally {
       setTriggering(false);
     }
@@ -136,6 +138,11 @@ export const ScheduleBackupsTab: React.FC<{ resource: any; tree?: any; applicati
           </Button>
           {paused && <span style={{ marginLeft: spacing[2], fontSize: fontSize.sm, color: colors.gray400 }}>Schedule is paused</span>}
         </div>
+        {triggerError && (
+          <div style={{ marginTop: spacing[2], padding: spacing[3], background: colors.redLight, border: `1px solid ${colors.red}`, borderRadius: 4, fontSize: fontSize.sm, fontFamily: fonts.mono, color: colors.redText }}>
+            {triggerError}
+          </div>
+        )}
       </div>
 
       {/* Backups from this schedule */}
