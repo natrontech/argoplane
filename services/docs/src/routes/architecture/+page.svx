@@ -18,7 +18,8 @@ Every ArgoPlane extension has three parts:
 3. **Proxy extension config**: ArgoCD routes `/extensions/<name>/*` requests from the UI to the Go backend
 
 ```
-Browser -> ArgoCD UI -> /extensions/metrics/* -> ArgoCD Proxy -> metrics-backend -> Prometheus
+Browser → ArgoCD UI → ArgoCD Proxy
+  → metrics-backend → Prometheus
 ```
 
 ## No state
