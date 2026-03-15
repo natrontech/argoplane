@@ -1,129 +1,126 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 560" font-family="'JetBrains Mono', 'SF Mono', monospace" font-size="12">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 520" font-family="'JetBrains Mono', 'SF Mono', monospace" font-size="11">
   <style>
     .box { stroke-width: 1; }
     .box-orange { fill: #FFF7ED; stroke: #E8935A; rx: 4; ry: 4; }
     .box-gray { fill: #FAFAF9; stroke: #D6D3D1; rx: 4; ry: 4; }
     .box-blue { fill: #DBEAFE; stroke: #93C5FD; rx: 4; ry: 4; }
     .box-green { fill: #D1FAE5; stroke: #6EE7B7; rx: 4; ry: 4; }
-    .label { fill: #78716C; font-size: 10; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
-    .title { fill: #292524; font-weight: 600; font-size: 13; }
-    .sub { fill: #78716C; font-size: 11; }
+    .label { fill: #78716C; font-size: 9; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+    .title { fill: #292524; font-weight: 600; font-size: 12; }
+    .sub { fill: #78716C; font-size: 10; }
     .arrow { stroke: #A8A29E; stroke-width: 1.5; fill: none; marker-end: url(#ah); }
     .arrow-o { stroke: #E8935A; stroke-width: 1.5; fill: none; marker-end: url(#aho); }
     .dash { stroke-dasharray: 4 3; }
     .region { fill: none; stroke: #D6D3D1; stroke-width: 1; stroke-dasharray: 6 3; rx: 4; ry: 4; }
+    .sep { stroke: #E7E5E4; stroke-width: 1; }
   </style>
   <defs>
-    <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <polygon points="0 0, 8 3, 0 6" fill="#A8A29E"/>
+    <marker id="ah" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+      <polygon points="0 0, 7 2.5, 0 5" fill="#A8A29E"/>
     </marker>
-    <marker id="aho" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <polygon points="0 0, 8 3, 0 6" fill="#E8935A"/>
+    <marker id="aho" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+      <polygon points="0 0, 7 2.5, 0 5" fill="#E8935A"/>
     </marker>
   </defs>
 
-  <!-- ═══════════ ROW 1: Request Flow ═══════════ -->
-  <text x="380" y="16" text-anchor="middle" class="label">request flow</text>
+  <!-- ══ ROW 1: Request Flow ══ -->
+  <text x="340" y="16" text-anchor="middle" class="label">request flow</text>
 
   <!-- Browser -->
-  <rect x="20" y="28" width="160" height="64" class="box box-gray"/>
-  <text x="100" y="56" text-anchor="middle" class="title">Browser</text>
-  <text x="100" y="72" text-anchor="middle" class="sub">ArgoCD UI + Extensions</text>
+  <rect x="16" y="28" width="140" height="56" class="box box-gray"/>
+  <text x="86" y="52" text-anchor="middle" class="title">Browser</text>
+  <text x="86" y="66" text-anchor="middle" class="sub">ArgoCD UI</text>
 
   <!-- Arrow 1 -->
-  <line x1="180" y1="60" x2="248" y2="60" class="arrow-o"/>
+  <line x1="156" y1="56" x2="214" y2="56" class="arrow-o"/>
 
   <!-- ArgoCD Server -->
-  <rect x="256" y="28" width="220" height="64" class="box box-orange"/>
-  <text x="366" y="56" text-anchor="middle" class="title">ArgoCD API Server</text>
-  <text x="366" y="72" text-anchor="middle" class="sub">Auth, RBAC, Proxy</text>
+  <rect x="222" y="28" width="190" height="56" class="box box-orange"/>
+  <text x="317" y="52" text-anchor="middle" class="title">ArgoCD API Server</text>
+  <text x="317" y="66" text-anchor="middle" class="sub">Auth, RBAC, Proxy</text>
 
   <!-- Arrow 2 -->
-  <line x1="476" y1="60" x2="548" y2="60" class="arrow-o"/>
-  <text x="512" y="52" text-anchor="middle" class="sub" font-size="10">/extensions/*</text>
+  <line x1="412" y1="56" x2="498" y2="56" class="arrow-o"/>
+  <text x="455" y="48" text-anchor="middle" class="sub" font-size="9">/extensions/*</text>
 
   <!-- Extension Backends -->
-  <rect x="556" y="28" width="180" height="64" class="box box-orange"/>
-  <text x="646" y="50" text-anchor="middle" class="title">Go Backends</text>
-  <text x="646" y="66" text-anchor="middle" class="sub">metrics, backups,</text>
-  <text x="646" y="78" text-anchor="middle" class="sub">networking</text>
+  <rect x="506" y="28" width="158" height="56" class="box box-orange"/>
+  <text x="585" y="48" text-anchor="middle" class="title">Go Backends</text>
+  <text x="585" y="62" text-anchor="middle" class="sub">metrics, backups,</text>
+  <text x="585" y="74" text-anchor="middle" class="sub">networking</text>
 
-  <!-- ═══════════ ROW 2: External Systems ═══════════ -->
-  <text x="380" y="136" text-anchor="middle" class="label">data sources</text>
+  <!-- ══ ROW 2: Data Sources ══ -->
+  <text x="340" y="128" text-anchor="middle" class="label">data sources</text>
 
-  <rect x="20" y="148" width="168" height="60" class="box box-blue"/>
-  <text x="104" y="174" text-anchor="middle" class="title">Prometheus</text>
-  <text x="104" y="190" text-anchor="middle" class="sub">PromQL queries</text>
+  <rect x="16" y="140" width="152" height="52" class="box box-blue"/>
+  <text x="92" y="162" text-anchor="middle" class="title">Prometheus</text>
+  <text x="92" y="176" text-anchor="middle" class="sub">PromQL queries</text>
 
-  <rect x="208" y="148" width="128" height="60" class="box box-blue"/>
-  <text x="272" y="174" text-anchor="middle" class="title">Velero</text>
-  <text x="272" y="190" text-anchor="middle" class="sub">Backups, Restores</text>
+  <rect x="180" y="140" width="120" height="52" class="box box-blue"/>
+  <text x="240" y="162" text-anchor="middle" class="title">Velero</text>
+  <text x="240" y="176" text-anchor="middle" class="sub">Backups, Restores</text>
 
-  <rect x="356" y="148" width="158" height="60" class="box box-blue"/>
-  <text x="435" y="174" text-anchor="middle" class="title">Cilium / Hubble</text>
-  <text x="435" y="190" text-anchor="middle" class="sub">Policies, Flows</text>
+  <rect x="312" y="140" width="140" height="52" class="box box-blue"/>
+  <text x="382" y="162" text-anchor="middle" class="title">Cilium / Hubble</text>
+  <text x="382" y="176" text-anchor="middle" class="sub">Policies, Flows</text>
 
-  <rect x="534" y="148" width="202" height="60" class="box box-green"/>
-  <text x="635" y="174" text-anchor="middle" class="title">Kubernetes API</text>
-  <text x="635" y="190" text-anchor="middle" class="sub">CRDs, StorageClasses, Nodes</text>
+  <rect x="464" y="140" width="200" height="52" class="box box-green"/>
+  <text x="564" y="162" text-anchor="middle" class="title">Kubernetes API</text>
+  <text x="564" y="176" text-anchor="middle" class="sub">CRDs, StorageClasses</text>
 
-  <!-- Arrows: Backends down to each data source -->
-  <path d="M 606 92 L 606 118 L 104 118 L 104 140" class="arrow dash"/>
-  <path d="M 626 92 L 626 126 L 272 126 L 272 140" class="arrow dash"/>
-  <path d="M 666 92 L 666 126 L 435 126 L 435 140" class="arrow dash"/>
-  <path d="M 686 92 L 686 118 L 635 118 L 635 140" class="arrow dash"/>
+  <!-- Arrows: Backends → Data Sources (staggered start points) -->
+  <path d="M 545 84 L 545 110 L 92 110 L 92 132" class="arrow dash"/>
+  <path d="M 565 84 L 565 118 L 240 118 L 240 132" class="arrow dash"/>
+  <path d="M 605 84 L 605 118 L 382 118 L 382 132" class="arrow dash"/>
+  <path d="M 625 84 L 625 110 L 564 110 L 564 132" class="arrow dash"/>
 
-  <!-- ═══════════ ROW 3: Identity & RBAC ═══════════ -->
-  <text x="380" y="252" text-anchor="middle" class="label">rbac &amp; multi-tenancy</text>
-  <rect x="20" y="264" width="716" height="80" class="region"/>
+  <!-- ══ ROW 3: RBAC ══ -->
+  <text x="340" y="234" text-anchor="middle" class="label">rbac &amp; multi-tenancy</text>
+  <rect x="16" y="246" width="648" height="64" class="region"/>
 
-  <!-- 4 items evenly spaced inside -->
-  <text x="110" y="290" text-anchor="middle" class="title">AppProjects</text>
-  <text x="110" y="306" text-anchor="middle" class="sub">Tenant isolation</text>
+  <text x="96" y="272" text-anchor="middle" class="title">AppProjects</text>
+  <text x="96" y="288" text-anchor="middle" class="sub">Tenant isolation</text>
+  <line x1="178" y1="256" x2="178" y2="300" class="sep"/>
 
-  <line x1="200" y1="276" x2="200" y2="332" stroke="#E7E5E4" stroke-width="1"/>
+  <text x="260" y="272" text-anchor="middle" class="title">OIDC / SSO</text>
+  <text x="260" y="288" text-anchor="middle" class="sub">Authentication</text>
+  <line x1="340" y1="256" x2="340" y2="300" class="sep"/>
 
-  <text x="300" y="290" text-anchor="middle" class="title">OIDC / SSO</text>
-  <text x="300" y="306" text-anchor="middle" class="sub">Authentication</text>
+  <text x="422" y="272" text-anchor="middle" class="title">RBAC Policies</text>
+  <text x="422" y="288" text-anchor="middle" class="sub">extensions, invoke</text>
+  <line x1="504" y1="256" x2="504" y2="300" class="sep"/>
 
-  <line x1="388" y1="276" x2="388" y2="332" stroke="#E7E5E4" stroke-width="1"/>
+  <text x="586" y="272" text-anchor="middle" class="title">Identity Headers</text>
+  <text x="586" y="288" text-anchor="middle" class="sub">User, Groups, Cluster</text>
 
-  <text x="478" y="290" text-anchor="middle" class="title">RBAC Policies</text>
-  <text x="478" y="306" text-anchor="middle" class="sub">extensions, invoke, *</text>
+  <!-- Arrow: ArgoCD → RBAC -->
+  <path d="M 317 84 L 317 238" class="arrow dash"/>
 
-  <line x1="568" y1="276" x2="568" y2="332" stroke="#E7E5E4" stroke-width="1"/>
+  <!-- ══ ROW 4: Categories ══ -->
+  <text x="340" y="354" text-anchor="middle" class="label">extension categories</text>
 
-  <text x="658" y="290" text-anchor="middle" class="title">Identity Headers</text>
-  <text x="658" y="306" text-anchor="middle" class="sub">Username, Groups</text>
+  <rect x="16" y="366" width="208" height="48" class="box box-orange"/>
+  <text x="120" y="386" text-anchor="middle" font-weight="600" font-size="12" fill="#E8935A">Discover</text>
+  <text x="120" y="400" text-anchor="middle" class="sub">StorageClasses, CRDs, Operators</text>
 
-  <!-- Arrow: ArgoCD down to RBAC -->
-  <path d="M 366 92 L 366 118 L 366 256" class="arrow" stroke-dasharray="4 3"/>
+  <rect x="236" y="366" width="208" height="48" class="box box-orange"/>
+  <text x="340" y="386" text-anchor="middle" font-weight="600" font-size="12" fill="#E8935A">Observe</text>
+  <text x="340" y="400" text-anchor="middle" class="sub">Metrics, Backups, Logs, Costs</text>
 
-  <!-- ═══════════ ROW 4: Extension Categories ═══════════ -->
-  <text x="380" y="392" text-anchor="middle" class="label">extension categories</text>
+  <rect x="456" y="366" width="208" height="48" class="box box-orange"/>
+  <text x="560" y="386" text-anchor="middle" font-weight="600" font-size="12" fill="#E8935A">Secure</text>
+  <text x="560" y="400" text-anchor="middle" class="sub">Vulnerabilities, Policies, Secrets</text>
 
-  <rect x="20" y="404" width="230" height="56" class="box box-orange"/>
-  <text x="135" y="428" text-anchor="middle" font-weight="600" font-size="13" fill="#E8935A">Discover</text>
-  <text x="135" y="444" text-anchor="middle" class="sub">StorageClasses, CRDs, Operators</text>
-
-  <rect x="265" y="404" width="230" height="56" class="box box-orange"/>
-  <text x="380" y="428" text-anchor="middle" font-weight="600" font-size="13" fill="#E8935A">Observe</text>
-  <text x="380" y="444" text-anchor="middle" class="sub">Metrics, Backups, Logs, Costs</text>
-
-  <rect x="510" y="404" width="226" height="56" class="box box-orange"/>
-  <text x="623" y="428" text-anchor="middle" font-weight="600" font-size="13" fill="#E8935A">Secure</text>
-  <text x="623" y="444" text-anchor="middle" class="sub">Vulnerabilities, Policies, Secrets</text>
-
-  <!-- ═══════════ Legend ═══════════ -->
-  <text x="20" y="500" class="label">legend</text>
-  <line x1="20" y1="516" x2="50" y2="516" class="arrow-o"/>
-  <text x="58" y="520" class="sub">Proxy request</text>
-  <line x1="150" y1="516" x2="180" y2="516" class="arrow dash"/>
-  <text x="188" y="520" class="sub">Backend query</text>
-  <rect x="290" y="508" width="16" height="16" class="box box-orange"/>
-  <text x="314" y="520" class="sub">ArgoPlane</text>
-  <rect x="390" y="508" width="16" height="16" class="box box-blue"/>
-  <text x="414" y="520" class="sub">External system</text>
-  <rect x="520" y="508" width="16" height="16" class="box box-green"/>
-  <text x="544" y="520" class="sub">Kubernetes</text>
+  <!-- ══ Legend ══ -->
+  <text x="16" y="452" class="label">legend</text>
+  <line x1="16" y1="466" x2="42" y2="466" class="arrow-o"/>
+  <text x="50" y="470" class="sub">Proxy request</text>
+  <line x1="140" y1="466" x2="166" y2="466" class="arrow dash"/>
+  <text x="174" y="470" class="sub">Backend query</text>
+  <rect x="264" y="458" width="14" height="14" class="box box-orange"/>
+  <text x="286" y="470" class="sub">ArgoPlane</text>
+  <rect x="354" y="458" width="14" height="14" class="box box-blue"/>
+  <text x="376" y="470" class="sub">External system</text>
+  <rect x="470" y="458" width="14" height="14" class="box box-green"/>
+  <text x="492" y="470" class="sub">Kubernetes</text>
 </svg>
