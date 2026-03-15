@@ -1,0 +1,108 @@
+---
+title: Backend Services
+description: Building Go backend services for ArgoPlane extensions
+---
+
+# Backend Services
+
+Each extension backend is a Go HTTP server that queries the underlying system and exposes a JSON API consumed by the UI via ArgoCD's proxy.
+
+## HTTP handlers
+
+Use Go 1.22+ routing patterns:
+
+```go
+mux := http.NewServeMux()
+mux.HandleFunc("GET /api/v1/metrics", s.handleMetrics)
+mux.HandleFunc("GET /api/v1/backups", s.handleBackups)
+mux.HandleFunc("POST /api/v1/backups/{name}/restore", s.handleRestore)
+```
+
+## ArgoCD identity headers
+
+Backend services receive identity headers from ArgoCD's proxy. Use them for authorization and scoping:
+
+```go
+func userFromRequest(r *http.Request) (username, userID string, groups []string) {
+    username = r.Header.Get("Argocd-Username")
+    userID = r.Header.Get("Argocd-User-Id")
+    groups = strings.Split(r.Header.Get("Argocd-User-Groups"), ",")
+    return
+}
+
+func clusterFromRequest(r *http.Request) (name, url string) {
+    name = r.Header.Get("Argocd-Target-Cluster-Name")
+    url = r.Header.Get("Argocd-Target-Cluster-URL")
+    return
+}
+```
+
+## Configuration
+
+Use `envconfig` struct tags. Load in `main()`, pass values to constructors:
+
+```go
+type Config struct {
+    Port          string `envconfig:"PORT" default:"8080"`
+    PrometheusURL string `envconfig:"PROMETHEUS_URL" required:"true"`
+    LogLevel      string `envconfig:"LOG_LEVEL" default:"info"`
+}
+```
+
+## Error handling
+
+Always wrap errors with context:
+
+```go
+if err != nil {
+    return nil, fmt.Errorf("failed to fetch backups: %w", err)
+}
+```
+
+## Logging
+
+Use `log/slog` with structured key-value pairs:
+
+```go
+slog.Info("querying prometheus", "url", config.PrometheusURL, "query", query)
+slog.Error("failed to fetch backups", "error", err, "namespace", ns)
+```
+
+## Import organization
+
+Three groups separated by blank lines: stdlib, external, internal:
+
+```go
+import (
+    "context"
+    "fmt"
+    "net/http"
+
+    "github.com/prometheus/client_golang/api"
+
+    "github.com/natrontech/argoplane/extensions/metrics/internal/query"
+)
+```
+
+## Graceful shutdown
+
+```go
+ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+defer stop()
+
+srv := &http.Server{Addr: ":" + config.Port, Handler: mux}
+
+go func() {
+    <-ctx.Done()
+    srv.Shutdown(context.Background())
+}()
+
+srv.ListenAndServe()
+```
+
+## Naming conventions
+
+- Constructors: `New<Type>(...) (*Type, error)`
+- Method receivers: short names (`s *Server`, `c *Client`)
+- No `Get`/`List` prefixes: `Backups()` not `GetBackups()`
+- Packages: single lowercase word (`metrics`, `backups`, `proxy`)

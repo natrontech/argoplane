@@ -1,0 +1,114 @@
+---
+title: Design System
+description: ArgoPlane visual design system reference
+---
+
+# Design System
+
+The ArgoPlane design system lives in `design-system/` at the repo root. All CSS custom properties use the `--ap-` prefix. All CSS classes use the `ap-` prefix.
+
+## Colors
+
+### Orange accent
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `orange-50` | `#FFF7ED` | Light backgrounds |
+| `orange-100` | `#FFEDD5` | Hover backgrounds |
+| `orange-200` | `#FDDCB0` | Borders |
+| `orange-300` | `#F5C28B` | Decorative |
+| `orange-400` | `#F0A868` | Dark mode accent |
+| `orange-500` | `#E8935A` | Primary interactive |
+| `orange-600` | `#D47A42` | Hover states |
+
+### Status colors
+
+| Status | Light | Solid | Text |
+|--------|-------|-------|------|
+| Success | `#D1FAE5` | `#6EE7B7` | `#16A34A` |
+| Error | `#FFE4E6` | `#FDA4AF` | `#B91C1C` |
+| Warning | `#FEF9C3` | `#FDE68A` | `#A16207` |
+| Info | `#DBEAFE` | `#93C5FD` | `#1D4ED8` |
+
+### Warm grays
+
+10 shades from `gray-50` (#FAFAF9) to `gray-900` (#1C1917). Used for text, borders, backgrounds.
+
+## Typography
+
+| Token | Size | Usage |
+|-------|------|-------|
+| `text-xs` | 11px | Labels, meta text |
+| `text-sm` | 13px | Secondary text, table data |
+| `text-base` | 14px | Body text |
+| `text-lg` | 16px | Headings |
+| `text-xl` | 20px | Metric values (maximum size) |
+
+Fonts:
+- **Heebo**: body text, headings, UI labels
+- **JetBrains Mono**: all data values, timestamps, resource names, code
+
+## Spacing
+
+4px grid. All spacing must be multiples of 4px.
+
+| Scale | Value |
+|-------|-------|
+| 1 | 4px |
+| 2 | 8px |
+| 3 | 12px |
+| 4 | 16px |
+| 5 | 20px |
+| 6 | 24px |
+| 8 | 32px |
+| 10 | 40px |
+
+## Rules
+
+These are non-negotiable:
+
+1. **4px grid**: all spacing must be multiples of 4px
+2. **1px borders**: always `1px solid`, never 2px (except table header bottom)
+3. **Max border-radius 4px**: `rounded-sm` (2px) or `rounded-md` (4px). No pills, no circles
+4. **No shadows**: no `box-shadow` anywhere
+5. **No gradients**: flat colors only
+6. **No animations > 150ms**: keep transitions snappy
+7. **Max font size 20px**: `text-xl` is the ceiling
+8. **Monospace for data**: all data values use JetBrains Mono
+9. **Status = colored squares**: 8x8px with `rounded-sm`, not circles
+10. **No hardcoded colors**: always use tokens
+
+## Dark mode
+
+Add `data-theme="dark"` or class `dark` to a parent element. Semantic tokens switch automatically:
+
+| Light | Dark |
+|-------|------|
+| White background | `gray-900` |
+| `gray-50` surface | `gray-800` |
+| `gray-800` text | `gray-100` |
+| `gray-500` secondary | `gray-400` |
+| `gray-200` borders | `gray-700` |
+| `orange-500` accent | `orange-400` |
+
+## Component library
+
+### CSS classes (`design-system/components.css`)
+
+Data display: `ap-badge`, `ap-tag`, `ap-metric`, `ap-kv`, `ap-table`, `ap-progress`
+
+Containers: `ap-card`, `ap-modal`, `ap-alert`
+
+Navigation: `ap-tabs`, `ap-breadcrumb`, `ap-sidenav`
+
+Form elements: `ap-btn`, `ap-input`, `ap-select`, `ap-toggle`
+
+Feedback: `ap-loading`, `ap-empty`, `ap-skeleton`, `ap-tooltip`
+
+### React components (`@argoplane/shared`)
+
+`StatusBadge`, `SectionHeader`, `MetricCard`, `Card`, `Button`, `DataTable`, `Cell`, `MetaRow`, `EmptyState`, `Loading`, `Tag`, `ProgressBar`, `Input`, `PixelDots`
+
+## Visual reference
+
+The complete visual reference with interactive examples is at `docs/styleguide/index.html` in the repository.

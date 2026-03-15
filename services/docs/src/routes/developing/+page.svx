@@ -1,0 +1,92 @@
+---
+title: Developing Extensions
+description: Guide to building ArgoPlane extensions
+---
+
+# Developing Extensions
+
+Every ArgoPlane extension follows the same pattern: a React/TypeScript UI bundle, a Go backend service, and ArgoCD proxy configuration.
+
+## Extension structure
+
+```
+extensions/<name>/
+  ui/
+    src/
+      index.tsx          # Entry point, registers extension
+      components/        # React components
+      hooks/             # Custom React hooks
+      types.ts           # TypeScript types
+      api.ts             # Fetch calls to backend
+    package.json
+    webpack.config.js
+    dist/
+      extension-<name>.js  # Built bundle (IIFE)
+  backend/
+    cmd/server/
+      main.go            # Entry point
+    internal/
+      ...                # Domain logic
+    go.mod
+    Dockerfile
+```
+
+## Development workflow
+
+### Prerequisites
+
+- Node.js 20+ (UI extensions)
+- Go 1.26+ (backend services)
+- kind (local Kubernetes)
+- kubectl, helm
+
+### Local setup
+
+```bash
+# Full dev environment
+make dev-infra
+
+# Build all extensions
+make build-extensions
+
+# Deploy to local cluster
+make deploy-extensions
+
+# Deploy demo app for testing
+make deploy-example
+```
+
+### Building a single extension
+
+After editing UI code:
+
+```bash
+cd extensions/<name>/ui && npm run build
+make load-extensions
+```
+
+After editing backend code:
+
+```bash
+make build-<name>
+make load-<name>
+make deploy-<name>
+```
+
+## Checklist for new extensions
+
+1. Create `extensions/<name>/ui/` and `extensions/<name>/backend/`
+2. Register the extension via `window.extensionsAPI` in `index.tsx`
+3. Build the Go backend HTTP server
+4. Add deployment manifests in `deploy/extensions/<name>/`
+5. Add proxy config in `deploy/argocd/proxy-extensions.json`
+6. Add RBAC in `hack/configure-argocd.sh`
+7. Add to `EXTENSIONS` list in the Makefile
+8. Update `examples/demo-app/` with test resources
+9. Update documentation in `services/docs/`
+
+## Next
+
+- [UI Extensions](/developing/ui-extensions): React/TypeScript extension guide
+- [Backend Services](/developing/backend-services): Go backend guide
+- [Design System](/developing/design-system): visual design reference

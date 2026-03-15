@@ -1,0 +1,50 @@
+---
+title: ArgoCD Configuration
+description: Configuring ArgoCD proxy extensions and RBAC for ArgoPlane
+---
+
+# ArgoCD Configuration
+
+ArgoPlane extensions require proxy routing and RBAC configuration in ArgoCD.
+
+## Proxy extensions
+
+ArgoCD routes extension API calls from the UI to backend services via its proxy mechanism. Configure this in `argocd-cm` ConfigMap or a separate ConfigMap:
+
+```json
+{
+  "extension.config.metrics": "services:\n- url: http://argoplane-metrics-backend.argocd.svc:8080\n",
+  "extension.config.backups": "services:\n- url: http://argoplane-backups-backend.argocd.svc:8081\n",
+  "extension.config.networking": "services:\n- url: http://argoplane-networking-backend.argocd.svc:8082\n"
+}
+```
+
+Each extension gets a route at `/extensions/<name>/*` that proxies to its backend service URL.
+
+## RBAC
+
+Extensions require explicit RBAC in ArgoCD v3. Add to `argocd-rbac-cm`:
+
+```
+p, role:admin, extensions, invoke, metrics, allow
+p, role:admin, extensions, invoke, backups, allow
+p, role:admin, extensions, invoke, networking, allow
+
+p, role:developer, extensions, invoke, metrics, allow
+p, role:developer, extensions, invoke, backups, allow
+p, role:developer, extensions, invoke, networking, allow
+```
+
+## ArgoCD v3 changes
+
+Key ArgoCD v3 changes to be aware of:
+
+- Fine-grained RBAC: `update`/`delete` on applications no longer cascades to sub-resources
+- Logs RBAC is always enforced (users need explicit `logs, get` permission)
+- Extensions require explicit RBAC: `p, role:<role>, extensions, invoke, <name>, allow`
+- Annotation-based resource tracking is the default (not label-based)
+- Resource health is stored in Redis by default
+
+## Custom CSS
+
+ArgoPlane includes custom CSS for the ArgoCD UI. Apply it as a ConfigMap mount or inline style injection. The CSS file is at `deploy/argocd/argoplane-styles.css`.

@@ -1,0 +1,118 @@
+---
+title: Backups API
+description: Backups extension backend API reference
+---
+
+# Backups API
+
+The backups backend exposes a JSON HTTP API consumed by the UI extension via ArgoCD's proxy at `/extensions/backups/`.
+
+## Endpoints
+
+### List schedules
+
+```
+GET /api/v1/schedules?namespace={ns}
+```
+
+List Velero backup schedules, optionally filtered by namespace.
+
+**Response:**
+
+```json
+{
+  "schedules": [
+    {
+      "name": "argoplane-demo-daily",
+      "namespace": "velero",
+      "schedule": "0 2 * * *",
+      "lastBackup": "2026-03-15T02:00:00Z",
+      "status": "Enabled"
+    }
+  ]
+}
+```
+
+### List backups
+
+```
+GET /api/v1/backups?schedule={name}&namespace={ns}
+```
+
+List Velero backups, optionally filtered by schedule or namespace.
+
+**Response:**
+
+```json
+{
+  "backups": [
+    {
+      "name": "argoplane-demo-daily-20260315020000",
+      "schedule": "argoplane-demo-daily",
+      "status": "Completed",
+      "startTimestamp": "2026-03-15T02:00:00Z",
+      "completionTimestamp": "2026-03-15T02:01:30Z",
+      "itemsBackedUp": 42
+    }
+  ]
+}
+```
+
+### Trigger backup
+
+```
+POST /api/v1/backups
+```
+
+Create an ad-hoc backup from a schedule.
+
+**Request body:**
+
+```json
+{
+  "schedule": "argoplane-demo-daily"
+}
+```
+
+### Trigger restore
+
+```
+POST /api/v1/restores
+```
+
+Restore from a completed backup.
+
+**Request body:**
+
+```json
+{
+  "backup": "argoplane-demo-daily-20260315020000",
+  "includeNamespaces": ["default"],
+  "includeResources": ["deployments", "services"]
+}
+```
+
+### Backup logs
+
+```
+GET /api/v1/backups/{name}/logs
+```
+
+Stream backup execution logs.
+
+### Backup results
+
+```
+GET /api/v1/backups/{name}/results
+```
+
+Download backup results/summary.
+
+## Error responses
+
+```json
+{
+  "error": "not_found",
+  "message": "backup 'xyz' not found"
+}
+```

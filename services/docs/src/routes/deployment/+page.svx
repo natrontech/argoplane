@@ -1,0 +1,80 @@
+---
+title: Deployment
+description: Deploying ArgoPlane to a Kubernetes cluster
+---
+
+# Deployment
+
+ArgoPlane extensions are deployed alongside ArgoCD in your Kubernetes cluster. Each extension backend runs as a separate Deployment with a Service.
+
+## Components to deploy
+
+For each extension, you need:
+
+1. **Backend Deployment + Service**: Go HTTP server in the `argocd` namespace
+2. **UI bundle**: JavaScript file loaded into the argocd-server pod at `/tmp/extensions/`
+3. **Proxy configuration**: ConfigMap entry routing `/extensions/<name>/*` to the backend
+4. **RBAC**: Policy rules allowing users to invoke the extension
+
+## Deployment manifests
+
+Extension manifests live in `deploy/extensions/<name>/deployment.yaml`:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argoplane-metrics-backend
+  namespace: argocd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: argoplane-metrics-backend
+  template:
+    spec:
+      containers:
+        - name: backend
+          image: argoplane-metrics-backend:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PROMETHEUS_URL
+              value: "http://prometheus-server.monitoring:9090"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: argoplane-metrics-backend
+  namespace: argocd
+spec:
+  selector:
+    app: argoplane-metrics-backend
+  ports:
+    - port: 8080
+      targetPort: 8080
+```
+
+## UI bundle loading
+
+UI extension bundles are loaded as init containers or volume mounts into the argocd-server pod. The built JavaScript file must be placed at `/tmp/extensions/extension-<name>.js`.
+
+## Docker images
+
+Backend images are tagged with the git commit hash:
+
+```bash
+docker build -t argoplane-metrics-backend:$(git rev-parse --short HEAD) .
+```
+
+## Quick deploy (local dev)
+
+```bash
+make deploy-extensions
+```
+
+This builds all backends, loads images into kind, applies manifests, copies UI bundles, and configures the proxy.
+
+## Next
+
+- [ArgoCD Configuration](/deployment/argocd-configuration): proxy routing and RBAC setup

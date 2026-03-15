@@ -1,0 +1,78 @@
+---
+title: Getting Started
+description: Install ArgoPlane extensions in your ArgoCD cluster
+---
+
+# Getting Started
+
+This guide walks you through installing ArgoPlane extensions in your ArgoCD cluster.
+
+## Prerequisites
+
+- ArgoCD v3.x installed and running
+- `kubectl` access to the cluster
+- Helm (for operator installations like Prometheus, Velero)
+
+## Local development setup
+
+For a local development environment using kind:
+
+```bash
+# Create kind cluster + install ArgoCD + operators
+make dev-infra
+
+# Get the admin password
+make argocd-password
+
+# Port-forward the ArgoCD UI
+make argocd-portforward
+```
+
+Then open `http://localhost:8080` in your browser.
+
+## Installing extensions
+
+Each extension consists of three parts:
+
+1. **Backend service**: a Go HTTP server deployed in the cluster
+2. **UI bundle**: a JavaScript file loaded into ArgoCD's UI
+3. **Proxy configuration**: ArgoCD routes `/extensions/<name>/*` to the backend
+
+### Deploy extension backends
+
+```bash
+# Deploy all extension backends and UI bundles
+make deploy-extensions
+```
+
+This applies Kubernetes Deployment and Service manifests for each extension backend, copies the built UI bundles into the argocd-server pod, and configures the proxy routing.
+
+### Configure RBAC
+
+Extensions require explicit RBAC in ArgoCD. Add permissions to `argocd-rbac-cm`:
+
+```yaml
+p, role:developer, extensions, invoke, metrics, allow
+p, role:developer, extensions, invoke, backups, allow
+p, role:developer, extensions, invoke, networking, allow
+```
+
+### Verify
+
+After deployment, navigate to any ArgoCD Application. You should see new tabs on Deployment and StatefulSet resources (Metrics), and new panels in the Application detail view (Backups, Networking).
+
+## Demo app
+
+A demo application is included to exercise all extensions:
+
+```bash
+make deploy-example
+```
+
+This deploys a guestbook application with Velero schedules, CiliumNetworkPolicies, and Prometheus metrics targets.
+
+## Next steps
+
+- [Architecture](/architecture): understand how extensions work under the hood
+- [Extensions](/extensions/metrics): explore individual extension documentation
+- [Developing](/developing): build your own extensions

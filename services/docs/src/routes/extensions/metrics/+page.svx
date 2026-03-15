@@ -1,0 +1,63 @@
+---
+title: Metrics Extension
+description: Prometheus metrics integration for ArgoCD
+---
+
+# Metrics Extension
+
+The metrics extension surfaces Prometheus metrics directly inside ArgoCD's resource detail views. Developers can see CPU, memory, request rates, and custom metrics for their Deployments, StatefulSets, and Pods without leaving ArgoCD.
+
+## Registration
+
+The extension registers as:
+
+- **Resource tab** on `apps/Deployment`, `apps/StatefulSet`, and core `Pod` resources
+- **System-level page** in the ArgoCD sidebar for cluster-wide metric views
+
+## What it shows
+
+### Resource tab (per-resource)
+
+When viewing a Deployment, StatefulSet, or Pod, the Metrics tab shows:
+
+- CPU usage over time
+- Memory usage over time
+- Pod count and status (for Deployments/StatefulSets)
+- Custom metrics defined via annotations
+
+### System-level page
+
+The sidebar page provides cluster-wide metric dashboards with namespace filtering.
+
+## Backend
+
+The metrics backend is a Go HTTP server that queries Prometheus:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/v1/metrics` | Query Prometheus metrics for a resource |
+| `GET /api/v1/metrics/labels` | List available label values |
+
+### Configuration
+
+| Environment Variable | Required | Default | Description |
+|---------------------|----------|---------|-------------|
+| `PROMETHEUS_URL` | Yes | - | Prometheus server URL |
+| `PORT` | No | `8080` | HTTP server port |
+| `LOG_LEVEL` | No | `info` | Log level (debug, info, warn, error) |
+
+## Proxy configuration
+
+In `deploy/argocd/proxy-extensions.json`:
+
+```json
+{
+  "extension.config.metrics": "services:\n- url: http://argoplane-metrics-backend.argocd.svc:8080\n"
+}
+```
+
+## RBAC
+
+```
+p, role:developer, extensions, invoke, metrics, allow
+```

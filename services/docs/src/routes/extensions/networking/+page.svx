@@ -1,0 +1,66 @@
+---
+title: Networking Extension
+description: Cilium network policy and Hubble flow visibility for ArgoCD
+---
+
+# Networking Extension
+
+The networking extension surfaces Cilium network policies and Hubble flow data inside ArgoCD. Developers can see which policies apply to their applications and observe actual network traffic.
+
+## Registration
+
+The extension registers as:
+
+- **App view** on any ArgoCD Application (detail page)
+- **Resource tab** on core `Pod` resources
+
+## What it shows
+
+### Application view
+
+When viewing an Application, the Networking view shows:
+
+- CiliumNetworkPolicies applied to the application's namespace
+- CiliumClusterwideNetworkPolicies affecting the namespace
+- Cross-namespace traffic flows (via Hubble)
+- Policy rule details (ingress/egress, endpoints, ports)
+
+### Pod resource tab
+
+Per-pod network visibility:
+
+- Active Hubble flows to/from the pod
+- Allowed and denied connections
+- Source/destination details
+
+## Demo resources
+
+The demo app includes:
+
+- 2 application-level CiliumNetworkPolicies (in-namespace)
+- 2 platform-level CiliumClusterwideNetworkPolicies
+- 2 platform-level CiliumNetworkPolicies (cross-namespace)
+- Cross-namespace traffic patterns for Hubble flow visibility
+
+## Backend
+
+The networking backend queries Cilium/Hubble:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/v1/policies` | List network policies for an application |
+| `GET /api/v1/flows` | Query Hubble flows for a namespace or pod |
+
+### Configuration
+
+| Environment Variable | Required | Default | Description |
+|---------------------|----------|---------|-------------|
+| `HUBBLE_ADDRESS` | No | `hubble-relay.kube-system:4245` | Hubble relay address |
+| `PORT` | No | `8082` | HTTP server port |
+| `LOG_LEVEL` | No | `info` | Log level |
+
+## RBAC
+
+```
+p, role:developer, extensions, invoke, networking, allow
+```

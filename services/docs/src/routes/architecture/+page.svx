@@ -1,0 +1,72 @@
+---
+title: Architecture
+description: How ArgoPlane extensions work
+---
+
+# Architecture
+
+ArgoPlane is a collection of ArgoCD UI extensions, not a standalone application. Every feature ships as an extension that lives inside ArgoCD's UI.
+
+## Extension pattern
+
+Every ArgoPlane extension has three parts:
+
+1. **UI extension** (React/TypeScript): registers tabs, status panels, or pages via `window.extensionsAPI`
+2. **Backend service** (Go): queries the underlying system (Prometheus, Velero, Cilium) and exposes an HTTP API
+3. **Proxy extension config**: ArgoCD routes `/extensions/<name>/*` requests from the UI to the Go backend
+
+```
+Browser -> ArgoCD UI -> /extensions/metrics/* -> ArgoCD Proxy -> metrics-backend -> Prometheus
+```
+
+## No state
+
+ArgoPlane has no database. All state is derived from external systems:
+
+- **Kubernetes API**: platform capabilities, ArgoCD Applications, operator resources
+- **Prometheus**: metrics data
+- **Velero**: backup/restore status
+- **Cilium/Hubble**: network policies and flows
+- **Git**: GitOps repos (via ArgoCD)
+- **OIDC**: user identity (via ArgoCD)
+
+## Multi-tenancy
+
+ArgoPlane relies on ArgoCD's native RBAC and AppProjects for tenant isolation. No additional auth layer. Proxy extensions inherit ArgoCD's authentication: the API server validates the user's token and passes identity headers to the backend.
+
+### Identity headers
+
+Backend services receive these headers from ArgoCD's proxy:
+
+| Header | Content |
+|--------|---------|
+| `Argocd-Username` | Authenticated username |
+| `Argocd-User-Id` | User identifier |
+| `Argocd-User-Groups` | Comma-separated group list |
+| `Argocd-Target-Cluster-Name` | Target cluster name |
+| `Argocd-Target-Cluster-URL` | Target cluster API URL |
+
+## Extension registration types
+
+ArgoCD v3 supports several extension registration methods:
+
+| Method | Use case |
+|--------|----------|
+| `registerResourceExtension` | Tabs on resource detail pages (Deployment, Pod, etc.) |
+| `registerSystemLevelExtension` | Sidebar pages (system-wide views) |
+| `registerStatusPanelExtension` | Status bar items on Application detail |
+| `registerAppViewExtension` | Full-page views within Application detail |
+| `registerTopBarActionMenuExt` | Action buttons in the top bar |
+
+## Loose coupling
+
+Extensions are independent. The metrics extension doesn't know about the backups extension. Each owns its domain. They share nothing except the ArgoCD proxy mechanism and the shared React component library (`@argoplane/shared`).
+
+## Design principles
+
+- **Extensions first**: don't build a separate portal unless ArgoCD's extension system can't handle it
+- **Discoverability first**: show what the platform offers, not just what's deployed
+- **Simplicity first**: prefer simplicity over abstraction
+- **Stateless**: no database, query existing systems
+- **Idempotent operations**: create/delete/update are safe to retry
+- **Minimal day-2 ops**: features should be operable by a small team

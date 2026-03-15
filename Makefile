@@ -201,6 +201,18 @@ clean: ## Remove test resources, keep cluster
 .PHONY: clean-all
 clean-all: cluster-delete ## Destroy everything
 
+# --- Documentation ---
+
+.PHONY: docs-site
+docs-site: ## Build the documentation site
+	@echo "==> Building docs site"
+	@cd services/docs && npm install && npm run build
+
+.PHONY: docs-site-dev
+docs-site-dev: ## Run docs site in dev mode
+	@echo "==> Starting docs dev server"
+	@cd services/docs && npm install && npm run dev
+
 # --- Help ---
 
 .PHONY: help

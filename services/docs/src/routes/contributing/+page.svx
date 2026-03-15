@@ -1,0 +1,80 @@
+---
+title: Contributing
+description: How to contribute to ArgoPlane
+---
+
+# Contributing
+
+ArgoPlane is open source (AGPL-3.0). Contributions are welcome.
+
+## Repository structure
+
+```
+extensions/          # ArgoCD UI extensions (React + Go)
+  shared/            # Shared React component library
+  metrics/           # Metrics extension (Prometheus)
+  backups/           # Backups extension (Velero)
+  networking/        # Networking extension (Cilium/Hubble)
+services/            # Standalone services
+  docs/              # Documentation site (SvelteKit)
+design-system/       # CSS design tokens and components
+hack/                # Dev scripts (kind cluster, ArgoCD setup)
+deploy/              # Deployment manifests
+  argocd/            # ArgoCD configuration
+  extensions/        # Per-extension deployments
+examples/            # Demo applications
+tests/               # Integration tests
+docs/                # Static docs (styleguide, roadmap)
+```
+
+## Development workflow
+
+```bash
+# Set up local dev environment
+make dev-infra
+
+# Build all extensions
+make build-extensions
+
+# Deploy to local cluster
+make deploy-extensions
+
+# Deploy demo app
+make deploy-example
+
+# Run integration tests
+make test-integration
+
+# Build docs site
+cd services/docs && npm run dev
+```
+
+## Commit conventions
+
+Concise, imperative mood. Focus on "why" not "what":
+
+```
+Add metrics extension with Prometheus backend
+Fix backup schedule timezone handling
+Wire up proxy extension config for networking
+```
+
+## Adding a new extension
+
+See the [developing guide](/developing) for the full checklist. Key steps:
+
+1. Create `extensions/<name>/ui/` and `extensions/<name>/backend/`
+2. Register via `window.extensionsAPI`
+3. Add deployment manifests, proxy config, RBAC
+4. Update the demo app
+5. Update documentation
+
+## Code style
+
+- **Go**: follow [Effective Go](https://go.dev/doc/effective_go), `log/slog` for logging, `net/http` stdlib for HTTP
+- **TypeScript/React**: strict mode, no `any` (except ArgoCD API types), PascalCase components
+- **CSS**: use design system tokens, no hardcoded colors, 4px grid
+
+## License
+
+AGPL-3.0. See [LICENSE](https://github.com/natrontech/argoplane/blob/main/LICENSE).

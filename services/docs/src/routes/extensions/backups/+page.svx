@@ -1,0 +1,66 @@
+---
+title: Backups Extension
+description: Velero backup and restore visibility for ArgoCD
+---
+
+# Backups Extension
+
+The backups extension surfaces Velero backup schedules, backup status, and restore capabilities inside ArgoCD. Developers can see their backup health and trigger restores without kubectl access.
+
+## Registration
+
+The extension registers as:
+
+- **App view** on any ArgoCD Application (detail page)
+- **Status panel** showing backup health summary
+- **Resource tab** on `velero.io/Schedule` and `velero.io/Backup` resources
+
+## What it shows
+
+### Application view
+
+When viewing an Application, the Backups view shows:
+
+- Active backup schedules for the application's namespace
+- Recent backups with status (Completed, Failed, InProgress)
+- Backup Storage Location (BSL) details
+- Ability to trigger ad-hoc backups from schedules
+- Granular restore from any completed backup
+
+### Status panel
+
+A compact status indicator showing:
+
+- Number of healthy/failed schedules
+- Last successful backup time
+- Overall backup health
+
+### Resource tabs
+
+Direct views on Velero Schedule and Backup resources showing detailed metadata, logs, and results.
+
+## Backend
+
+The backups backend queries Velero CRDs via the Kubernetes API:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/v1/schedules` | List backup schedules |
+| `GET /api/v1/backups` | List backups |
+| `POST /api/v1/backups` | Trigger a backup from a schedule |
+| `POST /api/v1/restores` | Trigger a restore from a backup |
+| `GET /api/v1/backups/{name}/logs` | Stream backup logs |
+| `GET /api/v1/backups/{name}/results` | Download backup results |
+
+### Configuration
+
+| Environment Variable | Required | Default | Description |
+|---------------------|----------|---------|-------------|
+| `PORT` | No | `8081` | HTTP server port |
+| `LOG_LEVEL` | No | `info` | Log level |
+
+## RBAC
+
+```
+p, role:developer, extensions, invoke, backups, allow
+```
