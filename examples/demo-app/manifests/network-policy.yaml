@@ -2,18 +2,29 @@ apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
   name: guestbook-policy
+  annotations:
+    description: "Allow ingress only from pods with role=frontend-client on port 80. Allow egress to DNS, kube-apiserver, and HTTPS."
 spec:
   endpointSelector:
     matchLabels:
       app: guestbook-ui
   ingress:
     - fromEndpoints:
-        - {}
+        - matchLabels:
+            role: frontend-client
       toPorts:
         - ports:
             - port: "80"
               protocol: TCP
   egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
     - toEntities:
         - kube-apiserver
     - toCIDR:

@@ -1,0 +1,67 @@
+# Allowed traffic: has role=frontend-client label, matches the guestbook ingress policy.
+# Curls guestbook-ui:80 every 3 seconds. These flows show as FORWARDED.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traffic-allowed
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traffic-allowed
+  template:
+    metadata:
+      labels:
+        app: traffic-allowed
+        role: frontend-client
+    spec:
+      containers:
+        - name: curl
+          image: curlimages/curl:8.12.1
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              while true; do
+                curl -sf -o /dev/null -w '%{http_code}' http://guestbook-ui.argoplane-demo.svc:80 || true
+                sleep 3
+              done
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 32Mi
+---
+# Blocked traffic: does NOT have role=frontend-client, so ingress to guestbook is denied.
+# Curls guestbook-ui:80 every 5 seconds. These flows show as DROPPED at the guestbook endpoint.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traffic-blocked
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traffic-blocked
+  template:
+    metadata:
+      labels:
+        app: traffic-blocked
+        role: unauthorized
+    spec:
+      containers:
+        - name: curl
+          image: curlimages/curl:8.12.1
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              while true; do
+                curl -sf -o /dev/null --connect-timeout 2 -w '%{http_code}' http://guestbook-ui.argoplane-demo.svc:80 || true
+                sleep 5
+              done
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 32Mi
