@@ -463,16 +463,7 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
   React.useEffect(() => { setLoading(true); fetchAll(); }, [fetchAll]);
   React.useEffect(() => { const i = setInterval(fetchAll, REFRESH_INTERVAL); return () => clearInterval(i); }, [fetchAll]);
 
-  if (loading) return <div style={panel}><Loading /></div>;
-  if (error) {
-    return (
-      <div style={panel}>
-        <div style={{ color: colors.redText, marginBottom: spacing[2] }}>Failed to load: {error}</div>
-        <Button onClick={() => { setLoading(true); fetchAll(); }}>Retry</Button>
-      </div>
-    );
-  }
-
+  // All hooks must be above early returns to satisfy rules of hooks.
   const flows = flowsResponse?.flows || [];
   const flowSummary = flowsResponse?.summary;
   const hubbleAvailable = flowsResponse?.hubble ?? false;
@@ -480,7 +471,6 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
   const graph = React.useMemo(() => buildGraph(flows, namespace, graphWidth), [flows, namespace, graphWidth]);
   const nodeWidth = Math.min(graphWidth * 0.24, 180);
 
-  // Selected node detail.
   const selectedPodName = selectedNode?.startsWith('center:') ? selectedNode.slice(7) : null;
   const selectedEndpoint = selectedPodName ? endpoints.find((ep) => ep.name === selectedPodName) : null;
   const displayPolicies = React.useMemo(() => {
@@ -493,11 +483,20 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
     });
   }, [selectedPodName, endpoints, policies]);
 
-  // Edges connected to selected node.
   const connectedEdgeIds = React.useMemo(() => {
     if (!selectedNode) return new Set<string>();
     return new Set(graph.edges.filter((e) => e.sourceId === selectedNode || e.targetId === selectedNode).map((e) => e.id));
   }, [selectedNode, graph.edges]);
+
+  if (loading) return <div style={panel}><Loading /></div>;
+  if (error) {
+    return (
+      <div style={panel}>
+        <div style={{ color: colors.redText, marginBottom: spacing[2] }}>Failed to load: {error}</div>
+        <Button onClick={() => { setLoading(true); fetchAll(); }}>Retry</Button>
+      </div>
+    );
+  }
 
   return (
     <div style={rootPanel}>
