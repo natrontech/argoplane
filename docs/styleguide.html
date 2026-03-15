@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArgoPlane Style Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ================================================================
+     ArgoPlane Design Tokens
+     ================================================================ */
+  :root {
+    /* Primary accent (pastel orange) */
+    --ap-orange-50:  #FFF7ED;
+    --ap-orange-100: #FFEDD5;
+    --ap-orange-200: #FDDCB0;
+    --ap-orange-300: #F5C28B;
+    --ap-orange-400: #F0A868;
+    --ap-orange-500: #E8935A;
+    --ap-orange-600: #D47A42;
+
+    /* Status: green */
+    --ap-green-light: #D1FAE5;
+    --ap-green:       #6EE7B7;
+    --ap-green-solid: #86EFAC;
+
+    /* Status: red */
+    --ap-red-light: #FFE4E6;
+    --ap-red:       #FDA4AF;
+    --ap-red-solid: #FCA5A5;
+
+    /* Status: yellow */
+    --ap-yellow-light: #FEF9C3;
+    --ap-yellow:       #FDE68A;
+    --ap-yellow-solid: #FDE047;
+
+    /* Status: blue */
+    --ap-blue-light: #DBEAFE;
+    --ap-blue:       #93C5FD;
+    --ap-blue-solid: #7DD3FC;
+
+    /* Warm grays */
+    --ap-gray-50:  #FAFAF9;
+    --ap-gray-100: #F5F5F4;
+    --ap-gray-200: #E7E5E4;
+    --ap-gray-300: #D6D3D1;
+    --ap-gray-400: #A8A29E;
+    --ap-gray-500: #78716C;
+    --ap-gray-600: #57534E;
+    --ap-gray-700: #44403C;
+    --ap-gray-800: #292524;
+    --ap-gray-900: #1C1917;
+
+    --ap-white: #FFFFFF;
+
+    /* Typography */
+    --ap-font-body: 'Heebo', sans-serif;
+    --ap-font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+
+    /* Spacing (4px grid) */
+    --ap-space-1:  4px;
+    --ap-space-2:  8px;
+    --ap-space-3:  12px;
+    --ap-space-4:  16px;
+    --ap-space-5:  20px;
+    --ap-space-6:  24px;
+    --ap-space-8:  32px;
+    --ap-space-10: 40px;
+
+    /* Radius */
+    --ap-radius-none: 0px;
+    --ap-radius-sm:   2px;
+    --ap-radius-md:   4px;
+  }
+
+  /* ================================================================
+     Page Layout
+     ================================================================ */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--ap-font-body);
+    font-size: 14px;
+    color: var(--ap-gray-800);
+    background: var(--ap-white);
+    line-height: 1.5;
+  }
+
+  .page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: var(--ap-space-8) var(--ap-space-5);
+  }
+
+  .page-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--ap-gray-800);
+    margin-bottom: var(--ap-space-1);
+  }
+
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--ap-gray-500);
+    margin-bottom: var(--ap-space-10);
+    font-family: var(--ap-font-mono);
+  }
+
+  /* ================================================================
+     Section
+     ================================================================ */
+  .section {
+    margin-bottom: var(--ap-space-10);
+  }
+
+  .section-header {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ap-gray-500);
+    display: flex;
+    align-items: center;
+    gap: var(--ap-space-2);
+    margin-bottom: var(--ap-space-5);
+  }
+
+  .section-line {
+    flex: 1;
+    height: 1px;
+    background: var(--ap-gray-200);
+  }
+
+  .section-desc {
+    font-size: 13px;
+    color: var(--ap-gray-500);
+    margin-bottom: var(--ap-space-4);
+  }
+
+  /* ================================================================
+     Demo Rows
+     ================================================================ */
+  .demo-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ap-space-4);
+    margin-bottom: var(--ap-space-5);
+    align-items: flex-start;
+  }
+
+  .demo-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ap-gray-400);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: var(--ap-space-2);
+  }
+
+  .demo-block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ap-space-1);
+  }
+
+  /* ================================================================
+     Color Swatches
+     ================================================================ */
+  .swatch-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ap-space-2);
+    margin-bottom: var(--ap-space-4);
+  }
+
+  .swatch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--ap-space-1);
+  }
+
+  .swatch-color {
+    width: 48px;
+    height: 48px;
+    border: 1px solid var(--ap-gray-200);
+    border-radius: var(--ap-radius-sm);
+  }
+
+  .swatch-name {
+    font-size: 10px;
+    font-family: var(--ap-font-mono);
+    color: var(--ap-gray-500);
+    text-align: center;
+  }
+
+  .swatch-hex {
+    font-size: 10px;
+    font-family: var(--ap-font-mono);
+    color: var(--ap-gray-400);
+  }
+
+  /* ================================================================
+     Status Badge
+     ================================================================ */
+  .ap-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .ap-badge-square {
+    width: 8px;
+    height: 8px;
+    border-radius: 1px;
+    flex-shrink: 0;
+  }
+
+  /* ================================================================
+     Cards
+     ================================================================ */
+  .ap-card {
+    background: var(--ap-gray-50);
+    border: 1px solid var(--ap-gray-200);
+    border-radius: var(--ap-radius-md);
+    padding: var(--ap-space-4);
+  }
+
+  /* ================================================================
+     Metric Card
+     ================================================================ */
+  .ap-metric {
+    background: var(--ap-gray-50);
+    border: 1px solid var(--ap-gray-200);
+    border-radius: var(--ap-radius-md);
+    padding: var(--ap-space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--ap-space-1);
+    min-width: 120px;
+    position: relative;
+  }
+
+  .ap-metric-value {
+    font-size: 20px;
+    font-weight: 600;
+    font-family: var(--ap-font-mono);
+    color: var(--ap-gray-800);
+    line-height: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  .ap-metric-unit {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--ap-gray-400);
+    font-family: var(--ap-font-mono);
+  }
+
+  .ap-metric-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ap-gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  /* ================================================================
+     Buttons
+     ================================================================ */
+  .ap-button {
+    background: var(--ap-orange-100);
+    color: var(--ap-orange-600);
+    border: 1px solid var(--ap-orange-200);
+    border-radius: var(--ap-radius-sm);
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.1s;
+  }
+
+  .ap-button:hover {
+    background: var(--ap-orange-200);
+  }
+
+  .ap-button-primary {
+    background: var(--ap-orange-500);
+    color: var(--ap-white);
+    border: 1px solid var(--ap-orange-600);
+  }
+
+  .ap-button-primary:hover {
+    background: var(--ap-orange-400);
+  }
+
+  .ap-button-disabled {
+    background: var(--ap-gray-100);
+    color: var(--ap-gray-400);
+    border: 1px solid var(--ap-gray-200);
+    cursor: not-allowed;
+  }
+
+  .ap-button-danger {
+    background: var(--ap-red-light);
+    color: #B91C1C;
+    border: 1px solid var(--ap-red);
+  }
+
+  .ap-button-danger:hover {
+    background: var(--ap-red);
+  }
+
+  /* ================================================================
+     Table
+     ================================================================ */
+  .ap-table {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+  }
+
+  .ap-table th {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ap-gray-500);
+    padding: 8px 12px;
+    border-bottom: 2px solid var(--ap-gray-200);
+    text-align: left;
+  }
+
+  .ap-table td {
+    font-size: 13px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--ap-gray-100);
+    font-family: var(--ap-font-mono);
+  }
+
+  .ap-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* ================================================================
+     Meta Row
+     ================================================================ */
+  .ap-meta-row {
+    display: flex;
+    align-items: center;
+    gap: var(--ap-space-2);
+    font-size: 13px;
+    color: var(--ap-gray-500);
+    font-family: var(--ap-font-mono);
+  }
+
+  .ap-meta-sep {
+    color: var(--ap-gray-300);
+  }
+
+  .ap-meta-label {
+    color: var(--ap-gray-400);
+  }
+
+  .ap-meta-value {
+    color: var(--ap-gray-700);
+  }
+
+  /* ================================================================
+     Empty State
+     ================================================================ */
+  .ap-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--ap-space-10);
+    gap: var(--ap-space-3);
+  }
+
+  .ap-empty-icon {
+    display: grid;
+    grid-template-columns: 6px 6px;
+    gap: 2px;
+  }
+
+  .ap-empty-pixel {
+    width: 6px;
+    height: 6px;
+    background: var(--ap-gray-200);
+    border-radius: 1px;
+  }
+
+  .ap-empty-text {
+    font-size: 13px;
+    color: var(--ap-gray-400);
+  }
+
+  /* ================================================================
+     Loading
+     ================================================================ */
+  .ap-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ap-space-1);
+    padding: var(--ap-space-5);
+  }
+
+  .ap-loading-square {
+    width: 8px;
+    height: 8px;
+    background: var(--ap-gray-200);
+    border-radius: 1px;
+    transition: background 0.15s;
+  }
+
+  .ap-loading-square.active {
+    background: var(--ap-orange-400);
+  }
+
+  /* ================================================================
+     Pixel Decoration
+     ================================================================ */
+  .ap-pixel-dots {
+    display: grid;
+    grid-template-columns: 3px 3px;
+    gap: 2px;
+    position: absolute;
+    top: var(--ap-space-2);
+    right: var(--ap-space-2);
+  }
+
+  .ap-pixel-dot {
+    width: 3px;
+    height: 3px;
+    background: var(--ap-gray-200);
+  }
+
+  /* ================================================================
+     Tags / Chips
+     ================================================================ */
+  .ap-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: var(--ap-font-mono);
+    padding: 2px 8px;
+    border-radius: var(--ap-radius-sm);
+    border: 1px solid;
+  }
+
+  .ap-tag-orange {
+    background: var(--ap-orange-50);
+    color: var(--ap-orange-600);
+    border-color: var(--ap-orange-200);
+  }
+
+  .ap-tag-green {
+    background: var(--ap-green-light);
+    color: #16A34A;
+    border-color: var(--ap-green);
+  }
+
+  .ap-tag-red {
+    background: var(--ap-red-light);
+    color: #B91C1C;
+    border-color: var(--ap-red);
+  }
+
+  .ap-tag-gray {
+    background: var(--ap-gray-100);
+    color: var(--ap-gray-600);
+    border-color: var(--ap-gray-200);
+  }
+
+  /* ================================================================
+     Input
+     ================================================================ */
+  .ap-input {
+    font-family: var(--ap-font-mono);
+    font-size: 13px;
+    padding: 6px 12px;
+    border: 1px solid var(--ap-gray-200);
+    border-radius: var(--ap-radius-sm);
+    background: var(--ap-white);
+    color: var(--ap-gray-800);
+    outline: none;
+    transition: border-color 0.1s;
+  }
+
+  .ap-input:focus {
+    border-color: var(--ap-orange-300);
+  }
+
+  .ap-input::placeholder {
+    color: var(--ap-gray-400);
+  }
+
+  /* ================================================================
+     Tooltip
+     ================================================================ */
+  .ap-tooltip-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .ap-tooltip {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--ap-gray-800);
+    color: var(--ap-gray-100);
+    font-size: 11px;
+    font-family: var(--ap-font-mono);
+    padding: 4px 8px;
+    border-radius: var(--ap-radius-sm);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  /* ================================================================
+     Progress Bar
+     ================================================================ */
+  .ap-progress {
+    height: 4px;
+    background: var(--ap-gray-100);
+    border-radius: 0;
+    overflow: hidden;
+  }
+
+  .ap-progress-fill {
+    height: 100%;
+    background: var(--ap-orange-400);
+    transition: width 0.15s;
+  }
+
+  /* ================================================================
+     Dark Theme Section
+     ================================================================ */
+  .dark-section {
+    background: var(--ap-gray-900);
+    border-radius: var(--ap-radius-md);
+    padding: var(--ap-space-5);
+    color: var(--ap-gray-100);
+  }
+
+  .dark-section .section-header {
+    color: var(--ap-gray-400);
+  }
+
+  .dark-section .section-line {
+    background: var(--ap-gray-700);
+  }
+
+  .dark-section .ap-card {
+    background: var(--ap-gray-800);
+    border-color: var(--ap-gray-700);
+  }
+
+  .dark-section .ap-metric {
+    background: var(--ap-gray-800);
+    border-color: var(--ap-gray-700);
+  }
+
+  .dark-section .ap-metric-value {
+    color: var(--ap-gray-100);
+  }
+
+  .dark-section .ap-metric-label {
+    color: var(--ap-gray-400);
+  }
+
+  .dark-section .ap-metric-unit {
+    color: var(--ap-gray-500);
+  }
+
+  .dark-section .ap-table th {
+    color: var(--ap-gray-400);
+    border-bottom-color: var(--ap-gray-700);
+  }
+
+  .dark-section .ap-table td {
+    color: var(--ap-gray-300);
+    border-bottom-color: var(--ap-gray-800);
+  }
+
+  .dark-section .ap-meta-row {
+    color: var(--ap-gray-400);
+  }
+
+  .dark-section .ap-meta-value {
+    color: var(--ap-gray-200);
+  }
+
+  .dark-section .ap-meta-label {
+    color: var(--ap-gray-500);
+  }
+
+  .dark-section .ap-meta-sep {
+    color: var(--ap-gray-600);
+  }
+
+  .dark-section .ap-button {
+    background: var(--ap-orange-600);
+    color: var(--ap-orange-100);
+    border-color: var(--ap-orange-500);
+  }
+
+  .dark-section .ap-button-primary {
+    background: var(--ap-orange-400);
+    color: var(--ap-gray-900);
+    border-color: var(--ap-orange-500);
+  }
+
+  .dark-section .ap-empty-pixel {
+    background: var(--ap-gray-700);
+  }
+
+  .dark-section .ap-empty-text {
+    color: var(--ap-gray-500);
+  }
+
+  .dark-section .ap-input {
+    background: var(--ap-gray-800);
+    border-color: var(--ap-gray-700);
+    color: var(--ap-gray-100);
+  }
+
+  .dark-section .ap-input:focus {
+    border-color: var(--ap-orange-400);
+  }
+
+  .dark-section .ap-input::placeholder {
+    color: var(--ap-gray-600);
+  }
+
+  .dark-section .ap-tag-gray {
+    background: var(--ap-gray-800);
+    color: var(--ap-gray-300);
+    border-color: var(--ap-gray-700);
+  }
+
+  .dark-section .ap-pixel-dot {
+    background: var(--ap-gray-700);
+  }
+
+  .dark-section .ap-progress {
+    background: var(--ap-gray-800);
+  }
+
+  .dark-section .ap-loading-square {
+    background: var(--ap-gray-700);
+  }
+
+  .dark-section .ap-loading-square.active {
+    background: var(--ap-orange-400);
+  }
+
+  .dark-section .demo-label {
+    color: var(--ap-gray-600);
+  }
+
+  .dark-section .section-desc {
+    color: var(--ap-gray-500);
+  }
+
+  /* ================================================================
+     Composition: Panel (how an extension looks inside ArgoCD)
+     ================================================================ */
+  .ap-panel {
+    padding: var(--ap-space-5);
+    font-family: inherit;
+  }
+
+  /* ================================================================
+     Typography specimen
+     ================================================================ */
+  .type-specimen {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ap-space-3);
+  }
+
+  .type-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--ap-space-4);
+  }
+
+  .type-size {
+    font-size: 11px;
+    font-family: var(--ap-font-mono);
+    color: var(--ap-gray-400);
+    width: 80px;
+    flex-shrink: 0;
+    text-align: right;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Title -->
+  <h1 class="page-title">ArgoPlane Style Guide</h1>
+  <p class="page-subtitle">minimal pixel art . pastel palette . 4px grid</p>
+
+  <!-- ============================================================
+       COLORS
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Colors</span>
+      <span class="section-line"></span>
+    </div>
+
+    <div class="demo-label">Primary Accent (Orange)</div>
+    <div class="swatch-group">
+      <div class="swatch">
+        <div class="swatch-color" style="background: #FFF7ED"></div>
+        <span class="swatch-name">50</span>
+        <span class="swatch-hex">#FFF7ED</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #FFEDD5"></div>
+        <span class="swatch-name">100</span>
+        <span class="swatch-hex">#FFEDD5</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #FDDCB0"></div>
+        <span class="swatch-name">200</span>
+        <span class="swatch-hex">#FDDCB0</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #F5C28B"></div>
+        <span class="swatch-name">300</span>
+        <span class="swatch-hex">#F5C28B</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #F0A868"></div>
+        <span class="swatch-name">400</span>
+        <span class="swatch-hex">#F0A868</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #E8935A"></div>
+        <span class="swatch-name">500</span>
+        <span class="swatch-hex">#E8935A</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #D47A42"></div>
+        <span class="swatch-name">600</span>
+        <span class="swatch-hex">#D47A42</span>
+      </div>
+    </div>
+
+    <div class="demo-label">Status Colors</div>
+    <div class="swatch-group">
+      <div class="swatch">
+        <div class="swatch-color" style="background: #D1FAE5"></div>
+        <span class="swatch-name">green-lt</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #86EFAC"></div>
+        <span class="swatch-name">green</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #FFE4E6"></div>
+        <span class="swatch-name">red-lt</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #FCA5A5"></div>
+        <span class="swatch-name">red</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #FEF9C3"></div>
+        <span class="swatch-name">yellow-lt</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #FDE047"></div>
+        <span class="swatch-name">yellow</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #DBEAFE"></div>
+        <span class="swatch-name">blue-lt</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #7DD3FC"></div>
+        <span class="swatch-name">blue</span>
+      </div>
+    </div>
+
+    <div class="demo-label">Warm Grays</div>
+    <div class="swatch-group">
+      <div class="swatch">
+        <div class="swatch-color" style="background: #FAFAF9"></div>
+        <span class="swatch-name">50</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #F5F5F4"></div>
+        <span class="swatch-name">100</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #E7E5E4"></div>
+        <span class="swatch-name">200</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #D6D3D1"></div>
+        <span class="swatch-name">300</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #A8A29E"></div>
+        <span class="swatch-name">400</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #78716C"></div>
+        <span class="swatch-name">500</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #57534E"></div>
+        <span class="swatch-name">600</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #44403C"></div>
+        <span class="swatch-name">700</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #292524"></div>
+        <span class="swatch-name">800</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #1C1917"></div>
+        <span class="swatch-name">900</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       TYPOGRAPHY
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Typography</span>
+      <span class="section-line"></span>
+    </div>
+
+    <div class="type-specimen">
+      <div class="type-row">
+        <span class="type-size">20px / 600</span>
+        <span style="font-size: 20px; font-weight: 600;">Panel Title (Heebo)</span>
+      </div>
+      <div class="type-row">
+        <span class="type-size">16px / 600</span>
+        <span style="font-size: 16px; font-weight: 600;">Section Header</span>
+      </div>
+      <div class="type-row">
+        <span class="type-size">14px / 400</span>
+        <span style="font-size: 14px; font-weight: 400;">Body text looks like this. Clear and readable.</span>
+      </div>
+      <div class="type-row">
+        <span class="type-size">13px / 500</span>
+        <span style="font-size: 13px; font-weight: 500;">Button label or table cell text</span>
+      </div>
+      <div class="type-row">
+        <span class="type-size">11px / 600</span>
+        <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ap-gray-500);">METADATA LABEL</span>
+      </div>
+      <div class="type-row">
+        <span class="type-size">mono 20px</span>
+        <span style="font-size: 20px; font-weight: 600; font-family: var(--ap-font-mono);">42.8m</span>
+      </div>
+      <div class="type-row">
+        <span class="type-size">mono 13px</span>
+        <span style="font-size: 13px; font-family: var(--ap-font-mono);">default/nginx-deployment</span>
+      </div>
+      <div class="type-row">
+        <span class="type-size">mono 11px</span>
+        <span style="font-size: 11px; font-family: var(--ap-font-mono); color: var(--ap-gray-500);">2024-03-15T14:32:00Z</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SPACING & GRID
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Spacing (4px Grid)</span>
+      <span class="section-line"></span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 12px;" class="demo-row">
+        <span style="width: 60px; font-size: 11px; font-family: var(--ap-font-mono); color: var(--ap-gray-400); text-align: right;">4px</span>
+        <div style="width: 4px; height: 12px; background: var(--ap-orange-300); border-radius: 1px;"></div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="width: 60px; font-size: 11px; font-family: var(--ap-font-mono); color: var(--ap-gray-400); text-align: right;">8px</span>
+        <div style="width: 8px; height: 12px; background: var(--ap-orange-300); border-radius: 1px;"></div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="width: 60px; font-size: 11px; font-family: var(--ap-font-mono); color: var(--ap-gray-400); text-align: right;">12px</span>
+        <div style="width: 12px; height: 12px; background: var(--ap-orange-300); border-radius: 1px;"></div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="width: 60px; font-size: 11px; font-family: var(--ap-font-mono); color: var(--ap-gray-400); text-align: right;">16px</span>
+        <div style="width: 16px; height: 12px; background: var(--ap-orange-300); border-radius: 1px;"></div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="width: 60px; font-size: 11px; font-family: var(--ap-font-mono); color: var(--ap-gray-400); text-align: right;">20px</span>
+        <div style="width: 20px; height: 12px; background: var(--ap-orange-300); border-radius: 1px;"></div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="width: 60px; font-size: 11px; font-family: var(--ap-font-mono); color: var(--ap-gray-400); text-align: right;">24px</span>
+        <div style="width: 24px; height: 12px; background: var(--ap-orange-300); border-radius: 1px;"></div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="width: 60px; font-size: 11px; font-family: var(--ap-font-mono); color: var(--ap-gray-400); text-align: right;">32px</span>
+        <div style="width: 32px; height: 12px; background: var(--ap-orange-300); border-radius: 1px;"></div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="width: 60px; font-size: 11px; font-family: var(--ap-font-mono); color: var(--ap-gray-400); text-align: right;">40px</span>
+        <div style="width: 40px; height: 12px; background: var(--ap-orange-300); border-radius: 1px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       STATUS BADGES
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Status Badges</span>
+      <span class="section-line"></span>
+    </div>
+    <p class="section-desc">8x8px colored square (not a circle). The pixel art signature element.</p>
+
+    <div class="demo-row">
+      <span class="ap-badge">
+        <span class="ap-badge-square" style="background: var(--ap-green-solid)"></span>
+        Healthy
+      </span>
+      <span class="ap-badge">
+        <span class="ap-badge-square" style="background: var(--ap-yellow-solid)"></span>
+        Degraded
+      </span>
+      <span class="ap-badge">
+        <span class="ap-badge-square" style="background: var(--ap-red-solid)"></span>
+        Failed
+      </span>
+      <span class="ap-badge">
+        <span class="ap-badge-square" style="background: var(--ap-blue-solid)"></span>
+        In Progress
+      </span>
+      <span class="ap-badge">
+        <span class="ap-badge-square" style="background: var(--ap-gray-300)"></span>
+        Unknown
+      </span>
+    </div>
+
+    <div class="demo-label" style="margin-top: 16px;">With Background</div>
+    <div class="demo-row">
+      <span class="ap-badge" style="background: var(--ap-green-light); padding: 4px 10px; border-radius: 2px;">
+        <span class="ap-badge-square" style="background: var(--ap-green-solid)"></span>
+        Healthy
+      </span>
+      <span class="ap-badge" style="background: var(--ap-yellow-light); padding: 4px 10px; border-radius: 2px;">
+        <span class="ap-badge-square" style="background: var(--ap-yellow-solid)"></span>
+        Degraded
+      </span>
+      <span class="ap-badge" style="background: var(--ap-red-light); padding: 4px 10px; border-radius: 2px;">
+        <span class="ap-badge-square" style="background: var(--ap-red-solid)"></span>
+        Failed
+      </span>
+      <span class="ap-badge" style="background: var(--ap-blue-light); padding: 4px 10px; border-radius: 2px;">
+        <span class="ap-badge-square" style="background: var(--ap-blue-solid)"></span>
+        In Progress
+      </span>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SECTION HEADERS
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Section Headers</span>
+      <span class="section-line"></span>
+    </div>
+    <p class="section-desc">Uppercase label with a single-pixel line extending to the right. Optional action slot.</p>
+
+    <div style="margin-bottom: 16px;">
+      <div class="section-header">
+        <span>BACKUPS</span>
+        <span class="section-line"></span>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-header">
+        <span>RESOURCE METRICS</span>
+        <span class="section-line"></span>
+        <button class="ap-button" style="font-size: 11px; padding: 3px 8px;">Refresh</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       CARDS
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Cards</span>
+      <span class="section-line"></span>
+    </div>
+    <p class="section-desc">Light background, thin border, no shadow. 4px radius.</p>
+
+    <div class="demo-row">
+      <div class="ap-card" style="max-width: 300px;">
+        <div style="font-size: 14px; font-weight: 500; margin-bottom: 8px;">Basic Card</div>
+        <div style="font-size: 13px; color: var(--ap-gray-500);">
+          Subtle container for grouping related information. No shadow, no gradient.
+        </div>
+      </div>
+
+      <div class="ap-card" style="max-width: 300px; position: relative;">
+        <div class="ap-pixel-dots">
+          <span class="ap-pixel-dot"></span>
+          <span class="ap-pixel-dot"></span>
+          <span class="ap-pixel-dot"></span>
+          <span class="ap-pixel-dot"></span>
+        </div>
+        <div style="font-size: 14px; font-weight: 500; margin-bottom: 8px;">Card with Pixel Dots</div>
+        <div style="font-size: 13px; color: var(--ap-gray-500);">
+          Feature panels get the 2x2 pixel dot decoration in the top-right corner.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       METRIC CARDS
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Metric Cards</span>
+      <span class="section-line"></span>
+    </div>
+    <p class="section-desc">Compact value display. Monospace value, small uppercase label below.</p>
+
+    <div class="demo-row">
+      <div class="ap-metric">
+        <div class="ap-metric-value">12.5<span class="ap-metric-unit">m</span></div>
+        <span class="ap-metric-label">CPU Usage</span>
+      </div>
+      <div class="ap-metric">
+        <div class="ap-metric-value">128<span class="ap-metric-unit">Mi</span></div>
+        <span class="ap-metric-label">Memory</span>
+      </div>
+      <div class="ap-metric">
+        <div class="ap-metric-value">3/3</div>
+        <span class="ap-metric-label">Pods Ready</span>
+      </div>
+      <div class="ap-metric">
+        <div class="ap-metric-value">99.9<span class="ap-metric-unit">%</span></div>
+        <span class="ap-metric-label">Uptime</span>
+      </div>
+    </div>
+
+    <div class="demo-label" style="margin-top: 8px;">With Pixel Decoration</div>
+    <div class="demo-row">
+      <div class="ap-metric" style="position: relative;">
+        <div class="ap-pixel-dots">
+          <span class="ap-pixel-dot"></span>
+          <span class="ap-pixel-dot"></span>
+          <span class="ap-pixel-dot"></span>
+          <span class="ap-pixel-dot"></span>
+        </div>
+        <div class="ap-metric-value" style="color: var(--ap-orange-500);">47</div>
+        <span class="ap-metric-label">Deployments</span>
+      </div>
+      <div class="ap-metric" style="position: relative;">
+        <div class="ap-pixel-dots">
+          <span class="ap-pixel-dot"></span>
+          <span class="ap-pixel-dot"></span>
+          <span class="ap-pixel-dot"></span>
+          <span class="ap-pixel-dot"></span>
+        </div>
+        <div class="ap-metric-value" style="color: #16A34A;">42</div>
+        <span class="ap-metric-label">Healthy</span>
+      </div>
+      <div class="ap-metric" style="position: relative;">
+        <div class="ap-pixel-dots">
+          <span class="ap-pixel-dot"></span>
+          <span class="ap-pixel-dot"></span>
+          <span class="ap-pixel-dot"></span>
+          <span class="ap-pixel-dot"></span>
+        </div>
+        <div class="ap-metric-value" style="color: #B91C1C;">5</div>
+        <span class="ap-metric-label">Failed</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       BUTTONS
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Buttons</span>
+      <span class="section-line"></span>
+    </div>
+    <p class="section-desc">Flat, pastel fill, 2px radius. No shadows, no gradients.</p>
+
+    <div class="demo-row">
+      <div class="demo-block">
+        <div class="demo-label">Secondary</div>
+        <button class="ap-button">Create Backup</button>
+      </div>
+      <div class="demo-block">
+        <div class="demo-label">Primary</div>
+        <button class="ap-button ap-button-primary">Deploy</button>
+      </div>
+      <div class="demo-block">
+        <div class="demo-label">Danger</div>
+        <button class="ap-button ap-button-danger">Delete</button>
+      </div>
+      <div class="demo-block">
+        <div class="demo-label">Disabled</div>
+        <button class="ap-button ap-button-disabled" disabled>Disabled</button>
+      </div>
+    </div>
+
+    <div class="demo-label" style="margin-top: 8px;">Small</div>
+    <div class="demo-row">
+      <button class="ap-button" style="font-size: 11px; padding: 3px 8px;">Refresh</button>
+      <button class="ap-button ap-button-primary" style="font-size: 11px; padding: 3px 8px;">Sync</button>
+      <button class="ap-button ap-button-danger" style="font-size: 11px; padding: 3px 8px;">Remove</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       TAGS
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Tags</span>
+      <span class="section-line"></span>
+    </div>
+    <p class="section-desc">Small labels for categorization. Monospace text, 2px radius.</p>
+
+    <div class="demo-row">
+      <span class="ap-tag ap-tag-orange">production</span>
+      <span class="ap-tag ap-tag-green">synced</span>
+      <span class="ap-tag ap-tag-red">out-of-sync</span>
+      <span class="ap-tag ap-tag-gray">v1.2.3</span>
+      <span class="ap-tag ap-tag-gray">helm</span>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       INPUTS
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Inputs</span>
+      <span class="section-line"></span>
+    </div>
+    <p class="section-desc">Monospace text, 2px radius, orange focus ring. No shadows.</p>
+
+    <div class="demo-row">
+      <div class="demo-block">
+        <div class="demo-label">Default</div>
+        <input class="ap-input" type="text" placeholder="namespace" style="width: 200px;">
+      </div>
+      <div class="demo-block">
+        <div class="demo-label">With Value</div>
+        <input class="ap-input" type="text" value="default" style="width: 200px;">
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       PROGRESS BAR
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Progress Bar</span>
+      <span class="section-line"></span>
+    </div>
+    <p class="section-desc">4px height, sharp corners, no border-radius. Pixel-crisp.</p>
+
+    <div style="max-width: 400px; display: flex; flex-direction: column; gap: 12px;">
+      <div>
+        <div class="demo-label" style="margin-bottom: 4px;">25%</div>
+        <div class="ap-progress"><div class="ap-progress-fill" style="width: 25%"></div></div>
+      </div>
+      <div>
+        <div class="demo-label" style="margin-bottom: 4px;">60%</div>
+        <div class="ap-progress"><div class="ap-progress-fill" style="width: 60%"></div></div>
+      </div>
+      <div>
+        <div class="demo-label" style="margin-bottom: 4px;">100%</div>
+        <div class="ap-progress"><div class="ap-progress-fill" style="width: 100%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       TABLE
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Data Table</span>
+      <span class="section-line"></span>
+    </div>
+    <p class="section-desc">Minimal. No alternating rows, no shadows. Single-pixel borders. Monospace values.</p>
+
+    <table class="ap-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Status</th>
+          <th>Age</th>
+          <th>Size</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>backup-2024-03-15-1432</td>
+          <td>
+            <span class="ap-badge">
+              <span class="ap-badge-square" style="background: var(--ap-green-solid)"></span>
+              Completed
+            </span>
+          </td>
+          <td>2h ago</td>
+          <td>1.2 GiB</td>
+        </tr>
+        <tr>
+          <td>backup-2024-03-14-0800</td>
+          <td>
+            <span class="ap-badge">
+              <span class="ap-badge-square" style="background: var(--ap-green-solid)"></span>
+              Completed
+            </span>
+          </td>
+          <td>1d ago</td>
+          <td>1.1 GiB</td>
+        </tr>
+        <tr>
+          <td>backup-2024-03-13-2200</td>
+          <td>
+            <span class="ap-badge">
+              <span class="ap-badge-square" style="background: var(--ap-red-solid)"></span>
+              Failed
+            </span>
+          </td>
+          <td>2d ago</td>
+          <td>--</td>
+        </tr>
+        <tr>
+          <td>backup-2024-03-13-0800</td>
+          <td>
+            <span class="ap-badge">
+              <span class="ap-badge-square" style="background: var(--ap-blue-solid)"></span>
+              In Progress
+            </span>
+          </td>
+          <td>2d ago</td>
+          <td>0.4 GiB</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================================
+       META ROW
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Meta Row</span>
+      <span class="section-line"></span>
+    </div>
+    <p class="section-desc">Inline key-value pairs with interpunct separator. Compact data density.</p>
+
+    <div class="ap-meta-row">
+      <span><span class="ap-meta-label">Namespace: </span><span class="ap-meta-value">default</span></span>
+      <span class="ap-meta-sep">&middot;</span>
+      <span><span class="ap-meta-label">Last backup: </span><span class="ap-meta-value">2h ago</span></span>
+      <span class="ap-meta-sep">&middot;</span>
+      <span>
+        <span class="ap-meta-label">Status: </span>
+        <span class="ap-badge" style="font-size: 13px;">
+          <span class="ap-badge-square" style="background: var(--ap-green-solid)"></span>
+          <span class="ap-meta-value">Healthy</span>
+        </span>
+      </span>
+    </div>
+
+    <div class="ap-meta-row" style="margin-top: 12px;">
+      <span><span class="ap-meta-label">Cluster: </span><span class="ap-meta-value">prod-eu-west</span></span>
+      <span class="ap-meta-sep">&middot;</span>
+      <span><span class="ap-meta-label">App: </span><span class="ap-meta-value">nginx-deployment</span></span>
+      <span class="ap-meta-sep">&middot;</span>
+      <span><span class="ap-meta-label">Replicas: </span><span class="ap-meta-value">3/3</span></span>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       EMPTY STATE
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Empty State</span>
+      <span class="section-line"></span>
+    </div>
+    <p class="section-desc">Centered, muted. 2x2 pixel-art grid squares above the message.</p>
+
+    <div class="ap-card">
+      <div class="ap-empty">
+        <div class="ap-empty-icon">
+          <span class="ap-empty-pixel"></span>
+          <span class="ap-empty-pixel"></span>
+          <span class="ap-empty-pixel"></span>
+          <span class="ap-empty-pixel"></span>
+        </div>
+        <span class="ap-empty-text">No backups found</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       LOADING
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Loading</span>
+      <span class="section-line"></span>
+    </div>
+    <p class="section-desc">Three squares cycling sequentially. Not a spinner.</p>
+
+    <div class="ap-card">
+      <div class="ap-loading" id="loading-demo">
+        <span class="ap-loading-square active"></span>
+        <span class="ap-loading-square"></span>
+        <span class="ap-loading-square"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       PIXEL DECORATION
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Pixel Decoration</span>
+      <span class="section-line"></span>
+    </div>
+    <p class="section-desc">Subtle 2x2 dot cluster in card corners. Very faint (gray-200). Only on feature panels.</p>
+
+    <div class="demo-row">
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <div class="demo-label" style="margin: 0;">3x3px dots:</div>
+        <div class="ap-pixel-dots" style="position: static;">
+          <span class="ap-pixel-dot"></span>
+          <span class="ap-pixel-dot"></span>
+          <span class="ap-pixel-dot"></span>
+          <span class="ap-pixel-dot"></span>
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <div class="demo-label" style="margin: 0;">6x6px pixels (empty state):</div>
+        <div class="ap-empty-icon" style="position: static;">
+          <span class="ap-empty-pixel"></span>
+          <span class="ap-empty-pixel"></span>
+          <span class="ap-empty-pixel"></span>
+          <span class="ap-empty-pixel"></span>
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <div class="demo-label" style="margin: 0;">8x8px badge squares:</div>
+        <div style="display: flex; gap: 4px;">
+          <span class="ap-badge-square" style="background: var(--ap-orange-400)"></span>
+          <span class="ap-badge-square" style="background: var(--ap-green-solid)"></span>
+          <span class="ap-badge-square" style="background: var(--ap-red-solid)"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       RADIUS & BORDERS
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Borders &amp; Corners</span>
+      <span class="section-line"></span>
+    </div>
+    <p class="section-desc">Sharp or barely rounded. Never fully rounded. Always 1px border width.</p>
+
+    <div class="demo-row">
+      <div class="demo-block" style="align-items: center;">
+        <div class="demo-label">0px (none)</div>
+        <div style="width: 80px; height: 48px; border: 1px solid var(--ap-gray-200); border-radius: 0px; background: var(--ap-gray-50);"></div>
+      </div>
+      <div class="demo-block" style="align-items: center;">
+        <div class="demo-label">2px (sm)</div>
+        <div style="width: 80px; height: 48px; border: 1px solid var(--ap-gray-200); border-radius: 2px; background: var(--ap-gray-50);"></div>
+      </div>
+      <div class="demo-block" style="align-items: center;">
+        <div class="demo-label">4px (md)</div>
+        <div style="width: 80px; height: 48px; border: 1px solid var(--ap-gray-200); border-radius: 4px; background: var(--ap-gray-50);"></div>
+      </div>
+      <div class="demo-block" style="align-items: center;">
+        <div class="demo-label" style="color: var(--ap-red-solid);">never (pill)</div>
+        <div style="width: 80px; height: 48px; border: 1px solid var(--ap-red); border-radius: 24px; background: var(--ap-red-light); opacity: 0.5;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       COMPOSITION: METRICS PANEL
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Composition: Metrics Panel</span>
+      <span class="section-line"></span>
+    </div>
+    <p class="section-desc">How a full extension panel looks assembled from these components.</p>
+
+    <div class="ap-card" style="padding: 20px;">
+      <div class="section-header">
+        <span>RESOURCE METRICS</span>
+        <span class="section-line"></span>
+      </div>
+
+      <div class="ap-meta-row" style="margin-bottom: 16px;">
+        <span><span class="ap-meta-label">Namespace: </span><span class="ap-meta-value">production</span></span>
+        <span class="ap-meta-sep">&middot;</span>
+        <span><span class="ap-meta-label">Resource: </span><span class="ap-meta-value">nginx-deployment</span></span>
+      </div>
+
+      <div style="display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;">
+        <div class="ap-metric" style="position: relative;">
+          <div class="ap-pixel-dots">
+            <span class="ap-pixel-dot"></span>
+            <span class="ap-pixel-dot"></span>
+            <span class="ap-pixel-dot"></span>
+            <span class="ap-pixel-dot"></span>
+          </div>
+          <div class="ap-metric-value">24.3<span class="ap-metric-unit">m</span></div>
+          <span class="ap-metric-label">CPU Usage</span>
+        </div>
+        <div class="ap-metric" style="position: relative;">
+          <div class="ap-pixel-dots">
+            <span class="ap-pixel-dot"></span>
+            <span class="ap-pixel-dot"></span>
+            <span class="ap-pixel-dot"></span>
+            <span class="ap-pixel-dot"></span>
+          </div>
+          <div class="ap-metric-value">256<span class="ap-metric-unit">Mi</span></div>
+          <span class="ap-metric-label">Memory</span>
+        </div>
+        <div class="ap-metric">
+          <div class="ap-metric-value">3/3</div>
+          <span class="ap-metric-label">Pods Ready</span>
+        </div>
+        <div class="ap-metric">
+          <div class="ap-metric-value">0</div>
+          <span class="ap-metric-label">Restarts</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       COMPOSITION: BACKUP STATUS
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Composition: Backup Panel</span>
+      <span class="section-line"></span>
+    </div>
+    <p class="section-desc">Full backup extension panel with table and action buttons.</p>
+
+    <div class="ap-card" style="padding: 20px;">
+      <div class="section-header">
+        <span>BACKUPS</span>
+        <span class="section-line"></span>
+        <button class="ap-button ap-button-primary" style="font-size: 11px; padding: 3px 8px;">Create Backup</button>
+      </div>
+
+      <div class="ap-meta-row" style="margin-bottom: 16px;">
+        <span><span class="ap-meta-label">Schedule: </span><span class="ap-meta-value">daily 02:00 UTC</span></span>
+        <span class="ap-meta-sep">&middot;</span>
+        <span><span class="ap-meta-label">Retention: </span><span class="ap-meta-value">30 days</span></span>
+        <span class="ap-meta-sep">&middot;</span>
+        <span>
+          <span class="ap-meta-label">Status: </span>
+          <span class="ap-badge" style="font-size: 13px;">
+            <span class="ap-badge-square" style="background: var(--ap-green-solid)"></span>
+            <span class="ap-meta-value">Healthy</span>
+          </span>
+        </span>
+      </div>
+
+      <table class="ap-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Status</th>
+            <th>Age</th>
+            <th>Size</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>backup-2024-03-15-0200</td>
+            <td>
+              <span class="ap-badge">
+                <span class="ap-badge-square" style="background: var(--ap-green-solid)"></span>
+                Completed
+              </span>
+            </td>
+            <td>14h ago</td>
+            <td>1.2 GiB</td>
+          </tr>
+          <tr>
+            <td>backup-2024-03-14-0200</td>
+            <td>
+              <span class="ap-badge">
+                <span class="ap-badge-square" style="background: var(--ap-green-solid)"></span>
+                Completed
+              </span>
+            </td>
+            <td>1d ago</td>
+            <td>1.1 GiB</td>
+          </tr>
+          <tr>
+            <td>backup-2024-03-13-0200</td>
+            <td>
+              <span class="ap-badge">
+                <span class="ap-badge-square" style="background: var(--ap-green-solid)"></span>
+                Completed
+              </span>
+            </td>
+            <td>2d ago</td>
+            <td>1.1 GiB</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       TOOLTIP
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Tooltip</span>
+      <span class="section-line"></span>
+    </div>
+    <p class="section-desc">Dark background, monospace text, 2px radius. Positioned above target.</p>
+
+    <div class="demo-row" style="padding-top: 32px;">
+      <div class="ap-tooltip-wrapper">
+        <div class="ap-tooltip">backup-2024-03-15-0200</div>
+        <span class="ap-tag ap-tag-gray">backup-2024...0200</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       ANTI-PATTERNS
+       ============================================================ -->
+  <div class="section">
+    <div class="section-header">
+      <span>Anti-Patterns</span>
+      <span class="section-line"></span>
+    </div>
+
+    <div class="demo-row" style="gap: 24px;">
+      <div class="demo-block" style="align-items: center;">
+        <div class="demo-label" style="color: var(--ap-red-solid);">no pills</div>
+        <button style="background: var(--ap-orange-100); border: 1px solid var(--ap-orange-200); border-radius: 20px; padding: 6px 16px; font-size: 13px; color: var(--ap-orange-600); opacity: 0.4; text-decoration: line-through;">Deploy</button>
+      </div>
+      <div class="demo-block" style="align-items: center;">
+        <div class="demo-label" style="color: var(--ap-red-solid);">no shadows</div>
+        <div style="background: var(--ap-gray-50); border: 1px solid var(--ap-gray-200); border-radius: 4px; padding: 12px 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); opacity: 0.4; text-decoration: line-through; font-size: 13px;">Card</div>
+      </div>
+      <div class="demo-block" style="align-items: center;">
+        <div class="demo-label" style="color: var(--ap-red-solid);">no gradients</div>
+        <button style="background: linear-gradient(135deg, var(--ap-orange-300), var(--ap-orange-500)); border: none; border-radius: 2px; padding: 6px 16px; font-size: 13px; color: white; opacity: 0.4; text-decoration: line-through;">Deploy</button>
+      </div>
+      <div class="demo-block" style="align-items: center;">
+        <div class="demo-label" style="color: var(--ap-red-solid);">no circles</div>
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--ap-green-solid); opacity: 0.4;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       DARK THEME
+       ============================================================ -->
+  <div class="section">
+    <div class="dark-section">
+      <div class="section-header">
+        <span>Dark Theme</span>
+        <span class="section-line"></span>
+      </div>
+      <p class="section-desc">Same structure, inverted. Orange uses 400 shade for contrast.</p>
+
+      <!-- Status badges dark -->
+      <div class="demo-label">Status Badges</div>
+      <div class="demo-row">
+        <span class="ap-badge" style="color: var(--ap-gray-100);">
+          <span class="ap-badge-square" style="background: var(--ap-green-solid)"></span>
+          Healthy
+        </span>
+        <span class="ap-badge" style="color: var(--ap-gray-100);">
+          <span class="ap-badge-square" style="background: var(--ap-yellow-solid)"></span>
+          Degraded
+        </span>
+        <span class="ap-badge" style="color: var(--ap-gray-100);">
+          <span class="ap-badge-square" style="background: var(--ap-red-solid)"></span>
+          Failed
+        </span>
+        <span class="ap-badge" style="color: var(--ap-gray-100);">
+          <span class="ap-badge-square" style="background: var(--ap-blue-solid)"></span>
+          In Progress
+        </span>
+      </div>
+
+      <!-- Buttons dark -->
+      <div class="demo-label" style="margin-top: 16px;">Buttons</div>
+      <div class="demo-row">
+        <button class="ap-button">Secondary</button>
+        <button class="ap-button ap-button-primary">Primary</button>
+      </div>
+
+      <!-- Cards dark -->
+      <div class="demo-label" style="margin-top: 16px;">Cards &amp; Metrics</div>
+      <div class="demo-row">
+        <div class="ap-metric" style="position: relative;">
+          <div class="ap-pixel-dots">
+            <span class="ap-pixel-dot"></span>
+            <span class="ap-pixel-dot"></span>
+            <span class="ap-pixel-dot"></span>
+            <span class="ap-pixel-dot"></span>
+          </div>
+          <div class="ap-metric-value">24.3<span class="ap-metric-unit">m</span></div>
+          <span class="ap-metric-label">CPU Usage</span>
+        </div>
+        <div class="ap-metric">
+          <div class="ap-metric-value">128<span class="ap-metric-unit">Mi</span></div>
+          <span class="ap-metric-label">Memory</span>
+        </div>
+      </div>
+
+      <!-- Meta row dark -->
+      <div class="demo-label" style="margin-top: 16px;">Meta Row</div>
+      <div class="ap-meta-row">
+        <span><span class="ap-meta-label">Namespace: </span><span class="ap-meta-value">default</span></span>
+        <span class="ap-meta-sep">&middot;</span>
+        <span><span class="ap-meta-label">Pods: </span><span class="ap-meta-value">3/3</span></span>
+      </div>
+
+      <!-- Table dark -->
+      <div class="demo-label" style="margin-top: 16px;">Table</div>
+      <table class="ap-table" style="margin-top: 8px;">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Status</th>
+            <th>Age</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>nginx-abc123</td>
+            <td>
+              <span class="ap-badge" style="color: var(--ap-gray-100);">
+                <span class="ap-badge-square" style="background: var(--ap-green-solid)"></span>
+                Running
+              </span>
+            </td>
+            <td>3d</td>
+          </tr>
+          <tr>
+            <td>redis-xyz789</td>
+            <td>
+              <span class="ap-badge" style="color: var(--ap-gray-100);">
+                <span class="ap-badge-square" style="background: var(--ap-yellow-solid)"></span>
+                Pending
+              </span>
+            </td>
+            <td>1m</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Input dark -->
+      <div class="demo-label" style="margin-top: 16px;">Input</div>
+      <div class="demo-row">
+        <input class="ap-input" type="text" placeholder="search resources..." style="width: 240px;">
+      </div>
+
+      <!-- Tags dark -->
+      <div class="demo-label" style="margin-top: 16px;">Tags</div>
+      <div class="demo-row">
+        <span class="ap-tag ap-tag-orange">production</span>
+        <span class="ap-tag ap-tag-green">synced</span>
+        <span class="ap-tag ap-tag-gray">v2.1.0</span>
+      </div>
+
+      <!-- Progress dark -->
+      <div class="demo-label" style="margin-top: 16px;">Progress</div>
+      <div style="max-width: 300px;">
+        <div class="ap-progress"><div class="ap-progress-fill" style="width: 72%"></div></div>
+      </div>
+
+      <!-- Empty + Loading dark -->
+      <div class="demo-row" style="margin-top: 16px; gap: 32px;">
+        <div class="demo-block">
+          <div class="demo-label">Empty State</div>
+          <div class="ap-card" style="min-width: 200px;">
+            <div class="ap-empty" style="padding: 20px;">
+              <div class="ap-empty-icon">
+                <span class="ap-empty-pixel"></span>
+                <span class="ap-empty-pixel"></span>
+                <span class="ap-empty-pixel"></span>
+                <span class="ap-empty-pixel"></span>
+              </div>
+              <span class="ap-empty-text">No data</span>
+            </div>
+          </div>
+        </div>
+        <div class="demo-block">
+          <div class="demo-label">Loading</div>
+          <div class="ap-card" style="min-width: 200px;">
+            <div class="ap-loading" id="loading-demo-dark">
+              <span class="ap-loading-square"></span>
+              <span class="ap-loading-square active"></span>
+              <span class="ap-loading-square"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Loading animation -->
+<script>
+  function animateLoading(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const squares = container.querySelectorAll('.ap-loading-square');
+    let active = 0;
+    setInterval(() => {
+      squares.forEach((sq, i) => {
+        sq.classList.toggle('active', i === active);
+      });
+      active = (active + 1) % 3;
+    }, 300);
+  }
+  animateLoading('loading-demo');
+  animateLoading('loading-demo-dark');
+</script>
+</body>
+</html>
