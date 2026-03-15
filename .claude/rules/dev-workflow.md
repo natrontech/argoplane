@@ -6,7 +6,7 @@
 - [kubectl](https://kubernetes.io/docs/tasks/tools/) for cluster interaction
 - [helm](https://helm.sh/) for installing operators
 - [Node.js 20+](https://nodejs.org/) for building UI extensions
-- [Go 1.23+](https://go.dev/) for building backend services
+- [Go 1.26+](https://go.dev/) for building backend services
 
 ## Local Development Stack
 
