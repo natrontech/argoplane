@@ -83,6 +83,7 @@ function buildGraph(flows: FlowSummary[], namespace: string, width: number): {
     sourceLabel: string;
     targetCol: 'center' | 'right';
     targetLabel: string;
+    // Note: left→right is possible when neither pod is in-namespace.
     forwarded: number;
     dropped: number;
     errors: number;
@@ -101,69 +102,79 @@ function buildGraph(flows: FlowSummary[], namespace: string, width: number): {
     n.drop += drop;
   }
 
+  function addEdge(
+    srcCol: 'left' | 'center', srcLabel: string,
+    tgtCol: 'center' | 'right', tgtLabel: string,
+    f: FlowSummary, fwd: number, drop: number
+  ) {
+    const proto = f.protocol || '';
+    const port = f.destPort || 0;
+    const prefix = srcCol === 'left' ? 'l' : 'c';
+    const suffix = tgtCol === 'right' ? 'r' : 'c';
+    const ek = `${prefix}:${srcLabel}|${suffix}:${tgtLabel}|${proto}:${port}`;
+    if (!edgeMap.has(ek)) {
+      edgeMap.set(ek, { sourceCol: srcCol, sourceLabel: srcLabel, targetCol: tgtCol, targetLabel: tgtLabel, forwarded: 0, dropped: 0, errors: 0, protocol: proto, port, dropReasons: [] });
+    }
+    const e = edgeMap.get(ek)!;
+    e.forwarded += fwd;
+    e.dropped += drop;
+    if (f.verdict === 'ERROR') e.errors++;
+    if (f.dropReason && !e.dropReasons.includes(f.dropReason)) e.dropReasons.push(f.dropReason);
+  }
+
   for (const f of flows) {
-    const isSourceLocal = f.sourceNamespace === namespace && f.sourcePod;
-    const isDestLocal = f.destNamespace === namespace && f.destPod;
+    const srcInNs = f.sourceNamespace === namespace;
+    const dstInNs = f.destNamespace === namespace;
+    const hasSrcPod = !!f.sourcePod;
+    const hasDstPod = !!f.destPod;
+    const isSourceLocal = srcInNs && hasSrcPod;
+    const isDestLocal = dstInNs && hasDstPod;
     const fwd = f.verdict === 'FORWARDED' ? 1 : 0;
     const drop = f.verdict === 'DROPPED' ? 1 : 0;
 
-    if (isSourceLocal && !isDestLocal) {
-      // Outbound: center → right
-      const centerLabel = f.sourcePod;
-      const rightLabel = f.destPod
-        ? (f.destNamespace === namespace ? f.destPod : `${f.destNamespace}/${f.destPod}`)
-        : f.destDNS || f.destIP || 'unknown';
-      const proto = f.protocol || '';
-      const port = f.destPort || 0;
+    if (isSourceLocal && isDestLocal) {
+      // Internal: source in center, dest on right (same namespace pod-to-pod).
+      ensureNode(centerSet, f.sourcePod);
+      addToNode(centerSet, f.sourcePod, fwd, drop);
+      ensureNode(rightSet, f.destPod);
+      addToNode(rightSet, f.destPod, fwd, drop);
+      addEdge('center', f.sourcePod, 'right', f.destPod, f, fwd, drop);
 
-      ensureNode(centerSet, centerLabel);
-      addToNode(centerSet, centerLabel, fwd, drop);
+    } else if (isSourceLocal) {
+      // Outbound: center → right.
+      const rightLabel = hasDstPod
+        ? (dstInNs ? f.destPod : `${f.destNamespace}/${f.destPod}`)
+        : f.destDNS || f.destIP || 'unknown';
+      ensureNode(centerSet, f.sourcePod);
+      addToNode(centerSet, f.sourcePod, fwd, drop);
       ensureNode(rightSet, rightLabel);
       addToNode(rightSet, rightLabel, fwd, drop);
+      addEdge('center', f.sourcePod, 'right', rightLabel, f, fwd, drop);
 
-      const ek = `c:${centerLabel}|r:${rightLabel}|${proto}:${port}`;
-      if (!edgeMap.has(ek)) {
-        edgeMap.set(ek, { sourceCol: 'center', sourceLabel: centerLabel, targetCol: 'right', targetLabel: rightLabel, forwarded: 0, dropped: 0, errors: 0, protocol: proto, port, dropReasons: [] });
-      }
-      const e = edgeMap.get(ek)!;
-      e.forwarded += fwd;
-      e.dropped += drop;
-      if (f.verdict === 'ERROR') e.errors++;
-      if (f.dropReason && !e.dropReasons.includes(f.dropReason)) e.dropReasons.push(f.dropReason);
-
-    } else if (isDestLocal && !isSourceLocal) {
-      // Inbound: left → center
-      const centerLabel = f.destPod;
-      const leftLabel = f.sourcePod
-        ? (f.sourceNamespace === namespace ? f.sourcePod : `${f.sourceNamespace}/${f.sourcePod}`)
+    } else if (isDestLocal) {
+      // Inbound: left → center.
+      const leftLabel = hasSrcPod
+        ? (srcInNs ? f.sourcePod : `${f.sourceNamespace}/${f.sourcePod}`)
         : f.sourceIP || 'unknown';
-      const proto = f.protocol || '';
-      const port = f.destPort || 0;
-
-      ensureNode(centerSet, centerLabel);
-      addToNode(centerSet, centerLabel, fwd, drop);
       ensureNode(leftSet, leftLabel);
       addToNode(leftSet, leftLabel, fwd, drop);
+      ensureNode(centerSet, f.destPod);
+      addToNode(centerSet, f.destPod, fwd, drop);
+      addEdge('left', leftLabel, 'center', f.destPod, f, fwd, drop);
 
-      const ek = `l:${leftLabel}|c:${centerLabel}|${proto}:${port}`;
-      if (!edgeMap.has(ek)) {
-        edgeMap.set(ek, { sourceCol: 'left', sourceLabel: leftLabel, targetCol: 'center', targetLabel: centerLabel, forwarded: 0, dropped: 0, errors: 0, protocol: proto, port, dropReasons: [] });
-      }
-      const e = edgeMap.get(ek)!;
-      e.forwarded += fwd;
-      e.dropped += drop;
-      if (f.verdict === 'ERROR') e.errors++;
-      if (f.dropReason && !e.dropReasons.includes(f.dropReason)) e.dropReasons.push(f.dropReason);
-
-    } else if (isSourceLocal && isDestLocal) {
-      // Internal: center → center (show as center pod outbound to another center pod)
-      const srcLabel = f.sourcePod;
-      const dstLabel = f.destPod;
-      ensureNode(centerSet, srcLabel);
-      addToNode(centerSet, srcLabel, fwd, drop);
-      ensureNode(centerSet, dstLabel);
-      addToNode(centerSet, dstLabel, fwd, drop);
-      // Skip drawing internal edges for clarity (they connect same column).
+    } else {
+      // Neither side has a known pod in namespace. Use IPs/DNS.
+      const srcLabel = f.sourcePod
+        ? `${f.sourceNamespace}/${f.sourcePod}`
+        : f.sourceIP || 'unknown';
+      const dstLabel = f.destPod
+        ? `${f.destNamespace}/${f.destPod}`
+        : f.destDNS || f.destIP || 'unknown';
+      ensureNode(leftSet, srcLabel);
+      addToNode(leftSet, srcLabel, fwd, drop);
+      ensureNode(rightSet, dstLabel);
+      addToNode(rightSet, dstLabel, fwd, drop);
+      addEdge('left', srcLabel, 'right', dstLabel, f, fwd, drop);
     }
   }
 
