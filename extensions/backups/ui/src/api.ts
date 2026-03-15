@@ -131,7 +131,7 @@ export async function fetchLogs(
   appNamespace: string,
   appName: string,
   project: string
-): Promise<{ downloadURL: string }> {
+): Promise<{ content: string }> {
   const params = new URLSearchParams({ name, kind });
   const response = await fetch(`/extensions/backups/api/v1/logs?${params}`, {
     headers: proxyHeaders(appNamespace, appName, project),

@@ -437,13 +437,14 @@ const ScheduleDetail: React.FC<{
 const BackupDetail: React.FC<{ backup: BackupSummary; appNamespace: string; appName: string; project: string }> = ({ backup: b, appNamespace, appName, project }) => {
   const [logsLoading, setLogsLoading] = React.useState(false);
   const [logsError, setLogsError] = React.useState<string | null>(null);
+  const [logsContent, setLogsContent] = React.useState<{ title: string; text: string } | null>(null);
 
   const openLogs = async (kind: 'BackupLog' | 'BackupResults') => {
     setLogsLoading(true);
     setLogsError(null);
     try {
       const result = await fetchLogs(b.name, kind, appNamespace, appName, project);
-      window.open(result.downloadURL, '_blank');
+      setLogsContent({ title: kind === 'BackupLog' ? 'Backup Logs' : 'Backup Results', text: result.content });
     } catch (err: any) {
       setLogsError(`Could not fetch ${kind === 'BackupLog' ? 'logs' : 'results'}: ${err.message || 'unknown error'}. Velero DownloadRequest CRD may not be installed.`);
     }
@@ -500,6 +501,9 @@ const BackupDetail: React.FC<{ backup: BackupSummary; appNamespace: string; appN
               {logsError}
             </div>
           )}
+          {logsContent && (
+            <LogViewer title={logsContent.title} content={logsContent.text} onClose={() => setLogsContent(null)} />
+          )}
         </div>
       </td>
     </tr>
@@ -513,13 +517,14 @@ const BackupDetail: React.FC<{ backup: BackupSummary; appNamespace: string; appN
 const RestoreDetail: React.FC<{ restore: RestoreSummary; appNamespace: string; appName: string; project: string }> = ({ restore: r, appNamespace, appName, project }) => {
   const [logsLoading, setLogsLoading] = React.useState(false);
   const [logsError, setLogsError] = React.useState<string | null>(null);
+  const [logsContent, setLogsContent] = React.useState<{ title: string; text: string } | null>(null);
 
   const openLogs = async (kind: 'RestoreLog' | 'RestoreResults') => {
     setLogsLoading(true);
     setLogsError(null);
     try {
       const result = await fetchLogs(r.name, kind, appNamespace, appName, project);
-      window.open(result.downloadURL, '_blank');
+      setLogsContent({ title: kind === 'RestoreLog' ? 'Restore Logs' : 'Restore Results', text: result.content });
     } catch (err: any) {
       setLogsError(`Could not fetch ${kind === 'RestoreLog' ? 'logs' : 'results'}: ${err.message || 'unknown error'}. Velero DownloadRequest CRD may not be installed.`);
     }
@@ -577,11 +582,36 @@ const RestoreDetail: React.FC<{ restore: RestoreSummary; appNamespace: string; a
               {logsError}
             </div>
           )}
+          {logsContent && (
+            <LogViewer title={logsContent.title} content={logsContent.text} onClose={() => setLogsContent(null)} />
+          )}
         </div>
       </td>
     </tr>
   );
 };
+
+// ============================================================
+// Log Viewer (inline)
+// ============================================================
+
+const LogViewer: React.FC<{ title: string; content: string; onClose: () => void }> = ({ title, content, onClose }) => (
+  <div style={{ marginTop: spacing[3], border: `1px solid ${colors.gray200}`, borderRadius: 4, overflow: 'hidden' }}>
+    <div style={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: `${spacing[2]}px ${spacing[3]}px`, background: colors.gray100,
+      borderBottom: `1px solid ${colors.gray200}`,
+    }}>
+      <span style={{ fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.gray500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{title}</span>
+      <span onClick={onClose} style={{ cursor: 'pointer', fontSize: fontSize.sm, color: colors.gray400, fontWeight: fontWeight.semibold }}>x</span>
+    </div>
+    <pre style={{
+      margin: 0, padding: spacing[3], background: colors.gray800, color: colors.gray100,
+      fontSize: fontSize.xs, fontFamily: fonts.mono, lineHeight: 1.5,
+      maxHeight: 400, overflowY: 'auto', overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all',
+    }}>{content || '(empty)'}</pre>
+  </div>
+);
 
 // ============================================================
 // Main component
