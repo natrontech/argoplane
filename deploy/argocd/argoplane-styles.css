@@ -495,11 +495,12 @@ i.fa.fa-heart {
    Monospace for data, 6px 12px padding, 2px radius, orange focus.
    ================================================================= */
 
-/* --- Text inputs, textareas, selects --- */
-.argo-field input,
+/* --- Text inputs, textareas, selects ---
+   Exclude checkbox/radio so ArgoCD's native controls stay intact. */
+.argo-field input:not([type="checkbox"]):not([type="radio"]),
 .argo-field textarea,
 .argo-field select,
-.argo-form-row input,
+.argo-form-row input:not([type="checkbox"]):not([type="radio"]),
 .argo-form-row textarea,
 .argo-form-row select,
 input.argo-input,
@@ -525,8 +526,8 @@ input[type="search"] {
 }
 
 /* Placeholders */
-.argo-field input::placeholder,
-.argo-form-row input::placeholder,
+.argo-field input:not([type="checkbox"]):not([type="radio"])::placeholder,
+.argo-form-row input:not([type="checkbox"]):not([type="radio"])::placeholder,
 input.argo-input::placeholder,
 input[type="text"]::placeholder,
 input[type="password"]::placeholder,
@@ -536,10 +537,10 @@ input[type="search"]::placeholder {
 }
 
 /* Focus state: orange border */
-.argo-field input:focus,
+.argo-field input:not([type="checkbox"]):not([type="radio"]):focus,
 .argo-field textarea:focus,
 .argo-field select:focus,
-.argo-form-row input:focus,
+.argo-form-row input:not([type="checkbox"]):not([type="radio"]):focus,
 .argo-form-row textarea:focus,
 .argo-form-row select:focus,
 input.argo-input:focus,
@@ -556,20 +557,20 @@ input[type="search"]:focus {
 }
 
 /* Error state */
-.argo-field--error input,
-.argo-form-row--error input,
+.argo-field--error input:not([type="checkbox"]):not([type="radio"]),
+.argo-form-row--error input:not([type="checkbox"]):not([type="radio"]),
 input.argo-input--error {
   border-color: var(--ap-red) !important;
 }
 
-.argo-field--error input:focus,
-.argo-form-row--error input:focus {
+.argo-field--error input:not([type="checkbox"]):not([type="radio"]):focus,
+.argo-form-row--error input:not([type="checkbox"]):not([type="radio"]):focus {
   border-color: var(--ap-red-text) !important;
 }
 
 /* Disabled state */
-.argo-field input:disabled,
-.argo-form-row input:disabled,
+.argo-field input:not([type="checkbox"]):not([type="radio"]):disabled,
+.argo-form-row input:not([type="checkbox"]):not([type="radio"]):disabled,
 input.argo-input:disabled,
 select:disabled,
 textarea:disabled {
@@ -1109,10 +1110,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Forms */
-.theme-dark .argo-field input,
+.theme-dark .argo-field input:not([type="checkbox"]):not([type="radio"]),
 .theme-dark .argo-field textarea,
 .theme-dark .argo-field select,
-.theme-dark .argo-form-row input,
+.theme-dark .argo-form-row input:not([type="checkbox"]):not([type="radio"]),
 .theme-dark .argo-form-row textarea,
 .theme-dark .argo-form-row select,
 .theme-dark input.argo-input,
@@ -1128,8 +1129,8 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--ap-gray-100) !important;
 }
 
-.theme-dark .argo-field input::placeholder,
-.theme-dark .argo-form-row input::placeholder,
+.theme-dark .argo-field input:not([type="checkbox"]):not([type="radio"])::placeholder,
+.theme-dark .argo-form-row input:not([type="checkbox"]):not([type="radio"])::placeholder,
 .theme-dark input.argo-input::placeholder,
 .theme-dark input[type="text"]::placeholder,
 .theme-dark input[type="password"]::placeholder,
@@ -1137,10 +1138,10 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--ap-gray-500) !important;
 }
 
-.theme-dark .argo-field input:focus,
+.theme-dark .argo-field input:not([type="checkbox"]):not([type="radio"]):focus,
 .theme-dark .argo-field textarea:focus,
 .theme-dark .argo-field select:focus,
-.theme-dark .argo-form-row input:focus,
+.theme-dark .argo-form-row input:not([type="checkbox"]):not([type="radio"]):focus,
 .theme-dark .argo-form-row textarea:focus,
 .theme-dark input.argo-input:focus,
 .theme-dark input[type="text"]:focus,
@@ -1162,9 +1163,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Dark disabled */
-.theme-dark .argo-field input:disabled,
-.theme-dark .argo-form-row input:disabled,
-.theme-dark input:disabled {
+.theme-dark .argo-field input:not([type="checkbox"]):not([type="radio"]):disabled,
+.theme-dark .argo-form-row input:not([type="checkbox"]):not([type="radio"]):disabled,
+.theme-dark input:not([type="checkbox"]):not([type="radio"]):disabled {
   background: var(--ap-gray-800) !important;
   color: var(--ap-gray-500) !important;
   border-color: var(--ap-gray-700) !important;
