@@ -823,9 +823,10 @@ h1, h2, h3, h4, h5, h6 {
    ArgoCD uses gradient+starfield bg, .login__box, .login__logo.
    ================================================================= */
 
-/* Override the gradient+starfield background with pixel-art wallpaper */
+/* Override the gradient+starfield background with pixel-art wallpaper.
+   URL is relative to the CSS file location (/shared/app/custom/). */
 .login {
-  background: url("./custom/login-wallpaper.jpg") center center / cover no-repeat var(--ap-gray-900) !important;
+  background: url("login-wallpaper.jpg") center center / cover no-repeat var(--ap-gray-900) !important;
 }
 
 /* Left decorative content panel: dark overlay for readability */
@@ -885,56 +886,93 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1.2;
 }
 
-/* "by ArgoPlane" subtitle */
-.login__logo .logo-image {
-  margin-bottom: 0 !important;
+/* "by ArgoPlane" subtitle below ArgoCD title.
+   Use the width-control wrapper. ::before renders before the child img
+   but CSS order can position it. Instead, use the parent's ::before
+   with flexbox ordering to push it to the bottom. */
+.login__logo {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
 }
 
-.login__logo.width-control::before {
+/* The ::after content already goes after img, which is correct.
+   Add a second subtitle via box-decoration on the logo wrapper. */
+.login__box .login__logo::before {
   content: "by ArgoPlane";
-  display: block;
+  order: 99;
   font-family: var(--ap-font-body);
   font-size: 11px;
   font-weight: 400;
   color: var(--ap-gray-400);
   letter-spacing: 0.3px;
-  order: 3;
+  margin-top: 2px;
 }
 
-/* Login buttons: orange accent */
-.login .argo-button {
+/* Login buttons: orange accent, crisp corners */
+.login .argo-button,
+.login__box .argo-button,
+.login__box button,
+.login .argo-button--base,
+.login .argo-button--full-width,
+.login__form-row button {
   background: var(--ap-orange-500) !important;
-  border-color: var(--ap-orange-600) !important;
+  border: 1px solid var(--ap-orange-600) !important;
   color: white !important;
   border-radius: var(--ap-radius-sm) !important;
+  font-family: var(--ap-font-body) !important;
+  padding: 10px 20px !important;
+  cursor: pointer !important;
 }
 
-.login .argo-button:hover {
+.login .argo-button:hover,
+.login__box .argo-button:hover,
+.login__box button:hover,
+.login__form-row button:hover {
   background: var(--ap-orange-600) !important;
 }
 
-/* Login form inputs: need high specificity to override ArgoCD defaults */
+/* Login form inputs: aggressive selectors to beat ArgoCD defaults */
 .login .argo-form-row input,
 .login__box input[type="text"],
 .login__box input[type="password"],
-.login__box .argo-field input {
+.login__box .argo-field input,
+.login__box .argo-form-row input[type="text"],
+.login__box .argo-form-row input[type="password"],
+.login input {
   border: 1px solid var(--ap-gray-200) !important;
   border-radius: var(--ap-radius-sm) !important;
   font-family: var(--ap-font-mono) !important;
   font-size: 13px !important;
-  padding: 8px 12px !important;
+  padding: 10px 12px !important;
   background: white !important;
   color: var(--ap-gray-800) !important;
   width: 100% !important;
   box-sizing: border-box !important;
+  outline: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  transition: border-color 100ms ease !important;
 }
 
 .login .argo-form-row input:focus,
-.login__box input[type="text"]:focus,
-.login__box input[type="password"]:focus,
-.login__box .argo-field input:focus {
+.login__box input:focus,
+.login input:focus {
   border-color: var(--ap-orange-500) !important;
   outline: none !important;
+}
+
+/* Login form labels */
+.login .argo-form-row label,
+.login__box label {
+  font-family: var(--ap-font-body) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  color: var(--ap-gray-500) !important;
+  margin-bottom: 6px !important;
+  display: block !important;
 }
 
 /* SSO separator */
