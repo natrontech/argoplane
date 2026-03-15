@@ -622,22 +622,8 @@ textarea.argo-textarea {
 }
 
 /* --- Checkboxes & radios ---
-   ArgoCD renders its own visual checkbox/radio components alongside
-   native inputs. Hide the native input so only ArgoCD's visual shows.
-   Custom pixel-art checkboxes live in @argoplane/shared for extensions. */
-input[type="checkbox"],
-input[type="radio"] {
-  -webkit-appearance: none !important;
-  appearance: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: none !important;
-  opacity: 0 !important;
-  position: absolute !important;
-  pointer-events: none !important;
-}
+   Leave ArgoCD's native checkbox/radio styling untouched.
+   Custom pixel-art controls live in @argoplane/shared for extensions. */
 
 /* --- Toggle switches --- */
 .argo-field .toggle-button,
