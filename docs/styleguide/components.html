@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Components - ArgoPlane Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../design-system/tokens.css">
+<link rel="stylesheet" href="../../design-system/base.css">
+<link rel="stylesheet" href="../../design-system/components.css">
+<link rel="stylesheet" href="../../design-system/utilities.css">
+<link rel="stylesheet" href="styleguide.css">
+</head>
+<body>
+<div class="sg-layout">
+  <nav class="sg-sidebar">
+    <div class="sg-logo">
+      <div class="sg-logo__pixels">
+        <span></span><span></span><span></span><span></span>
+      </div>
+      <span class="ap-font-semibold">ArgoPlane</span>
+      <span class="ap-text-faint ap-text-xs">Design System</span>
+    </div>
+    <div class="ap-sidenav">
+      <a class="ap-sidenav__item" href="index.html">Overview</a>
+      <a class="ap-sidenav__item" href="tokens.html">Tokens</a>
+      <a class="ap-sidenav__item ap-sidenav__item--active" href="components.html">Components</a>
+      <a class="ap-sidenav__item" href="patterns.html">Patterns</a>
+    </div>
+    <div class="sg-sidebar__footer">
+      <label class="ap-toggle sg-theme-toggle">
+        <input type="checkbox" id="theme-toggle">
+        <span class="ap-toggle__track">
+          <span class="ap-toggle__thumb"></span>
+        </span>
+        <span class="ap-text-xs ap-text-muted" style="margin-left: 8px;">Dark mode</span>
+      </label>
+    </div>
+  </nav>
+
+  <main class="sg-main">
+    <div class="sg-content">
+      <h1>Components</h1>
+      <p class="ap-text-muted ap-mt-2">
+        Every component is a plain CSS class prefixed with <code>ap-</code>. No JavaScript required.
+        For React, use the equivalent from <code>@argoplane/shared</code>.
+      </p>
+
+      <!-- STATUS BADGE -->
+      <div class="ap-section-header ap-mt-8" id="badge"><span>STATUS BADGE</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        The signature ArgoPlane element. 8x8px colored square (not a circle) before the status label.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex ap-gap-6 ap-flex-wrap">
+          <span class="ap-badge ap-badge--healthy">Healthy</span>
+          <span class="ap-badge ap-badge--degraded">Degraded</span>
+          <span class="ap-badge ap-badge--failed">Failed</span>
+          <span class="ap-badge ap-badge--in-progress">In Progress</span>
+          <span class="ap-badge ap-badge--unknown">Unknown</span>
+        </div>
+        <div class="sg-example__code">&lt;span class="ap-badge ap-badge--healthy"&gt;Healthy&lt;/span&gt;</div>
+      </div>
+
+      <h4 class="ap-mt-4">With background</h4>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex ap-gap-4 ap-flex-wrap">
+          <span class="ap-badge ap-badge--bg ap-badge--healthy">Healthy</span>
+          <span class="ap-badge ap-badge--bg ap-badge--degraded">Degraded</span>
+          <span class="ap-badge ap-badge--bg ap-badge--failed">Failed</span>
+          <span class="ap-badge ap-badge--bg ap-badge--in-progress">In Progress</span>
+          <span class="ap-badge ap-badge--bg ap-badge--unknown">Unknown</span>
+        </div>
+        <div class="sg-example__code">&lt;span class="ap-badge ap-badge--bg ap-badge--healthy"&gt;Healthy&lt;/span&gt;</div>
+      </div>
+
+      <!-- BUTTONS -->
+      <div class="ap-section-header ap-mt-8" id="buttons"><span>BUTTONS</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex ap-gap-3 ap-flex-wrap ap-items-center">
+          <button class="ap-btn">Secondary</button>
+          <button class="ap-btn ap-btn--primary">Primary</button>
+          <button class="ap-btn ap-btn--danger">Danger</button>
+          <button class="ap-btn ap-btn--ghost">Ghost</button>
+          <button class="ap-btn" disabled>Disabled</button>
+          <button class="ap-btn ap-btn--sm">Small</button>
+        </div>
+        <div class="sg-example__code">&lt;button class="ap-btn"&gt;Secondary&lt;/button&gt;
+&lt;button class="ap-btn ap-btn--primary"&gt;Primary&lt;/button&gt;
+&lt;button class="ap-btn ap-btn--danger"&gt;Danger&lt;/button&gt;
+&lt;button class="ap-btn ap-btn--ghost"&gt;Ghost&lt;/button&gt;
+&lt;button class="ap-btn" disabled&gt;Disabled&lt;/button&gt;
+&lt;button class="ap-btn ap-btn--sm"&gt;Small&lt;/button&gt;</div>
+      </div>
+
+      <!-- CARDS -->
+      <div class="ap-section-header ap-mt-8" id="cards"><span>CARDS</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex ap-gap-4">
+          <div class="ap-card" style="flex: 1;">
+            <h3>Default Card</h3>
+            <p class="ap-text-sm ap-text-muted ap-mt-2">Surface background with thin border.</p>
+          </div>
+          <div class="ap-card ap-card--elevated" style="flex: 1;">
+            <h3>Elevated Card</h3>
+            <p class="ap-text-sm ap-text-muted ap-mt-2">White background variant.</p>
+          </div>
+          <div class="ap-card ap-card--interactive" style="flex: 1;">
+            <h3>Interactive Card</h3>
+            <p class="ap-text-sm ap-text-muted ap-mt-2">Hover to see border change.</p>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-card"&gt;...&lt;/div&gt;
+&lt;div class="ap-card ap-card--elevated"&gt;...&lt;/div&gt;
+&lt;div class="ap-card ap-card--interactive"&gt;...&lt;/div&gt;</div>
+      </div>
+
+      <!-- METRIC CARD -->
+      <div class="ap-section-header ap-mt-8" id="metric"><span>METRIC CARD</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex ap-gap-4">
+          <div class="ap-metric">
+            <div class="ap-pixels"><span></span><span></span><span></span><span></span></div>
+            <div class="ap-flex ap-items-baseline ap-gap-1">
+              <span class="ap-metric__value">12.5</span>
+              <span class="ap-metric__unit">ms</span>
+            </div>
+            <span class="ap-metric__label">P99 Latency</span>
+          </div>
+          <div class="ap-metric">
+            <div class="ap-pixels"><span></span><span></span><span></span><span></span></div>
+            <div class="ap-flex ap-items-baseline ap-gap-1">
+              <span class="ap-metric__value">847</span>
+              <span class="ap-metric__unit">req/s</span>
+            </div>
+            <span class="ap-metric__label">Throughput</span>
+          </div>
+          <div class="ap-metric">
+            <div class="ap-pixels"><span></span><span></span><span></span><span></span></div>
+            <span class="ap-metric__value">99.97%</span>
+            <span class="ap-metric__label">Availability</span>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-metric"&gt;
+  &lt;div class="ap-pixels"&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;
+  &lt;div class="ap-flex ap-items-baseline ap-gap-1"&gt;
+    &lt;span class="ap-metric__value"&gt;12.5&lt;/span&gt;
+    &lt;span class="ap-metric__unit"&gt;ms&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;span class="ap-metric__label"&gt;P99 Latency&lt;/span&gt;
+&lt;/div&gt;</div>
+      </div>
+
+      <!-- SECTION HEADER -->
+      <div class="ap-section-header ap-mt-8" id="section-header"><span>SECTION HEADER</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview">
+          <div class="ap-section-header"><span>BACKUPS</span></div>
+          <div class="ap-section-header"><span>METRICS</span><button class="ap-btn ap-btn--sm">Refresh</button></div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-section-header"&gt;&lt;span&gt;BACKUPS&lt;/span&gt;&lt;/div&gt;
+&lt;div class="ap-section-header"&gt;
+  &lt;span&gt;METRICS&lt;/span&gt;
+  &lt;button class="ap-btn ap-btn--sm"&gt;Refresh&lt;/button&gt;
+&lt;/div&gt;</div>
+      </div>
+
+      <!-- TAGS -->
+      <div class="ap-section-header ap-mt-8" id="tags"><span>TAGS</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex ap-gap-3 ap-flex-wrap">
+          <span class="ap-tag ap-tag--orange">v1.2.3</span>
+          <span class="ap-tag ap-tag--green">Synced</span>
+          <span class="ap-tag ap-tag--red">OutOfSync</span>
+          <span class="ap-tag ap-tag--blue">Progressing</span>
+          <span class="ap-tag ap-tag--gray">Unknown</span>
+        </div>
+        <div class="sg-example__code">&lt;span class="ap-tag ap-tag--orange"&gt;v1.2.3&lt;/span&gt;
+&lt;span class="ap-tag ap-tag--green"&gt;Synced&lt;/span&gt;
+&lt;span class="ap-tag ap-tag--red"&gt;OutOfSync&lt;/span&gt;</div>
+      </div>
+
+      <!-- TABLE -->
+      <div class="ap-section-header ap-mt-8" id="table"><span>TABLE</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview">
+          <table class="ap-table ap-table--hoverable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Namespace</th>
+                <th>Status</th>
+                <th>Last Backup</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>guestbook-daily</td>
+                <td>production</td>
+                <td><span class="ap-badge ap-badge--healthy">Completed</span></td>
+                <td>2h ago</td>
+              </tr>
+              <tr>
+                <td>cache-hourly</td>
+                <td>staging</td>
+                <td><span class="ap-badge ap-badge--in-progress">Running</span></td>
+                <td>15m ago</td>
+              </tr>
+              <tr>
+                <td>db-snapshot</td>
+                <td>production</td>
+                <td><span class="ap-badge ap-badge--failed">Failed</span></td>
+                <td>1d ago</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="sg-example__code">&lt;table class="ap-table ap-table--hoverable"&gt;
+  &lt;thead&gt;&lt;tr&gt;&lt;th&gt;Name&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+  &lt;tbody&gt;&lt;tr&gt;&lt;td&gt;value&lt;/td&gt;&lt;td&gt;...&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;
+&lt;/table&gt;</div>
+      </div>
+
+      <!-- INPUTS -->
+      <div class="ap-section-header ap-mt-8" id="inputs"><span>FORM ELEMENTS</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex-col ap-gap-4" style="max-width: 360px;">
+          <div>
+            <label class="ap-label">Namespace</label>
+            <input class="ap-input" type="text" placeholder="e.g. production" />
+          </div>
+          <div>
+            <label class="ap-label">Environment</label>
+            <select class="ap-select ap-w-full">
+              <option>production</option>
+              <option>staging</option>
+              <option>development</option>
+            </select>
+          </div>
+          <div>
+            <label class="ap-label">Description</label>
+            <textarea class="ap-textarea" placeholder="Optional description..."></textarea>
+          </div>
+          <div>
+            <label class="ap-label">Error state</label>
+            <input class="ap-input ap-input--error" type="text" value="invalid-name!" />
+          </div>
+          <div class="ap-flex ap-items-center ap-gap-3">
+            <label class="ap-label ap-m-0">Auto-sync</label>
+            <label class="ap-toggle">
+              <input type="checkbox" checked>
+              <span class="ap-toggle__track">
+                <span class="ap-toggle__thumb"></span>
+              </span>
+            </label>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;label class="ap-label"&gt;Namespace&lt;/label&gt;
+&lt;input class="ap-input" type="text" placeholder="..." /&gt;
+&lt;select class="ap-select"&gt;...&lt;/select&gt;
+&lt;textarea class="ap-textarea"&gt;&lt;/textarea&gt;
+&lt;input class="ap-input ap-input--error" /&gt;
+
+&lt;label class="ap-toggle"&gt;
+  &lt;input type="checkbox"&gt;
+  &lt;span class="ap-toggle__track"&gt;
+    &lt;span class="ap-toggle__thumb"&gt;&lt;/span&gt;
+  &lt;/span&gt;
+&lt;/label&gt;</div>
+      </div>
+
+      <!-- ALERTS -->
+      <div class="ap-section-header ap-mt-8" id="alerts"><span>ALERTS</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex-col ap-gap-3">
+          <div class="ap-alert ap-alert--info">Application sync will be triggered automatically.</div>
+          <div class="ap-alert ap-alert--success">Backup completed successfully.</div>
+          <div class="ap-alert ap-alert--warning">Cluster resources are running low.</div>
+          <div class="ap-alert ap-alert--error">Failed to connect to Prometheus endpoint.</div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-alert ap-alert--info"&gt;Message&lt;/div&gt;
+&lt;div class="ap-alert ap-alert--success"&gt;Message&lt;/div&gt;
+&lt;div class="ap-alert ap-alert--warning"&gt;Message&lt;/div&gt;
+&lt;div class="ap-alert ap-alert--error"&gt;Message&lt;/div&gt;</div>
+      </div>
+
+      <!-- PROGRESS BAR -->
+      <div class="ap-section-header ap-mt-8" id="progress"><span>PROGRESS BAR</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex-col ap-gap-4">
+          <div>
+            <div class="ap-flex ap-justify-between ap-mb-1">
+              <span class="ap-text-xs ap-text-muted">CPU Usage</span>
+              <span class="ap-text-xs ap-font-mono ap-text-muted">72%</span>
+            </div>
+            <div class="ap-progress"><div class="ap-progress__fill" style="width: 72%;"></div></div>
+          </div>
+          <div>
+            <div class="ap-flex ap-justify-between ap-mb-1">
+              <span class="ap-text-xs ap-text-muted">Sync Progress</span>
+              <span class="ap-text-xs ap-font-mono ap-text-muted">100%</span>
+            </div>
+            <div class="ap-progress"><div class="ap-progress__fill ap-progress__fill--green" style="width: 100%;"></div></div>
+          </div>
+          <div>
+            <div class="ap-flex ap-justify-between ap-mb-1">
+              <span class="ap-text-xs ap-text-muted">Error Rate</span>
+              <span class="ap-text-xs ap-font-mono ap-text-muted">23%</span>
+            </div>
+            <div class="ap-progress"><div class="ap-progress__fill ap-progress__fill--red" style="width: 23%;"></div></div>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-progress"&gt;
+  &lt;div class="ap-progress__fill" style="width: 72%;"&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="ap-progress"&gt;
+  &lt;div class="ap-progress__fill ap-progress__fill--green" style="width: 100%;"&gt;&lt;/div&gt;
+&lt;/div&gt;</div>
+      </div>
+
+      <!-- META ROW -->
+      <div class="ap-section-header ap-mt-8" id="meta"><span>META ROW</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview">
+          <div class="ap-meta">
+            <span class="ap-meta__item">
+              <span class="ap-meta__key">Namespace:</span>
+              <span class="ap-meta__val">production</span>
+            </span>
+            <span class="ap-meta__sep"></span>
+            <span class="ap-meta__item">
+              <span class="ap-meta__key">Last backup:</span>
+              <span class="ap-meta__val">2h ago</span>
+            </span>
+            <span class="ap-meta__sep"></span>
+            <span class="ap-meta__item">
+              <span class="ap-meta__key">Status:</span>
+              <span class="ap-meta__val"><span class="ap-badge ap-badge--healthy">Healthy</span></span>
+            </span>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-meta"&gt;
+  &lt;span class="ap-meta__item"&gt;
+    &lt;span class="ap-meta__key"&gt;Namespace:&lt;/span&gt;
+    &lt;span class="ap-meta__val"&gt;production&lt;/span&gt;
+  &lt;/span&gt;
+  &lt;span class="ap-meta__sep"&gt;&lt;/span&gt;
+  ...
+&lt;/div&gt;</div>
+      </div>
+
+      <!-- KEY-VALUE LIST -->
+      <div class="ap-section-header ap-mt-8" id="kv"><span>KEY-VALUE LIST</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview">
+          <dl class="ap-kv">
+            <dt>Cluster</dt><dd>production-us-east-1</dd>
+            <dt>Namespace</dt><dd>argoplane-demo</dd>
+            <dt>Created</dt><dd>2025-03-14T10:22:00Z</dd>
+            <dt>Sync Status</dt><dd><span class="ap-badge ap-badge--healthy">Synced</span></dd>
+            <dt>Health</dt><dd><span class="ap-badge ap-badge--healthy">Healthy</span></dd>
+          </dl>
+        </div>
+        <div class="sg-example__code">&lt;dl class="ap-kv"&gt;
+  &lt;dt&gt;Cluster&lt;/dt&gt;&lt;dd&gt;production-us-east-1&lt;/dd&gt;
+  &lt;dt&gt;Namespace&lt;/dt&gt;&lt;dd&gt;argoplane-demo&lt;/dd&gt;
+&lt;/dl&gt;</div>
+      </div>
+
+      <!-- TABS -->
+      <div class="ap-section-header ap-mt-8" id="tabs"><span>TABS</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview">
+          <nav class="ap-tabs">
+            <button class="ap-tabs__tab ap-tabs__tab--active">Overview</button>
+            <button class="ap-tabs__tab">Metrics</button>
+            <button class="ap-tabs__tab">Backups</button>
+            <button class="ap-tabs__tab">Networking</button>
+          </nav>
+        </div>
+        <div class="sg-example__code">&lt;nav class="ap-tabs"&gt;
+  &lt;button class="ap-tabs__tab ap-tabs__tab--active"&gt;Overview&lt;/button&gt;
+  &lt;button class="ap-tabs__tab"&gt;Metrics&lt;/button&gt;
+&lt;/nav&gt;</div>
+      </div>
+
+      <!-- BREADCRUMB -->
+      <div class="ap-section-header ap-mt-8" id="breadcrumb"><span>BREADCRUMB</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview">
+          <nav class="ap-breadcrumb">
+            <a href="#">Home</a>
+            <span>/</span>
+            <a href="#">Extensions</a>
+            <span>/</span>
+            <span>Metrics</span>
+          </nav>
+        </div>
+        <div class="sg-example__code">&lt;nav class="ap-breadcrumb"&gt;
+  &lt;a href="#"&gt;Home&lt;/a&gt;&lt;span&gt;/&lt;/span&gt;
+  &lt;a href="#"&gt;Extensions&lt;/a&gt;&lt;span&gt;/&lt;/span&gt;
+  &lt;span&gt;Metrics&lt;/span&gt;
+&lt;/nav&gt;</div>
+      </div>
+
+      <!-- AVATAR -->
+      <div class="ap-section-header ap-mt-8" id="avatar"><span>AVATAR</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex ap-gap-3 ap-items-center">
+          <span class="ap-avatar">JL</span>
+          <span class="ap-avatar ap-avatar--lg">AP</span>
+        </div>
+        <div class="sg-example__code">&lt;span class="ap-avatar"&gt;JL&lt;/span&gt;
+&lt;span class="ap-avatar ap-avatar--lg"&gt;AP&lt;/span&gt;</div>
+      </div>
+
+      <!-- COUNT BADGE -->
+      <div class="ap-section-header ap-mt-8" id="count"><span>COUNT BADGE</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex ap-gap-4 ap-items-center">
+          <span class="ap-flex ap-items-center ap-gap-2">Backups <span class="ap-count">12</span></span>
+          <span class="ap-flex ap-items-center ap-gap-2">Alerts <span class="ap-count ap-count--accent">3</span></span>
+        </div>
+        <div class="sg-example__code">&lt;span class="ap-count"&gt;12&lt;/span&gt;
+&lt;span class="ap-count ap-count--accent"&gt;3&lt;/span&gt;</div>
+      </div>
+
+      <!-- SIDEBAR NAV -->
+      <div class="ap-section-header ap-mt-8" id="sidenav"><span>SIDEBAR NAV</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview" style="max-width: 220px;">
+          <nav class="ap-sidenav">
+            <span class="ap-sidenav__group">Discover</span>
+            <a class="ap-sidenav__item ap-sidenav__item--active" href="#">Platform</a>
+            <a class="ap-sidenav__item" href="#">CRDs</a>
+            <span class="ap-sidenav__group">Observe</span>
+            <a class="ap-sidenav__item" href="#">Metrics</a>
+            <a class="ap-sidenav__item" href="#">Backups</a>
+            <span class="ap-sidenav__group">Secure</span>
+            <a class="ap-sidenav__item" href="#">Policies</a>
+          </nav>
+        </div>
+        <div class="sg-example__code">&lt;nav class="ap-sidenav"&gt;
+  &lt;span class="ap-sidenav__group"&gt;Discover&lt;/span&gt;
+  &lt;a class="ap-sidenav__item ap-sidenav__item--active" href="#"&gt;Platform&lt;/a&gt;
+  &lt;a class="ap-sidenav__item" href="#"&gt;CRDs&lt;/a&gt;
+&lt;/nav&gt;</div>
+      </div>
+
+      <!-- EMPTY STATE -->
+      <div class="ap-section-header ap-mt-8" id="empty"><span>EMPTY STATE</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview">
+          <div class="ap-empty">
+            <div class="ap-empty__icon">
+              <span></span><span></span><span></span><span></span>
+            </div>
+            <p class="ap-empty__text">No backups found for this application</p>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-empty"&gt;
+  &lt;div class="ap-empty__icon"&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;
+  &lt;p class="ap-empty__text"&gt;No backups found&lt;/p&gt;
+&lt;/div&gt;</div>
+      </div>
+
+      <!-- LOADING -->
+      <div class="ap-section-header ap-mt-8" id="loading"><span>LOADING</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview">
+          <div class="ap-loading">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-loading"&gt;
+  &lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</div>
+      </div>
+
+      <!-- SKELETON -->
+      <div class="ap-section-header ap-mt-8" id="skeleton"><span>SKELETON</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex-col ap-gap-3">
+          <div class="ap-skeleton" style="width: 200px; height: 20px;"></div>
+          <div class="ap-skeleton" style="width: 100%; height: 14px;"></div>
+          <div class="ap-skeleton" style="width: 80%; height: 14px;"></div>
+          <div class="ap-flex ap-gap-3 ap-mt-2">
+            <div class="ap-skeleton" style="width: 120px; height: 64px;"></div>
+            <div class="ap-skeleton" style="width: 120px; height: 64px;"></div>
+            <div class="ap-skeleton" style="width: 120px; height: 64px;"></div>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-skeleton" style="width: 200px; height: 20px;"&gt;&lt;/div&gt;</div>
+      </div>
+
+      <!-- TOOLTIP -->
+      <div class="ap-section-header ap-mt-8" id="tooltip"><span>TOOLTIP</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex ap-gap-6" style="padding-top: 40px;">
+          <span class="ap-tooltip" data-tip="Last synced 2 minutes ago">Hover me</span>
+          <span class="ap-tooltip" data-tip="kubectl get pods -n production">Another tooltip</span>
+        </div>
+        <div class="sg-example__code">&lt;span class="ap-tooltip" data-tip="Last synced 2 minutes ago"&gt;Hover me&lt;/span&gt;</div>
+      </div>
+
+      <!-- MODAL -->
+      <div class="ap-section-header ap-mt-8" id="modal"><span>MODAL</span></div>
+      <div class="sg-example">
+        <div class="sg-example__preview">
+          <div style="position: relative; background: rgba(28,25,23,0.1); padding: 32px; border-radius: var(--ap-radius-md);">
+            <div class="ap-modal" style="position: relative; margin: 0 auto;">
+              <div class="ap-modal__header">Trigger Restore</div>
+              <div class="ap-modal__body">
+                <p class="ap-text-sm ap-text-muted">Are you sure you want to restore from backup <code>guestbook-daily-20250314</code>?</p>
+              </div>
+              <div class="ap-modal__footer">
+                <button class="ap-btn">Cancel</button>
+                <button class="ap-btn ap-btn--primary">Restore</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-modal-overlay"&gt;
+  &lt;div class="ap-modal"&gt;
+    &lt;div class="ap-modal__header"&gt;Title&lt;/div&gt;
+    &lt;div class="ap-modal__body"&gt;Content&lt;/div&gt;
+    &lt;div class="ap-modal__footer"&gt;Actions&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="styleguide.js"></script>
+</body>
+</html>

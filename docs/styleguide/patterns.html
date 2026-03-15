@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patterns - ArgoPlane Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../design-system/tokens.css">
+<link rel="stylesheet" href="../../design-system/base.css">
+<link rel="stylesheet" href="../../design-system/components.css">
+<link rel="stylesheet" href="../../design-system/utilities.css">
+<link rel="stylesheet" href="styleguide.css">
+</head>
+<body>
+<div class="sg-layout">
+  <nav class="sg-sidebar">
+    <div class="sg-logo">
+      <div class="sg-logo__pixels">
+        <span></span><span></span><span></span><span></span>
+      </div>
+      <span class="ap-font-semibold">ArgoPlane</span>
+      <span class="ap-text-faint ap-text-xs">Design System</span>
+    </div>
+    <div class="ap-sidenav">
+      <a class="ap-sidenav__item" href="index.html">Overview</a>
+      <a class="ap-sidenav__item" href="tokens.html">Tokens</a>
+      <a class="ap-sidenav__item" href="components.html">Components</a>
+      <a class="ap-sidenav__item ap-sidenav__item--active" href="patterns.html">Patterns</a>
+    </div>
+    <div class="sg-sidebar__footer">
+      <label class="ap-toggle sg-theme-toggle">
+        <input type="checkbox" id="theme-toggle">
+        <span class="ap-toggle__track">
+          <span class="ap-toggle__thumb"></span>
+        </span>
+        <span class="ap-text-xs ap-text-muted" style="margin-left: 8px;">Dark mode</span>
+      </label>
+    </div>
+  </nav>
+
+  <main class="sg-main">
+    <div class="sg-content">
+      <h1>Patterns</h1>
+      <p class="ap-text-muted ap-mt-2">
+        Common compositions showing how components work together.
+        These patterns appear across ArgoCD extensions, the portal, and docs.
+      </p>
+
+      <!-- EXTENSION TAB PANEL -->
+      <div class="ap-section-header ap-mt-8" id="extension-panel"><span>EXTENSION TAB PANEL</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        The standard layout for a resource tab extension inside ArgoCD. Metrics row at top,
+        section with data table below.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview">
+          <div class="ap-p-5">
+            <!-- Meta row -->
+            <div class="ap-meta ap-mb-4">
+              <span class="ap-meta__item">
+                <span class="ap-meta__key">Pod:</span>
+                <span class="ap-meta__val">guestbook-ui-7f8d6b4c5-x2k9m</span>
+              </span>
+              <span class="ap-meta__sep"></span>
+              <span class="ap-meta__item">
+                <span class="ap-meta__key">Namespace:</span>
+                <span class="ap-meta__val">argoplane-demo</span>
+              </span>
+              <span class="ap-meta__sep"></span>
+              <span class="ap-meta__item">
+                <span class="ap-meta__key">Status:</span>
+                <span class="ap-meta__val"><span class="ap-badge ap-badge--healthy">Healthy</span></span>
+              </span>
+            </div>
+
+            <!-- Metric cards row -->
+            <div class="ap-grid-4 ap-gap-3 ap-mb-6">
+              <div class="ap-metric">
+                <div class="ap-pixels"><span></span><span></span><span></span><span></span></div>
+                <div class="ap-flex ap-items-baseline ap-gap-1">
+                  <span class="ap-metric__value">24</span>
+                  <span class="ap-metric__unit">m</span>
+                </div>
+                <span class="ap-metric__label">CPU Usage</span>
+              </div>
+              <div class="ap-metric">
+                <div class="ap-pixels"><span></span><span></span><span></span><span></span></div>
+                <div class="ap-flex ap-items-baseline ap-gap-1">
+                  <span class="ap-metric__value">128</span>
+                  <span class="ap-metric__unit">Mi</span>
+                </div>
+                <span class="ap-metric__label">Memory</span>
+              </div>
+              <div class="ap-metric">
+                <div class="ap-pixels"><span></span><span></span><span></span><span></span></div>
+                <span class="ap-metric__value">847</span>
+                <span class="ap-metric__label">Requests / sec</span>
+              </div>
+              <div class="ap-metric">
+                <div class="ap-pixels"><span></span><span></span><span></span><span></span></div>
+                <div class="ap-flex ap-items-baseline ap-gap-1">
+                  <span class="ap-metric__value">12.5</span>
+                  <span class="ap-metric__unit">ms</span>
+                </div>
+                <span class="ap-metric__label">P99 Latency</span>
+              </div>
+            </div>
+
+            <!-- Table section -->
+            <div class="ap-section-header"><span>RECENT REQUESTS</span></div>
+            <table class="ap-table ap-table--hoverable">
+              <thead>
+                <tr>
+                  <th>Endpoint</th>
+                  <th>Method</th>
+                  <th>Status</th>
+                  <th>Latency</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>/api/v1/messages</td>
+                  <td class="ap-table__cell--text">GET</td>
+                  <td><span class="ap-tag ap-tag--green">200</span></td>
+                  <td>8ms</td>
+                </tr>
+                <tr>
+                  <td>/api/v1/messages</td>
+                  <td class="ap-table__cell--text">POST</td>
+                  <td><span class="ap-tag ap-tag--green">201</span></td>
+                  <td>23ms</td>
+                </tr>
+                <tr>
+                  <td>/api/v1/users/me</td>
+                  <td class="ap-table__cell--text">GET</td>
+                  <td><span class="ap-tag ap-tag--red">500</span></td>
+                  <td>1204ms</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATUS PANEL -->
+      <div class="ap-section-header ap-mt-8" id="status-panel"><span>STATUS PANEL</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        Compact status display for the ArgoCD app status bar. Shows key info at a glance.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview">
+          <div class="ap-card ap-flex ap-items-center ap-gap-4" style="max-width: 480px;">
+            <span class="ap-badge ap-badge--bg ap-badge--healthy">Backup OK</span>
+            <div class="ap-meta" style="flex: 1;">
+              <span class="ap-meta__item">
+                <span class="ap-meta__key">Last:</span>
+                <span class="ap-meta__val">2h ago</span>
+              </span>
+              <span class="ap-meta__sep"></span>
+              <span class="ap-meta__item">
+                <span class="ap-meta__key">Next:</span>
+                <span class="ap-meta__val">22h</span>
+              </span>
+            </div>
+            <button class="ap-btn ap-btn--sm">Details</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- DETAIL PAGE -->
+      <div class="ap-section-header ap-mt-8" id="detail-page"><span>DETAIL PAGE</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        Full detail view with key-value metadata, tabs, and content area.
+        Suitable for portal pages and system-level extensions.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview">
+          <div class="ap-p-5">
+            <!-- Header -->
+            <div class="ap-flex ap-items-center ap-gap-3 ap-mb-4">
+              <span class="ap-avatar ap-avatar--lg">GB</span>
+              <div>
+                <h2 class="ap-flex ap-items-center ap-gap-2">
+                  guestbook
+                  <span class="ap-badge ap-badge--bg ap-badge--healthy">Synced</span>
+                </h2>
+                <nav class="ap-breadcrumb ap-mt-1">
+                  <a href="#">Applications</a>
+                  <span>/</span>
+                  <span>guestbook</span>
+                </nav>
+              </div>
+              <div class="ap-ml-auto ap-flex ap-gap-2">
+                <button class="ap-btn">Sync</button>
+                <button class="ap-btn ap-btn--primary">Deploy</button>
+              </div>
+            </div>
+
+            <!-- KV metadata -->
+            <div class="ap-card ap-mb-4">
+              <dl class="ap-kv">
+                <dt>Project</dt><dd>default</dd>
+                <dt>Cluster</dt><dd>in-cluster</dd>
+                <dt>Namespace</dt><dd>argoplane-demo</dd>
+                <dt>Repo</dt><dd>github.com/argoproj/argocd-example-apps</dd>
+                <dt>Path</dt><dd>guestbook</dd>
+                <dt>Target Revision</dt><dd><span class="ap-tag ap-tag--orange">HEAD</span></dd>
+              </dl>
+            </div>
+
+            <!-- Tabs -->
+            <nav class="ap-tabs ap-mb-4">
+              <button class="ap-tabs__tab ap-tabs__tab--active">Overview</button>
+              <button class="ap-tabs__tab">Metrics <span class="ap-count">4</span></button>
+              <button class="ap-tabs__tab">Backups <span class="ap-count">12</span></button>
+              <button class="ap-tabs__tab">Networking</button>
+            </nav>
+
+            <!-- Content placeholder -->
+            <div class="ap-flex-col ap-gap-3">
+              <div class="ap-skeleton" style="width: 100%; height: 14px;"></div>
+              <div class="ap-skeleton" style="width: 85%; height: 14px;"></div>
+              <div class="ap-skeleton" style="width: 92%; height: 14px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PORTAL SIDEBAR LAYOUT -->
+      <div class="ap-section-header ap-mt-8" id="portal-layout"><span>PORTAL SIDEBAR LAYOUT</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        Two-column layout for the self-service portal and docs site.
+        Sidebar navigation on the left, content area on the right.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview">
+          <div class="ap-flex" style="min-height: 320px; border: var(--ap-border); border-radius: var(--ap-radius-md); overflow: hidden;">
+            <!-- Sidebar -->
+            <div class="ap-border-b" style="width: 200px; border-right: var(--ap-border); padding: var(--ap-space-4); flex-shrink: 0;">
+              <div class="ap-flex ap-items-center ap-gap-2 ap-mb-4">
+                <div style="display: grid; grid-template-columns: 4px 4px; gap: 2px;">
+                  <span style="width: 4px; height: 4px; background: var(--ap-orange-400); border-radius: 1px;"></span>
+                  <span style="width: 4px; height: 4px; background: var(--ap-orange-400); border-radius: 1px;"></span>
+                  <span style="width: 4px; height: 4px; background: var(--ap-orange-400); border-radius: 1px;"></span>
+                  <span style="width: 4px; height: 4px; background: var(--ap-orange-400); border-radius: 1px;"></span>
+                </div>
+                <span class="ap-font-semibold ap-text-sm">Portal</span>
+              </div>
+              <nav class="ap-sidenav">
+                <span class="ap-sidenav__group">Discover</span>
+                <a class="ap-sidenav__item ap-sidenav__item--active" href="#">Storage</a>
+                <a class="ap-sidenav__item" href="#">Networking</a>
+                <a class="ap-sidenav__item" href="#">CRDs</a>
+                <span class="ap-sidenav__group">Self-Service</span>
+                <a class="ap-sidenav__item" href="#">Databases</a>
+                <a class="ap-sidenav__item" href="#">Caches</a>
+              </nav>
+            </div>
+            <!-- Content -->
+            <div class="ap-p-5" style="flex: 1;">
+              <div class="ap-section-header"><span>STORAGE CLASSES</span></div>
+              <div class="ap-grid-3 ap-gap-3">
+                <div class="ap-card ap-card--interactive">
+                  <div class="ap-flex ap-items-center ap-gap-2 ap-mb-2">
+                    <span class="ap-badge ap-badge--healthy">Available</span>
+                    <span class="ap-font-semibold ap-text-sm">gp3</span>
+                  </div>
+                  <div class="ap-meta">
+                    <span class="ap-meta__item">
+                      <span class="ap-meta__key">Provisioner:</span>
+                      <span class="ap-meta__val">ebs.csi.aws.com</span>
+                    </span>
+                  </div>
+                  <div class="ap-flex ap-gap-2 ap-mt-2">
+                    <span class="ap-tag ap-tag--orange">default</span>
+                    <span class="ap-tag ap-tag--gray">SSD</span>
+                  </div>
+                </div>
+                <div class="ap-card ap-card--interactive">
+                  <div class="ap-flex ap-items-center ap-gap-2 ap-mb-2">
+                    <span class="ap-badge ap-badge--healthy">Available</span>
+                    <span class="ap-font-semibold ap-text-sm">io2</span>
+                  </div>
+                  <div class="ap-meta">
+                    <span class="ap-meta__item">
+                      <span class="ap-meta__key">Provisioner:</span>
+                      <span class="ap-meta__val">ebs.csi.aws.com</span>
+                    </span>
+                  </div>
+                  <div class="ap-flex ap-gap-2 ap-mt-2">
+                    <span class="ap-tag ap-tag--gray">High IOPS</span>
+                  </div>
+                </div>
+                <div class="ap-card ap-card--interactive">
+                  <div class="ap-flex ap-items-center ap-gap-2 ap-mb-2">
+                    <span class="ap-badge ap-badge--healthy">Available</span>
+                    <span class="ap-font-semibold ap-text-sm">efs-sc</span>
+                  </div>
+                  <div class="ap-meta">
+                    <span class="ap-meta__item">
+                      <span class="ap-meta__key">Provisioner:</span>
+                      <span class="ap-meta__val">efs.csi.aws.com</span>
+                    </span>
+                  </div>
+                  <div class="ap-flex ap-gap-2 ap-mt-2">
+                    <span class="ap-tag ap-tag--gray">Shared</span>
+                    <span class="ap-tag ap-tag--gray">NFS</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FORM PATTERN -->
+      <div class="ap-section-header ap-mt-8" id="form"><span>FORM PATTERN</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        Standard form layout for self-service resource creation.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview">
+          <div class="ap-card" style="max-width: 480px;">
+            <h3 class="ap-mb-4">Request Database</h3>
+            <div class="ap-flex-col ap-gap-4">
+              <div>
+                <label class="ap-label">Database Name</label>
+                <input class="ap-input" type="text" placeholder="my-app-db" />
+              </div>
+              <div class="ap-grid-2 ap-gap-4">
+                <div>
+                  <label class="ap-label">Engine</label>
+                  <select class="ap-select ap-w-full">
+                    <option>PostgreSQL 16</option>
+                    <option>PostgreSQL 15</option>
+                    <option>MySQL 8</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="ap-label">Size</label>
+                  <select class="ap-select ap-w-full">
+                    <option>Small (1 vCPU, 2Gi)</option>
+                    <option>Medium (2 vCPU, 4Gi)</option>
+                    <option>Large (4 vCPU, 8Gi)</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label class="ap-label">Storage</label>
+                <div class="ap-flex ap-items-center ap-gap-2">
+                  <input class="ap-input" type="text" value="20" style="width: 80px;" />
+                  <span class="ap-text-sm ap-text-muted">Gi</span>
+                  <span class="ap-tag ap-tag--gray">gp3</span>
+                </div>
+              </div>
+              <div class="ap-flex ap-items-center ap-gap-3">
+                <label class="ap-toggle">
+                  <input type="checkbox" checked>
+                  <span class="ap-toggle__track"><span class="ap-toggle__thumb"></span></span>
+                </label>
+                <span class="ap-text-sm">Enable automated backups</span>
+              </div>
+              <div class="ap-alert ap-alert--info">
+                This will create a Crossplane Claim in your namespace. The database will be ready in approximately 5 minutes.
+              </div>
+              <div class="ap-flex ap-justify-end ap-gap-2">
+                <button class="ap-btn">Cancel</button>
+                <button class="ap-btn ap-btn--primary">Create Database</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DATA DENSITY -->
+      <div class="ap-section-header ap-mt-8" id="data-density"><span>DATA DENSITY</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        Show information compactly. Prefer inline key-value pairs over vertical lists when space allows.
+        Use the interpunct as separator.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex-col ap-gap-4">
+          <!-- Compact row -->
+          <div class="ap-card">
+            <div class="ap-flex ap-items-center ap-gap-3">
+              <span class="ap-badge ap-badge--bg ap-badge--healthy">Healthy</span>
+              <span class="ap-font-semibold ap-text-sm">guestbook-ui</span>
+              <div class="ap-meta ap-flex-1">
+                <span class="ap-meta__item">
+                  <span class="ap-meta__key">Replicas:</span>
+                  <span class="ap-meta__val">3/3</span>
+                </span>
+                <span class="ap-meta__sep"></span>
+                <span class="ap-meta__item">
+                  <span class="ap-meta__key">Image:</span>
+                  <span class="ap-meta__val">gcr.io/heptio/ks-guestbook:0.2</span>
+                </span>
+                <span class="ap-meta__sep"></span>
+                <span class="ap-meta__item">
+                  <span class="ap-meta__key">CPU:</span>
+                  <span class="ap-meta__val">24m</span>
+                </span>
+              </div>
+              <div class="ap-flex ap-gap-1">
+                <span class="ap-tag ap-tag--green">Synced</span>
+                <span class="ap-tag ap-tag--orange">v0.2</span>
+              </div>
+            </div>
+          </div>
+          <!-- Another compact row -->
+          <div class="ap-card">
+            <div class="ap-flex ap-items-center ap-gap-3">
+              <span class="ap-badge ap-badge--bg ap-badge--degraded">Degraded</span>
+              <span class="ap-font-semibold ap-text-sm">cache</span>
+              <div class="ap-meta ap-flex-1">
+                <span class="ap-meta__item">
+                  <span class="ap-meta__key">Replicas:</span>
+                  <span class="ap-meta__val">1/3</span>
+                </span>
+                <span class="ap-meta__sep"></span>
+                <span class="ap-meta__item">
+                  <span class="ap-meta__key">Image:</span>
+                  <span class="ap-meta__val">redis:7-alpine</span>
+                </span>
+                <span class="ap-meta__sep"></span>
+                <span class="ap-meta__item">
+                  <span class="ap-meta__key">Memory:</span>
+                  <span class="ap-meta__val">256Mi</span>
+                </span>
+              </div>
+              <div class="ap-flex ap-gap-1">
+                <span class="ap-tag ap-tag--red">OutOfSync</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PIXEL DECORATION -->
+      <div class="ap-section-header ap-mt-8" id="decoration"><span>PIXEL DECORATION</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        Subtle 2x2 dot cluster in the top-right of feature cards and metric panels.
+        Very faint (gray-200). Not on every element, just on feature panels.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex ap-gap-4">
+          <div class="ap-card ap-relative" style="min-width: 160px;">
+            <div class="ap-pixels"><span></span><span></span><span></span><span></span></div>
+            <h4 class="ap-mb-2">With decoration</h4>
+            <p class="ap-text-sm ap-text-muted">The 2x2 dots add subtle visual texture.</p>
+          </div>
+          <div class="ap-card" style="min-width: 160px;">
+            <h4 class="ap-mb-2">Without decoration</h4>
+            <p class="ap-text-sm ap-text-muted">Plain card for simpler content.</p>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-card ap-relative"&gt;
+  &lt;div class="ap-pixels"&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;
+  Content here
+&lt;/div&gt;</div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="styleguide.js"></script>
+</body>
+</html>

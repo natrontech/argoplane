@@ -1,0 +1,123 @@
+/* ================================================================
+   ArgoPlane Design Tokens
+   Single source of truth for all ArgoPlane surfaces:
+   ArgoCD extensions, self-service portal, docs, landing page.
+   ================================================================ */
+
+:root {
+  /* --- Primary Accent (Pastel Orange) --- */
+  --ap-orange-50:  #FFF7ED;
+  --ap-orange-100: #FFEDD5;
+  --ap-orange-200: #FDDCB0;
+  --ap-orange-300: #F5C28B;
+  --ap-orange-400: #F0A868;
+  --ap-orange-500: #E8935A;
+  --ap-orange-600: #D47A42;
+
+  /* --- Status: Green --- */
+  --ap-green-light:  #D1FAE5;
+  --ap-green:        #6EE7B7;
+  --ap-green-solid:  #86EFAC;
+  --ap-green-text:   #16A34A;
+
+  /* --- Status: Red --- */
+  --ap-red-light:    #FFE4E6;
+  --ap-red:          #FDA4AF;
+  --ap-red-solid:    #FCA5A5;
+  --ap-red-text:     #B91C1C;
+
+  /* --- Status: Yellow --- */
+  --ap-yellow-light: #FEF9C3;
+  --ap-yellow:       #FDE68A;
+  --ap-yellow-solid: #FDE047;
+  --ap-yellow-text:  #A16207;
+
+  /* --- Status: Blue --- */
+  --ap-blue-light:   #DBEAFE;
+  --ap-blue:         #93C5FD;
+  --ap-blue-solid:   #7DD3FC;
+  --ap-blue-text:    #1D4ED8;
+
+  /* --- Warm Grays --- */
+  --ap-gray-50:  #FAFAF9;
+  --ap-gray-100: #F5F5F4;
+  --ap-gray-200: #E7E5E4;
+  --ap-gray-300: #D6D3D1;
+  --ap-gray-400: #A8A29E;
+  --ap-gray-500: #78716C;
+  --ap-gray-600: #57534E;
+  --ap-gray-700: #44403C;
+  --ap-gray-800: #292524;
+  --ap-gray-900: #1C1917;
+  --ap-white:    #FFFFFF;
+
+  /* --- Typography --- */
+  --ap-font-body: 'Heebo', sans-serif;
+  --ap-font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+
+  --ap-text-xs:  11px;
+  --ap-text-sm:  13px;
+  --ap-text-md:  14px;
+  --ap-text-lg:  16px;
+  --ap-text-xl:  20px;
+
+  --ap-weight-normal:  400;
+  --ap-weight-medium:  500;
+  --ap-weight-semibold: 600;
+
+  --ap-leading-tight:  1.2;
+  --ap-leading-normal: 1.5;
+
+  /* --- Spacing (4px grid) --- */
+  --ap-space-1:  4px;
+  --ap-space-2:  8px;
+  --ap-space-3:  12px;
+  --ap-space-4:  16px;
+  --ap-space-5:  20px;
+  --ap-space-6:  24px;
+  --ap-space-8:  32px;
+  --ap-space-10: 40px;
+  --ap-space-12: 48px;
+  --ap-space-16: 64px;
+
+  /* --- Borders & Corners --- */
+  --ap-radius-none: 0px;
+  --ap-radius-sm:   2px;
+  --ap-radius-md:   4px;
+
+  --ap-border-width: 1px;
+  --ap-border-color: var(--ap-gray-200);
+  --ap-border:       var(--ap-border-width) solid var(--ap-border-color);
+
+  /* --- Transitions --- */
+  --ap-duration-fast: 100ms;
+  --ap-duration-normal: 150ms;
+
+  /* --- Semantic Aliases --- */
+  --ap-color-bg:         var(--ap-white);
+  --ap-color-surface:    var(--ap-gray-50);
+  --ap-color-text:       var(--ap-gray-800);
+  --ap-color-text-muted: var(--ap-gray-500);
+  --ap-color-text-faint: var(--ap-gray-400);
+  --ap-color-accent:     var(--ap-orange-500);
+  --ap-color-accent-hover: var(--ap-orange-600);
+  --ap-color-border:     var(--ap-gray-200);
+  --ap-color-border-strong: var(--ap-gray-300);
+}
+
+/* --- Dark Theme --- */
+
+[data-theme="dark"],
+.theme-dark {
+  --ap-color-bg:         var(--ap-gray-900);
+  --ap-color-surface:    var(--ap-gray-800);
+  --ap-color-text:       var(--ap-gray-100);
+  --ap-color-text-muted: var(--ap-gray-400);
+  --ap-color-text-faint: var(--ap-gray-500);
+  --ap-color-accent:     var(--ap-orange-400);
+  --ap-color-accent-hover: var(--ap-orange-500);
+  --ap-color-border:     var(--ap-gray-700);
+  --ap-color-border-strong: var(--ap-gray-600);
+
+  --ap-border-color:     var(--ap-gray-700);
+}

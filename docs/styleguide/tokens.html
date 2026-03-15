@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tokens - ArgoPlane Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../design-system/tokens.css">
+<link rel="stylesheet" href="../../design-system/base.css">
+<link rel="stylesheet" href="../../design-system/components.css">
+<link rel="stylesheet" href="../../design-system/utilities.css">
+<link rel="stylesheet" href="styleguide.css">
+</head>
+<body>
+<div class="sg-layout">
+  <nav class="sg-sidebar">
+    <div class="sg-logo">
+      <div class="sg-logo__pixels">
+        <span></span><span></span><span></span><span></span>
+      </div>
+      <span class="ap-font-semibold">ArgoPlane</span>
+      <span class="ap-text-faint ap-text-xs">Design System</span>
+    </div>
+    <div class="ap-sidenav">
+      <a class="ap-sidenav__item" href="index.html">Overview</a>
+      <a class="ap-sidenav__item ap-sidenav__item--active" href="tokens.html">Tokens</a>
+      <a class="ap-sidenav__item" href="components.html">Components</a>
+      <a class="ap-sidenav__item" href="patterns.html">Patterns</a>
+    </div>
+    <div class="sg-sidebar__footer">
+      <label class="ap-toggle sg-theme-toggle">
+        <input type="checkbox" id="theme-toggle">
+        <span class="ap-toggle__track">
+          <span class="ap-toggle__thumb"></span>
+        </span>
+        <span class="ap-text-xs ap-text-muted" style="margin-left: 8px;">Dark mode</span>
+      </label>
+    </div>
+  </nav>
+
+  <main class="sg-main">
+    <div class="sg-content">
+      <h1>Design Tokens</h1>
+      <p class="ap-text-muted ap-mt-2">
+        CSS custom properties that define every color, font, spacing value, and border in the system.
+        All tokens use the <code>--ap-</code> prefix.
+      </p>
+
+      <!-- COLORS: ORANGE -->
+      <div class="ap-section-header ap-mt-8" id="colors"><span>PRIMARY ACCENT</span></div>
+      <div class="sg-swatch-grid">
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-orange-50);"></div>
+          <span class="sg-swatch__label">orange-50</span>
+          <span class="sg-swatch__hex">#FFF7ED</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-orange-100);"></div>
+          <span class="sg-swatch__label">orange-100</span>
+          <span class="sg-swatch__hex">#FFEDD5</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-orange-200);"></div>
+          <span class="sg-swatch__label">orange-200</span>
+          <span class="sg-swatch__hex">#FDDCB0</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-orange-300);"></div>
+          <span class="sg-swatch__label">orange-300</span>
+          <span class="sg-swatch__hex">#F5C28B</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-orange-400);"></div>
+          <span class="sg-swatch__label">orange-400</span>
+          <span class="sg-swatch__hex">#F0A868</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-orange-500);"></div>
+          <span class="sg-swatch__label">orange-500</span>
+          <span class="sg-swatch__hex">#E8935A</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-orange-600);"></div>
+          <span class="sg-swatch__label">orange-600</span>
+          <span class="sg-swatch__hex">#D47A42</span>
+        </div>
+      </div>
+
+      <!-- STATUS COLORS -->
+      <div class="ap-section-header ap-mt-8"><span>STATUS COLORS</span></div>
+      <div class="sg-swatch-grid">
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-green-light);"></div>
+          <span class="sg-swatch__label">green-light</span>
+          <span class="sg-swatch__hex">#D1FAE5</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-green);"></div>
+          <span class="sg-swatch__label">green</span>
+          <span class="sg-swatch__hex">#6EE7B7</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-green-solid);"></div>
+          <span class="sg-swatch__label">green-solid</span>
+          <span class="sg-swatch__hex">#86EFAC</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-red-light);"></div>
+          <span class="sg-swatch__label">red-light</span>
+          <span class="sg-swatch__hex">#FFE4E6</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-red);"></div>
+          <span class="sg-swatch__label">red</span>
+          <span class="sg-swatch__hex">#FDA4AF</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-red-solid);"></div>
+          <span class="sg-swatch__label">red-solid</span>
+          <span class="sg-swatch__hex">#FCA5A5</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-yellow-light);"></div>
+          <span class="sg-swatch__label">yellow-light</span>
+          <span class="sg-swatch__hex">#FEF9C3</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-yellow);"></div>
+          <span class="sg-swatch__label">yellow</span>
+          <span class="sg-swatch__hex">#FDE68A</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-yellow-solid);"></div>
+          <span class="sg-swatch__label">yellow-solid</span>
+          <span class="sg-swatch__hex">#FDE047</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-blue-light);"></div>
+          <span class="sg-swatch__label">blue-light</span>
+          <span class="sg-swatch__hex">#DBEAFE</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-blue);"></div>
+          <span class="sg-swatch__label">blue</span>
+          <span class="sg-swatch__hex">#93C5FD</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-blue-solid);"></div>
+          <span class="sg-swatch__label">blue-solid</span>
+          <span class="sg-swatch__hex">#7DD3FC</span>
+        </div>
+      </div>
+
+      <!-- GRAYS -->
+      <div class="ap-section-header ap-mt-8"><span>WARM GRAYS</span></div>
+      <div class="sg-swatch-grid">
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-gray-50);"></div>
+          <span class="sg-swatch__label">gray-50</span>
+          <span class="sg-swatch__hex">#FAFAF9</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-gray-100);"></div>
+          <span class="sg-swatch__label">gray-100</span>
+          <span class="sg-swatch__hex">#F5F5F4</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-gray-200);"></div>
+          <span class="sg-swatch__label">gray-200</span>
+          <span class="sg-swatch__hex">#E7E5E4</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-gray-300);"></div>
+          <span class="sg-swatch__label">gray-300</span>
+          <span class="sg-swatch__hex">#D6D3D1</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-gray-400);"></div>
+          <span class="sg-swatch__label">gray-400</span>
+          <span class="sg-swatch__hex">#A8A29E</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-gray-500);"></div>
+          <span class="sg-swatch__label">gray-500</span>
+          <span class="sg-swatch__hex">#78716C</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-gray-600);"></div>
+          <span class="sg-swatch__label">gray-600</span>
+          <span class="sg-swatch__hex">#57534E</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-gray-700);"></div>
+          <span class="sg-swatch__label">gray-700</span>
+          <span class="sg-swatch__hex">#44403C</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-gray-800);"></div>
+          <span class="sg-swatch__label">gray-800</span>
+          <span class="sg-swatch__hex">#292524</span>
+        </div>
+        <div class="sg-swatch">
+          <div class="sg-swatch__color" style="background: var(--ap-gray-900);"></div>
+          <span class="sg-swatch__label">gray-900</span>
+          <span class="sg-swatch__hex">#1C1917</span>
+        </div>
+      </div>
+
+      <!-- SEMANTIC COLORS -->
+      <div class="ap-section-header ap-mt-8"><span>SEMANTIC TOKENS</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-4">
+        These tokens adapt automatically when dark theme is active. Use these for backgrounds,
+        text, and borders instead of raw color values.
+      </p>
+      <table class="ap-table">
+        <thead>
+          <tr>
+            <th>Token</th>
+            <th>Light</th>
+            <th>Dark</th>
+            <th>Usage</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>--ap-color-bg</td><td>white</td><td>gray-900</td><td>Page background</td></tr>
+          <tr><td>--ap-color-surface</td><td>gray-50</td><td>gray-800</td><td>Card, panel backgrounds</td></tr>
+          <tr><td>--ap-color-text</td><td>gray-800</td><td>gray-100</td><td>Primary text</td></tr>
+          <tr><td>--ap-color-text-muted</td><td>gray-500</td><td>gray-400</td><td>Secondary text, labels</td></tr>
+          <tr><td>--ap-color-text-faint</td><td>gray-400</td><td>gray-500</td><td>Hints, placeholders</td></tr>
+          <tr><td>--ap-color-accent</td><td>orange-500</td><td>orange-400</td><td>Interactive elements</td></tr>
+          <tr><td>--ap-color-border</td><td>gray-200</td><td>gray-700</td><td>Borders, dividers</td></tr>
+        </tbody>
+      </table>
+
+      <!-- TYPOGRAPHY -->
+      <div class="ap-section-header ap-mt-8" id="typography"><span>TYPOGRAPHY</span></div>
+
+      <h3>Font Stacks</h3>
+      <div class="ap-flex-col ap-gap-3 ap-mt-3">
+        <div class="sg-type-sample">
+          <span class="sg-type-sample__size">body</span>
+          <span style="font-family: var(--ap-font-body);">Heebo: The quick brown fox jumps over the lazy dog.</span>
+        </div>
+        <div class="sg-type-sample">
+          <span class="sg-type-sample__size">mono</span>
+          <span style="font-family: var(--ap-font-mono);">JetBrains Mono: kubectl get pods -n argocd</span>
+        </div>
+      </div>
+
+      <h3 class="ap-mt-6">Scale</h3>
+      <div class="ap-flex-col ap-gap-2 ap-mt-3">
+        <div class="sg-type-sample">
+          <span class="sg-type-sample__size">20px</span>
+          <span style="font-size: var(--ap-text-xl); font-weight: var(--ap-weight-semibold);">XL: Panel titles, metric values</span>
+        </div>
+        <div class="sg-type-sample">
+          <span class="sg-type-sample__size">16px</span>
+          <span style="font-size: var(--ap-text-lg); font-weight: var(--ap-weight-semibold);">LG: Section headers</span>
+        </div>
+        <div class="sg-type-sample">
+          <span class="sg-type-sample__size">14px</span>
+          <span style="font-size: var(--ap-text-md);">MD: Body text (default)</span>
+        </div>
+        <div class="sg-type-sample">
+          <span class="sg-type-sample__size">13px</span>
+          <span style="font-size: var(--ap-text-sm);">SM: Table cells, secondary text</span>
+        </div>
+        <div class="sg-type-sample">
+          <span class="sg-type-sample__size">11px</span>
+          <span style="font-size: var(--ap-text-xs); text-transform: uppercase; letter-spacing: 0.5px; color: var(--ap-color-text-muted);">XS: LABELS, METADATA, TABLE HEADERS</span>
+        </div>
+      </div>
+
+      <h3 class="ap-mt-6">Weights</h3>
+      <div class="ap-flex-col ap-gap-2 ap-mt-3">
+        <div class="sg-type-sample">
+          <span class="sg-type-sample__size">400</span>
+          <span style="font-weight: 400;">Normal: body text, descriptions</span>
+        </div>
+        <div class="sg-type-sample">
+          <span class="sg-type-sample__size">500</span>
+          <span style="font-weight: 500;">Medium: buttons, badges, nav items</span>
+        </div>
+        <div class="sg-type-sample">
+          <span class="sg-type-sample__size">600</span>
+          <span style="font-weight: 600;">Semibold: headings, labels, metric values</span>
+        </div>
+      </div>
+
+      <!-- SPACING -->
+      <div class="ap-section-header ap-mt-8" id="spacing"><span>SPACING</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-4">
+        Strict 4px grid. Every spacing value is a multiple of 4.
+      </p>
+      <div class="sg-space-demo">
+        <div class="sg-space-block">
+          <div class="sg-space-block__bar" style="height: 4px;"></div>
+          <span class="sg-space-block__label">1 (4px)</span>
+        </div>
+        <div class="sg-space-block">
+          <div class="sg-space-block__bar" style="height: 8px;"></div>
+          <span class="sg-space-block__label">2 (8px)</span>
+        </div>
+        <div class="sg-space-block">
+          <div class="sg-space-block__bar" style="height: 12px;"></div>
+          <span class="sg-space-block__label">3 (12px)</span>
+        </div>
+        <div class="sg-space-block">
+          <div class="sg-space-block__bar" style="height: 16px;"></div>
+          <span class="sg-space-block__label">4 (16px)</span>
+        </div>
+        <div class="sg-space-block">
+          <div class="sg-space-block__bar" style="height: 20px;"></div>
+          <span class="sg-space-block__label">5 (20px)</span>
+        </div>
+        <div class="sg-space-block">
+          <div class="sg-space-block__bar" style="height: 24px;"></div>
+          <span class="sg-space-block__label">6 (24px)</span>
+        </div>
+        <div class="sg-space-block">
+          <div class="sg-space-block__bar" style="height: 32px;"></div>
+          <span class="sg-space-block__label">8 (32px)</span>
+        </div>
+        <div class="sg-space-block">
+          <div class="sg-space-block__bar" style="height: 40px;"></div>
+          <span class="sg-space-block__label">10 (40px)</span>
+        </div>
+        <div class="sg-space-block">
+          <div class="sg-space-block__bar" style="height: 48px;"></div>
+          <span class="sg-space-block__label">12 (48px)</span>
+        </div>
+        <div class="sg-space-block">
+          <div class="sg-space-block__bar" style="height: 64px;"></div>
+          <span class="sg-space-block__label">16 (64px)</span>
+        </div>
+      </div>
+
+      <!-- BORDERS -->
+      <div class="ap-section-header ap-mt-8" id="borders"><span>BORDERS &amp; CORNERS</span></div>
+      <div class="ap-flex ap-gap-6 ap-mt-3">
+        <div class="ap-flex-col ap-items-center ap-gap-2">
+          <div style="width: 64px; height: 64px; border: var(--ap-border); border-radius: var(--ap-radius-none); background: var(--ap-color-surface);"></div>
+          <span class="ap-text-xs ap-font-mono ap-text-muted">none (0px)</span>
+        </div>
+        <div class="ap-flex-col ap-items-center ap-gap-2">
+          <div style="width: 64px; height: 64px; border: var(--ap-border); border-radius: var(--ap-radius-sm); background: var(--ap-color-surface);"></div>
+          <span class="ap-text-xs ap-font-mono ap-text-muted">sm (2px)</span>
+        </div>
+        <div class="ap-flex-col ap-items-center ap-gap-2">
+          <div style="width: 64px; height: 64px; border: var(--ap-border); border-radius: var(--ap-radius-md); background: var(--ap-color-surface);"></div>
+          <span class="ap-text-xs ap-font-mono ap-text-muted">md (4px)</span>
+        </div>
+      </div>
+      <p class="ap-text-sm ap-text-muted ap-mt-3">
+        Border width is always 1px. Always <code>solid</code>. The only exception is table header bottom borders at 2px.
+        Max border-radius is 4px. No pills, no circles.
+      </p>
+
+    </div>
+  </main>
+</div>
+
+<script src="styleguide.js"></script>
+</body>
+</html>

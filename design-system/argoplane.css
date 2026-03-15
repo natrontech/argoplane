@@ -1,0 +1,10 @@
+/* ================================================================
+   ArgoPlane Design System - All-in-one import
+   Usage: @import 'argoplane.css';
+   Or import individual files for smaller bundles.
+   ================================================================ */
+
+@import './tokens.css';
+@import './base.css';
+@import './components.css';
+@import './utilities.css';

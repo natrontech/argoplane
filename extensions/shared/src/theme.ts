@@ -1,5 +1,7 @@
 // ArgoPlane Design Tokens
-// Pastel palette with minimal pixel art influence
+// TypeScript re-export of values from design-system/tokens.css.
+// Keep in sync with the canonical CSS custom properties.
+// Pastel palette with minimal pixel art influence.
 
 export const colors = {
   // Primary accent (pastel orange)
@@ -15,21 +17,25 @@ export const colors = {
   greenLight: '#D1FAE5',
   green: '#6EE7B7',
   greenSolid: '#86EFAC',
+  greenText: '#16A34A',
 
   // Status: red
   redLight: '#FFE4E6',
   red: '#FDA4AF',
   redSolid: '#FCA5A5',
+  redText: '#B91C1C',
 
   // Status: yellow
   yellowLight: '#FEF9C3',
   yellow: '#FDE68A',
   yellowSolid: '#FDE047',
+  yellowText: '#A16207',
 
   // Status: blue
   blueLight: '#DBEAFE',
   blue: '#93C5FD',
   blueSolid: '#7DD3FC',
+  blueText: '#1D4ED8',
 
   // Warm grays
   gray50: '#FAFAF9',

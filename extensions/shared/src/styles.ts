@@ -287,12 +287,12 @@ const tagVariants: Record<TagVariant, React.CSSProperties> = {
   },
   green: {
     background: colors.greenLight,
-    color: '#16A34A',
+    color: colors.greenText,
     borderColor: colors.green,
   },
   red: {
     background: colors.redLight,
-    color: '#B91C1C',
+    color: colors.redText,
     borderColor: colors.red,
   },
   gray: {
