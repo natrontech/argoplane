@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { colors, fonts, fontSize, fontWeight } from '@argoplane/shared';
+import { colors, fonts, fontSize, fontWeight, radius } from '@argoplane/shared';
 import type { Status } from '@argoplane/shared';
 import { fetchOverview } from '../api';
 import { OverviewResponse, BackupSummary, ResourceRef } from '../types';
@@ -34,10 +34,6 @@ function timeAgo(iso?: string): string {
   return `${Math.floor(h / 24)}d`;
 }
 
-function nav(appNs: string, app: string) {
-  window.location.href = `/applications/${appNs}/${app}?resource=&extension=backups&view=Backups`;
-}
-
 interface StatusPanelProps {
   application: any;
   openFlyout?: () => void;
@@ -69,29 +65,35 @@ export const BackupStatusPanel: React.FC<StatusPanelProps> = ({ application }) =
   const st = phaseToStatus(latest?.phase);
 
   return (
-    <span
-      onClick={() => nav(appNs, app)}
-      style={wrap}
-      title="Last backup status (click for details)"
-    >
+    <span style={box} title="Last backup status">
+      <span style={title}>Backups</span>
       <span style={{ ...dot, background: statusClr[st] }} />
       <span style={val}>{latest ? timeAgo(latest.startTimestamp) : 'none'}</span>
       {scheds > 0 && (
-        <>
-          <span style={sep} />
-          <span style={lbl}>{scheds} sched</span>
-        </>
+        <span style={sub}>{scheds} sched</span>
       )}
     </span>
   );
 };
 
-const wrap: React.CSSProperties = {
-  cursor: 'pointer',
+const box: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
-  gap: 5,
+  gap: 6,
+  background: colors.gray50,
+  border: `1px solid ${colors.gray200}`,
+  borderRadius: radius.md,
+  padding: '4px 10px',
   fontFamily: fonts.mono,
+};
+
+const title: React.CSSProperties = {
+  fontSize: 10,
+  fontWeight: fontWeight.semibold,
+  color: colors.orange500,
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+  marginRight: 2,
 };
 
 const dot: React.CSSProperties = {
@@ -102,19 +104,13 @@ const dot: React.CSSProperties = {
 };
 
 const val: React.CSSProperties = {
-  fontSize: fontSize.sm,
+  fontSize: 12,
   fontWeight: fontWeight.semibold,
   color: colors.gray700,
 };
 
-const lbl: React.CSSProperties = {
-  fontSize: 11,
+const sub: React.CSSProperties = {
+  fontSize: 10,
   color: colors.gray400,
   fontWeight: fontWeight.medium,
-};
-
-const sep: React.CSSProperties = {
-  width: 1,
-  height: 12,
-  background: colors.gray200,
 };

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { colors, fonts, fontSize, fontWeight } from '@argoplane/shared';
+import { colors, fonts, fontWeight, radius } from '@argoplane/shared';
 import { fetchFlows } from '../api';
 import { FlowsResponse } from '../types';
 
@@ -12,10 +12,6 @@ function fmt(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
   return String(n);
-}
-
-function nav(appNs: string, app: string) {
-  window.location.href = `/applications/${appNs}/${app}?resource=&extension=networking&view=Networking`;
 }
 
 export const NetworkingStatusPanel: React.FC<StatusPanelProps> = ({ application }) => {
@@ -38,13 +34,9 @@ export const NetworkingStatusPanel: React.FC<StatusPanelProps> = ({ application 
   if (!loaded || !summary) return null;
 
   return (
-    <span
-      onClick={() => nav(appNs, app)}
-      style={wrap}
-      title="Network flows last 5m (click for details)"
-    >
+    <span style={box} title="Network flows in last 5 minutes">
+      <span style={title}>Flows</span>
       <span style={val}>{fmt(summary.total)}</span>
-      <span style={lbl}>flows</span>
       <span style={{ ...dot, background: colors.greenSolid }} />
       <span style={val}>{fmt(summary.forwarded)}</span>
       {summary.dropped > 0 && (
@@ -57,25 +49,30 @@ export const NetworkingStatusPanel: React.FC<StatusPanelProps> = ({ application 
   );
 };
 
-const wrap: React.CSSProperties = {
-  cursor: 'pointer',
+const box: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
-  gap: 4,
+  gap: 6,
+  background: colors.gray50,
+  border: `1px solid ${colors.gray200}`,
+  borderRadius: radius.md,
+  padding: '4px 10px',
   fontFamily: fonts.mono,
 };
 
-const val: React.CSSProperties = {
-  fontSize: fontSize.sm,
+const title: React.CSSProperties = {
+  fontSize: 10,
   fontWeight: fontWeight.semibold,
-  color: colors.gray700,
+  color: colors.orange500,
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+  marginRight: 2,
 };
 
-const lbl: React.CSSProperties = {
-  fontSize: 11,
-  color: colors.gray400,
-  fontWeight: fontWeight.medium,
-  marginRight: 2,
+const val: React.CSSProperties = {
+  fontSize: 12,
+  fontWeight: fontWeight.semibold,
+  color: colors.gray700,
 };
 
 const dot: React.CSSProperties = {
