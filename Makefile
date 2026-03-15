@@ -6,7 +6,7 @@ CLUSTER_NAME    ?= argoplane-dev
 ARGOCD_VERSION  ?= v3.3.3
 ARGOCD_NS       := argocd
 KIND_CONFIG     := hack/kind-config.yaml
-EXTENSIONS      := metrics backups
+EXTENSIONS      := metrics backups networking
 
 # --- Cluster lifecycle ---
 
@@ -16,7 +16,7 @@ cluster: ## Create kind cluster (idempotent)
 		echo "==> Cluster '$(CLUSTER_NAME)' already exists"; \
 	else \
 		echo "==> Creating cluster '$(CLUSTER_NAME)'"; \
-		kind create cluster --name $(CLUSTER_NAME) --config $(KIND_CONFIG) --wait 120s; \
+		kind create cluster --name $(CLUSTER_NAME) --config $(KIND_CONFIG); \
 	fi
 	@kubectl config use-context kind-$(CLUSTER_NAME)
 
@@ -32,7 +32,7 @@ cluster-delete: ## Delete kind cluster (idempotent)
 # --- CNI (Cilium) ---
 
 .PHONY: cilium
-cilium: cluster ## Install Cilium CNI with Hubble (idempotent)
+cilium: cluster ## Install Cilium CNI (idempotent)
 	@CLUSTER_NAME=$(CLUSTER_NAME) bash hack/install-cilium.sh
 
 # --- ArgoCD ---
@@ -41,7 +41,7 @@ cilium: cluster ## Install Cilium CNI with Hubble (idempotent)
 argocd: cilium ## Install ArgoCD (idempotent)
 	@echo "==> Installing ArgoCD $(ARGOCD_VERSION)"
 	@kubectl create namespace $(ARGOCD_NS) --dry-run=client -o yaml | kubectl apply -f -
-	@kubectl apply -n $(ARGOCD_NS) \
+	@kubectl apply -n $(ARGOCD_NS) --server-side --force-conflicts \
 		-f https://raw.githubusercontent.com/argoproj/argo-cd/$(ARGOCD_VERSION)/manifests/install.yaml
 	@echo "==> Waiting for ArgoCD to be ready..."
 	@kubectl -n $(ARGOCD_NS) rollout status deployment argocd-server --timeout=180s
