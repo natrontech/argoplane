@@ -1088,3 +1088,1234 @@
 .ap-logo-lockup__text span {
   color: var(--ap-color-accent);
 }
+
+/* ----------------------------------------------------------------
+   TOAST / NOTIFICATION
+   Positioned feedback for async operations (backup triggered, sync).
+   Usage: <div class="ap-toast ap-toast--success">
+            <span class="ap-toast__icon"></span>
+            <span class="ap-toast__msg">Backup triggered</span>
+            <button class="ap-toast__close">&times;</button>
+          </div>
+   Container: <div class="ap-toast-container">...</div>
+   ---------------------------------------------------------------- */
+
+.ap-toast-container {
+  position: fixed;
+  bottom: var(--ap-space-4);
+  right: var(--ap-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ap-space-2);
+  z-index: 1100;
+  pointer-events: none;
+}
+
+.ap-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--ap-space-2);
+  padding: var(--ap-space-2) var(--ap-space-3);
+  border: 1px solid;
+  border-radius: var(--ap-radius-md);
+  font-size: var(--ap-text-sm);
+  background: var(--ap-color-bg);
+  pointer-events: auto;
+  animation: ap-toast-in 150ms ease-out;
+  min-width: 240px;
+  max-width: 400px;
+}
+
+.ap-toast--success {
+  border-color: var(--ap-green);
+  background: var(--ap-green-light);
+  color: var(--ap-green-text);
+}
+
+.ap-toast--error {
+  border-color: var(--ap-red);
+  background: var(--ap-red-light);
+  color: var(--ap-red-text);
+}
+
+.ap-toast--warning {
+  border-color: var(--ap-yellow);
+  background: var(--ap-yellow-light);
+  color: var(--ap-yellow-text);
+}
+
+.ap-toast--info {
+  border-color: var(--ap-blue);
+  background: var(--ap-blue-light);
+  color: var(--ap-blue-text);
+}
+
+.ap-toast__icon::before {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+.ap-toast--success .ap-toast__icon::before { background: var(--ap-green-solid); }
+.ap-toast--error .ap-toast__icon::before   { background: var(--ap-red-solid); }
+.ap-toast--warning .ap-toast__icon::before { background: var(--ap-yellow-solid); }
+.ap-toast--info .ap-toast__icon::before    { background: var(--ap-blue-solid); }
+
+.ap-toast__msg {
+  flex: 1;
+  font-weight: var(--ap-weight-medium);
+}
+
+.ap-toast__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--ap-text-lg);
+  line-height: 1;
+  color: inherit;
+  opacity: 0.6;
+  padding: 0 2px;
+}
+
+.ap-toast__close:hover {
+  opacity: 1;
+}
+
+@keyframes ap-toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ----------------------------------------------------------------
+   DROPDOWN MENU
+   Context/action menu anchored to a trigger.
+   Usage: <div class="ap-dropdown" style="position: relative;">
+            <button class="ap-btn">Actions</button>
+            <div class="ap-dropdown__menu ap-dropdown__menu--open">
+              <button class="ap-dropdown__item">Edit</button>
+              <div class="ap-dropdown__divider"></div>
+              <button class="ap-dropdown__item ap-dropdown__item--danger">Delete</button>
+            </div>
+          </div>
+   ---------------------------------------------------------------- */
+
+.ap-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.ap-dropdown__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 160px;
+  background: var(--ap-color-bg);
+  border: var(--ap-border);
+  border-radius: var(--ap-radius-md);
+  padding: var(--ap-space-1) 0;
+  z-index: 500;
+  display: none;
+}
+
+.ap-dropdown__menu--open {
+  display: block;
+}
+
+.ap-dropdown__menu--right {
+  left: auto;
+  right: 0;
+}
+
+.ap-dropdown__item {
+  display: flex;
+  align-items: center;
+  gap: var(--ap-space-2);
+  width: 100%;
+  padding: 6px var(--ap-space-3);
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: var(--ap-text-sm);
+  color: var(--ap-color-text);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--ap-duration-fast);
+}
+
+.ap-dropdown__item:hover {
+  background: var(--ap-color-surface);
+}
+
+.ap-dropdown__item--danger {
+  color: var(--ap-red-text);
+}
+
+.ap-dropdown__item--danger:hover {
+  background: var(--ap-red-light);
+}
+
+.ap-dropdown__divider {
+  height: 1px;
+  background: var(--ap-color-border);
+  margin: var(--ap-space-1) 0;
+}
+
+.ap-dropdown__label {
+  padding: var(--ap-space-1) var(--ap-space-3);
+  font-size: var(--ap-text-xs);
+  font-weight: var(--ap-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ap-color-text-faint);
+}
+
+/* ----------------------------------------------------------------
+   ACCORDION / COLLAPSIBLE
+   Expandable detail sections. Pure CSS with <details>.
+   Usage: <details class="ap-accordion">
+            <summary class="ap-accordion__trigger">Resources</summary>
+            <div class="ap-accordion__content">Content</div>
+          </details>
+   ---------------------------------------------------------------- */
+
+.ap-accordion {
+  border: var(--ap-border);
+  border-radius: var(--ap-radius-md);
+}
+
+.ap-accordion + .ap-accordion {
+  border-top: none;
+  border-radius: 0;
+}
+
+.ap-accordion:first-child {
+  border-radius: var(--ap-radius-md) var(--ap-radius-md) 0 0;
+}
+
+.ap-accordion:last-child {
+  border-radius: 0 0 var(--ap-radius-md) var(--ap-radius-md);
+}
+
+.ap-accordion:only-child {
+  border-radius: var(--ap-radius-md);
+}
+
+.ap-accordion__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--ap-space-3) var(--ap-space-4);
+  cursor: pointer;
+  font-size: var(--ap-text-sm);
+  font-weight: var(--ap-weight-medium);
+  color: var(--ap-color-text);
+  list-style: none;
+  transition: background var(--ap-duration-fast);
+}
+
+.ap-accordion__trigger::-webkit-details-marker {
+  display: none;
+}
+
+.ap-accordion__trigger::after {
+  content: '+';
+  font-family: var(--ap-font-mono);
+  font-size: var(--ap-text-sm);
+  color: var(--ap-color-text-faint);
+  flex-shrink: 0;
+  transition: transform var(--ap-duration-fast);
+}
+
+.ap-accordion[open] > .ap-accordion__trigger::after {
+  content: '\2212';
+}
+
+.ap-accordion__trigger:hover {
+  background: var(--ap-color-surface);
+}
+
+.ap-accordion__content {
+  padding: 0 var(--ap-space-4) var(--ap-space-4);
+  font-size: var(--ap-text-sm);
+  color: var(--ap-color-text-muted);
+}
+
+/* ----------------------------------------------------------------
+   TIMELINE / ACTIVITY
+   Vertical event history (sync, backup, audit log).
+   Usage: <div class="ap-timeline">
+            <div class="ap-timeline__item">
+              <span class="ap-timeline__dot ap-timeline__dot--green"></span>
+              <div class="ap-timeline__body">
+                <div class="ap-timeline__title">Sync completed</div>
+                <div class="ap-timeline__time">2m ago</div>
+              </div>
+            </div>
+          </div>
+   ---------------------------------------------------------------- */
+
+.ap-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+  padding-left: var(--ap-space-4);
+}
+
+.ap-timeline::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 4px;
+  bottom: 4px;
+  width: 1px;
+  background: var(--ap-color-border);
+}
+
+.ap-timeline__item {
+  display: flex;
+  gap: var(--ap-space-3);
+  padding-bottom: var(--ap-space-4);
+  position: relative;
+}
+
+.ap-timeline__item:last-child {
+  padding-bottom: 0;
+}
+
+.ap-timeline__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  flex-shrink: 0;
+  margin-top: 4px;
+  margin-left: calc(-1 * var(--ap-space-4) + -1px);
+  background: var(--ap-gray-300);
+  position: relative;
+  z-index: 1;
+}
+
+.ap-timeline__dot--green  { background: var(--ap-green-solid); }
+.ap-timeline__dot--red    { background: var(--ap-red-solid); }
+.ap-timeline__dot--yellow { background: var(--ap-yellow-solid); }
+.ap-timeline__dot--blue   { background: var(--ap-blue-solid); }
+.ap-timeline__dot--orange { background: var(--ap-orange-400); }
+
+.ap-timeline__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ap-timeline__title {
+  font-size: var(--ap-text-sm);
+  font-weight: var(--ap-weight-medium);
+  color: var(--ap-color-text);
+}
+
+.ap-timeline__desc {
+  font-size: var(--ap-text-xs);
+  color: var(--ap-color-text-muted);
+  margin-top: 2px;
+}
+
+.ap-timeline__time {
+  font-size: var(--ap-text-xs);
+  font-family: var(--ap-font-mono);
+  color: var(--ap-color-text-faint);
+  margin-top: 2px;
+}
+
+/* ----------------------------------------------------------------
+   CODE BLOCK
+   Syntax-highlighted-ready code display with optional copy.
+   Usage: <div class="ap-code">
+            <div class="ap-code__header">
+              <span>deployment.yaml</span>
+              <button class="ap-code__copy">Copy</button>
+            </div>
+            <pre class="ap-code__body"><code>apiVersion: apps/v1...</code></pre>
+          </div>
+   ---------------------------------------------------------------- */
+
+.ap-code {
+  border: var(--ap-border);
+  border-radius: var(--ap-radius-md);
+  overflow: hidden;
+  font-size: var(--ap-text-xs);
+}
+
+.ap-code__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--ap-space-2) var(--ap-space-3);
+  background: var(--ap-color-surface);
+  border-bottom: var(--ap-border);
+  font-size: var(--ap-text-xs);
+  font-family: var(--ap-font-mono);
+  color: var(--ap-color-text-muted);
+}
+
+.ap-code__copy {
+  background: none;
+  border: 1px solid var(--ap-color-border);
+  border-radius: var(--ap-radius-sm);
+  padding: 2px 8px;
+  font-family: inherit;
+  font-size: var(--ap-text-xs);
+  color: var(--ap-color-text-muted);
+  cursor: pointer;
+  transition: border-color var(--ap-duration-fast), color var(--ap-duration-fast);
+}
+
+.ap-code__copy:hover {
+  border-color: var(--ap-color-accent);
+  color: var(--ap-color-accent);
+}
+
+.ap-code__body {
+  padding: var(--ap-space-3);
+  margin: 0;
+  overflow-x: auto;
+  font-family: var(--ap-font-mono);
+  font-size: var(--ap-text-xs);
+  line-height: 1.6;
+  color: var(--ap-color-text);
+  background: var(--ap-color-bg);
+}
+
+.ap-code__body code {
+  font-family: inherit;
+  font-size: inherit;
+  background: none;
+  padding: 0;
+}
+
+/* Line numbers (opt-in) */
+.ap-code__body--numbered {
+  counter-reset: line;
+}
+
+.ap-code__body--numbered .ap-code__line::before {
+  counter-increment: line;
+  content: counter(line);
+  display: inline-block;
+  width: 2.5em;
+  margin-right: var(--ap-space-3);
+  text-align: right;
+  color: var(--ap-color-text-faint);
+  user-select: none;
+}
+
+.ap-code__line {
+  display: block;
+}
+
+.ap-code__line--added {
+  background: var(--ap-green-light);
+}
+
+.ap-code__line--removed {
+  background: var(--ap-red-light);
+}
+
+/* ----------------------------------------------------------------
+   SEARCH INPUT
+   Input with search icon prefix.
+   Usage: <div class="ap-search">
+            <span class="ap-search__icon"></span>
+            <input class="ap-search__input" type="text" placeholder="Filter resources..." />
+          </div>
+   ---------------------------------------------------------------- */
+
+.ap-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ap-search__icon {
+  position: absolute;
+  left: 10px;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+}
+
+.ap-search__icon::before {
+  content: '';
+  display: block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--ap-color-text-faint);
+  border-radius: var(--ap-radius-sm);
+}
+
+.ap-search__icon::after {
+  content: '';
+  display: block;
+  width: 2px;
+  height: 5px;
+  background: var(--ap-color-text-faint);
+  transform: rotate(-45deg);
+  position: absolute;
+  bottom: 0;
+  right: 1px;
+}
+
+.ap-search__input {
+  font-family: var(--ap-font-mono);
+  font-size: var(--ap-text-sm);
+  padding: 6px 12px 6px 32px;
+  border: 1px solid var(--ap-color-border);
+  border-radius: var(--ap-radius-sm);
+  background: var(--ap-color-bg);
+  color: var(--ap-color-text);
+  outline: none;
+  width: 100%;
+  transition: border-color var(--ap-duration-fast);
+}
+
+.ap-search__input::placeholder {
+  color: var(--ap-color-text-faint);
+}
+
+.ap-search__input:focus {
+  border-color: var(--ap-color-accent);
+}
+
+/* Compact search for toolbars */
+.ap-search--compact .ap-search__input {
+  font-size: var(--ap-text-xs);
+  padding: 4px 10px 4px 28px;
+}
+
+/* ----------------------------------------------------------------
+   DRAWER / FLYOUT
+   Slide-out detail panel (ArgoCD status panel pattern).
+   Usage: <div class="ap-drawer-overlay">
+            <div class="ap-drawer">
+              <div class="ap-drawer__header">
+                <span>Resource Details</span>
+                <button class="ap-drawer__close">&times;</button>
+              </div>
+              <div class="ap-drawer__body">Content</div>
+            </div>
+          </div>
+   ---------------------------------------------------------------- */
+
+.ap-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 25, 23, 0.3);
+  z-index: 900;
+}
+
+.ap-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 480px;
+  max-width: 90vw;
+  background: var(--ap-color-bg);
+  border-left: var(--ap-border);
+  display: flex;
+  flex-direction: column;
+  z-index: 901;
+  animation: ap-drawer-in 150ms ease-out;
+}
+
+@keyframes ap-drawer-in {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+.ap-drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--ap-space-4);
+  border-bottom: var(--ap-border);
+  font-size: var(--ap-text-lg);
+  font-weight: var(--ap-weight-semibold);
+  flex-shrink: 0;
+}
+
+.ap-drawer__close {
+  background: none;
+  border: none;
+  font-size: var(--ap-text-xl);
+  color: var(--ap-color-text-muted);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.ap-drawer__close:hover {
+  color: var(--ap-color-text);
+}
+
+.ap-drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--ap-space-4);
+}
+
+.ap-drawer__footer {
+  padding: var(--ap-space-3) var(--ap-space-4);
+  border-top: var(--ap-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ap-space-2);
+  flex-shrink: 0;
+}
+
+/* ----------------------------------------------------------------
+   CHECKBOX / RADIO
+   Pixel-art styled form controls.
+   Usage: <label class="ap-checkbox">
+            <input type="checkbox" />
+            <span class="ap-checkbox__box"></span>
+            <span>Auto-sync enabled</span>
+          </label>
+   ---------------------------------------------------------------- */
+
+.ap-checkbox,
+.ap-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ap-space-2);
+  font-size: var(--ap-text-sm);
+  color: var(--ap-color-text);
+  cursor: pointer;
+}
+
+.ap-checkbox input,
+.ap-radio input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.ap-checkbox__box,
+.ap-radio__box {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--ap-color-border-strong);
+  border-radius: var(--ap-radius-sm);
+  background: var(--ap-color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--ap-duration-fast), border-color var(--ap-duration-fast);
+}
+
+.ap-checkbox input:checked + .ap-checkbox__box {
+  background: var(--ap-orange-500);
+  border-color: var(--ap-orange-600);
+}
+
+.ap-checkbox input:checked + .ap-checkbox__box::after {
+  content: '';
+  display: block;
+  width: 4px;
+  height: 8px;
+  border: 2px solid var(--ap-white);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translateY(-1px);
+}
+
+.ap-checkbox input:disabled + .ap-checkbox__box {
+  background: var(--ap-gray-100);
+  border-color: var(--ap-gray-200);
+  cursor: not-allowed;
+}
+
+.ap-radio__box {
+  border-radius: var(--ap-radius-sm);
+}
+
+.ap-radio input:checked + .ap-radio__box {
+  border-color: var(--ap-orange-500);
+}
+
+.ap-radio input:checked + .ap-radio__box::after {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  background: var(--ap-orange-500);
+  border-radius: 1px;
+}
+
+/* ----------------------------------------------------------------
+   BANNER
+   Full-width top-of-page announcement (maintenance, incidents).
+   Usage: <div class="ap-banner ap-banner--warning">
+            <span class="ap-banner__msg">Scheduled maintenance tonight 22:00 UTC</span>
+            <button class="ap-banner__close">&times;</button>
+          </div>
+   ---------------------------------------------------------------- */
+
+.ap-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ap-space-3);
+  padding: var(--ap-space-2) var(--ap-space-4);
+  font-size: var(--ap-text-sm);
+  font-weight: var(--ap-weight-medium);
+}
+
+.ap-banner--info {
+  background: var(--ap-blue-light);
+  color: var(--ap-blue-text);
+  border-bottom: 1px solid var(--ap-blue);
+}
+
+.ap-banner--warning {
+  background: var(--ap-yellow-light);
+  color: var(--ap-yellow-text);
+  border-bottom: 1px solid var(--ap-yellow);
+}
+
+.ap-banner--error {
+  background: var(--ap-red-light);
+  color: var(--ap-red-text);
+  border-bottom: 1px solid var(--ap-red);
+}
+
+.ap-banner--success {
+  background: var(--ap-green-light);
+  color: var(--ap-green-text);
+  border-bottom: 1px solid var(--ap-green);
+}
+
+.ap-banner__msg {
+  flex: 1;
+  text-align: center;
+}
+
+.ap-banner__close {
+  background: none;
+  border: none;
+  font-size: var(--ap-text-lg);
+  line-height: 1;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.6;
+  padding: 0 2px;
+}
+
+.ap-banner__close:hover {
+  opacity: 1;
+}
+
+/* ----------------------------------------------------------------
+   RESOURCE LIST
+   Clickable resource items with icon, name, status.
+   Usage: <div class="ap-resource-list">
+            <a class="ap-resource-list__item" href="#">
+              <span class="ap-resource-list__icon">D</span>
+              <div class="ap-resource-list__info">
+                <span class="ap-resource-list__name">guestbook-ui</span>
+                <span class="ap-resource-list__meta">Deployment / production</span>
+              </div>
+              <span class="ap-badge ap-badge--healthy">Healthy</span>
+            </a>
+          </div>
+   ---------------------------------------------------------------- */
+
+.ap-resource-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.ap-resource-list__item {
+  display: flex;
+  align-items: center;
+  gap: var(--ap-space-3);
+  padding: var(--ap-space-3) var(--ap-space-4);
+  border-bottom: 1px solid var(--ap-color-border);
+  text-decoration: none;
+  color: inherit;
+  transition: background var(--ap-duration-fast);
+}
+
+.ap-resource-list__item:last-child {
+  border-bottom: none;
+}
+
+.ap-resource-list__item:hover {
+  background: var(--ap-color-surface);
+}
+
+.ap-resource-list__icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ap-gray-100);
+  border: 1px solid var(--ap-color-border);
+  border-radius: var(--ap-radius-sm);
+  font-family: var(--ap-font-mono);
+  font-size: var(--ap-text-xs);
+  font-weight: var(--ap-weight-semibold);
+  color: var(--ap-color-text-muted);
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .ap-resource-list__icon,
+.theme-dark .ap-resource-list__icon {
+  background: var(--ap-gray-700);
+}
+
+.ap-resource-list__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ap-resource-list__name {
+  font-size: var(--ap-text-sm);
+  font-weight: var(--ap-weight-medium);
+  font-family: var(--ap-font-mono);
+  color: var(--ap-color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ap-resource-list__meta {
+  font-size: var(--ap-text-xs);
+  color: var(--ap-color-text-faint);
+}
+
+/* ----------------------------------------------------------------
+   STEPPER / WIZARD
+   Multi-step flow indicator for self-service provisioning.
+   Usage: <div class="ap-stepper">
+            <div class="ap-stepper__step ap-stepper__step--done">
+              <span class="ap-stepper__num">1</span>
+              <span class="ap-stepper__label">Select type</span>
+            </div>
+            <div class="ap-stepper__connector ap-stepper__connector--done"></div>
+            <div class="ap-stepper__step ap-stepper__step--active">
+              <span class="ap-stepper__num">2</span>
+              <span class="ap-stepper__label">Configure</span>
+            </div>
+            <div class="ap-stepper__connector"></div>
+            <div class="ap-stepper__step">
+              <span class="ap-stepper__num">3</span>
+              <span class="ap-stepper__label">Review</span>
+            </div>
+          </div>
+   ---------------------------------------------------------------- */
+
+.ap-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.ap-stepper__step {
+  display: flex;
+  align-items: center;
+  gap: var(--ap-space-2);
+  flex-shrink: 0;
+}
+
+.ap-stepper__num {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ap-color-border-strong);
+  border-radius: var(--ap-radius-sm);
+  font-size: var(--ap-text-xs);
+  font-weight: var(--ap-weight-semibold);
+  font-family: var(--ap-font-mono);
+  color: var(--ap-color-text-faint);
+  background: var(--ap-color-bg);
+}
+
+.ap-stepper__label {
+  font-size: var(--ap-text-sm);
+  color: var(--ap-color-text-faint);
+}
+
+.ap-stepper__connector {
+  flex: 1;
+  height: 1px;
+  background: var(--ap-color-border);
+  margin: 0 var(--ap-space-2);
+  min-width: 24px;
+}
+
+/* Active step */
+.ap-stepper__step--active .ap-stepper__num {
+  background: var(--ap-orange-500);
+  border-color: var(--ap-orange-600);
+  color: var(--ap-white);
+}
+
+.ap-stepper__step--active .ap-stepper__label {
+  color: var(--ap-color-text);
+  font-weight: var(--ap-weight-medium);
+}
+
+/* Done step */
+.ap-stepper__step--done .ap-stepper__num {
+  background: var(--ap-green-light);
+  border-color: var(--ap-green);
+  color: var(--ap-green-text);
+}
+
+.ap-stepper__step--done .ap-stepper__label {
+  color: var(--ap-color-text-muted);
+}
+
+.ap-stepper__connector--done {
+  background: var(--ap-green);
+}
+
+/* ----------------------------------------------------------------
+   PAGINATION
+   Page navigation for long resource lists.
+   Usage: <nav class="ap-pagination">
+            <button class="ap-pagination__btn" disabled>&laquo;</button>
+            <button class="ap-pagination__btn ap-pagination__btn--active">1</button>
+            <button class="ap-pagination__btn">2</button>
+            <button class="ap-pagination__btn">3</button>
+            <span class="ap-pagination__ellipsis">...</span>
+            <button class="ap-pagination__btn">12</button>
+            <button class="ap-pagination__btn">&raquo;</button>
+          </nav>
+   ---------------------------------------------------------------- */
+
+.ap-pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--ap-space-1);
+}
+
+.ap-pagination__btn {
+  min-width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  background: none;
+  border: 1px solid var(--ap-color-border);
+  border-radius: var(--ap-radius-sm);
+  font-family: var(--ap-font-mono);
+  font-size: var(--ap-text-xs);
+  color: var(--ap-color-text-muted);
+  cursor: pointer;
+  transition: background var(--ap-duration-fast), border-color var(--ap-duration-fast);
+}
+
+.ap-pagination__btn:hover:not(:disabled) {
+  background: var(--ap-color-surface);
+  border-color: var(--ap-color-border-strong);
+}
+
+.ap-pagination__btn--active {
+  background: var(--ap-orange-500);
+  border-color: var(--ap-orange-600);
+  color: var(--ap-white);
+}
+
+.ap-pagination__btn--active:hover:not(:disabled) {
+  background: var(--ap-orange-600);
+}
+
+.ap-pagination__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ap-pagination__ellipsis {
+  font-family: var(--ap-font-mono);
+  font-size: var(--ap-text-xs);
+  color: var(--ap-color-text-faint);
+  padding: 0 4px;
+}
+
+/* ----------------------------------------------------------------
+   KBD (KEYBOARD SHORTCUT)
+   Display keyboard shortcuts and hotkeys.
+   Usage: <kbd class="ap-kbd">Ctrl</kbd> + <kbd class="ap-kbd">K</kbd>
+   ---------------------------------------------------------------- */
+
+.ap-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: var(--ap-color-surface);
+  border: 1px solid var(--ap-color-border-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--ap-radius-sm);
+  font-family: var(--ap-font-mono);
+  font-size: var(--ap-text-xs);
+  color: var(--ap-color-text-muted);
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------------
+   COPY BUTTON
+   Click-to-copy pattern (resource names, YAML, IDs).
+   Usage: <button class="ap-copy" data-copy="kubectl get pods">
+            <span class="ap-copy__text">kubectl get pods</span>
+            <span class="ap-copy__icon"></span>
+          </button>
+   ---------------------------------------------------------------- */
+
+.ap-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ap-space-1);
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--ap-font-mono);
+  font-size: var(--ap-text-sm);
+  color: var(--ap-color-text);
+  cursor: pointer;
+}
+
+.ap-copy:hover {
+  color: var(--ap-color-accent);
+}
+
+.ap-copy__icon {
+  width: 14px;
+  height: 14px;
+  position: relative;
+  opacity: 0.4;
+  transition: opacity var(--ap-duration-fast);
+}
+
+.ap-copy:hover .ap-copy__icon {
+  opacity: 1;
+}
+
+.ap-copy__icon::before,
+.ap-copy__icon::after {
+  content: '';
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border: 1px solid currentColor;
+  border-radius: 1px;
+}
+
+.ap-copy__icon::before {
+  top: 0;
+  left: 0;
+}
+
+.ap-copy__icon::after {
+  bottom: 0;
+  right: 0;
+  background: var(--ap-color-bg);
+}
+
+/* ----------------------------------------------------------------
+   POPOVER
+   Rich content on hover/click, more complex than tooltip.
+   Usage: <div class="ap-popover">
+            <div class="ap-popover__trigger">Hover target</div>
+            <div class="ap-popover__content">
+              Rich content here
+            </div>
+          </div>
+   ---------------------------------------------------------------- */
+
+.ap-popover {
+  position: relative;
+  display: inline-block;
+}
+
+.ap-popover__content {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ap-color-bg);
+  border: var(--ap-border);
+  border-radius: var(--ap-radius-md);
+  padding: var(--ap-space-3);
+  min-width: 200px;
+  max-width: 320px;
+  font-size: var(--ap-text-sm);
+  z-index: 600;
+  display: none;
+}
+
+.ap-popover:hover .ap-popover__content,
+.ap-popover--open .ap-popover__content {
+  display: block;
+}
+
+.ap-popover__content--below {
+  bottom: auto;
+  top: calc(100% + 6px);
+}
+
+/* ----------------------------------------------------------------
+   BUTTON GROUP
+   Adjacent buttons sharing borders.
+   Usage: <div class="ap-btn-group">
+            <button class="ap-btn">List</button>
+            <button class="ap-btn ap-btn--primary">Grid</button>
+          </div>
+   ---------------------------------------------------------------- */
+
+.ap-btn-group {
+  display: inline-flex;
+}
+
+.ap-btn-group > .ap-btn {
+  border-radius: 0;
+}
+
+.ap-btn-group > .ap-btn + .ap-btn {
+  margin-left: -1px;
+}
+
+.ap-btn-group > .ap-btn:first-child {
+  border-radius: var(--ap-radius-sm) 0 0 var(--ap-radius-sm);
+}
+
+.ap-btn-group > .ap-btn:last-child {
+  border-radius: 0 var(--ap-radius-sm) var(--ap-radius-sm) 0;
+}
+
+.ap-btn-group > .ap-btn:only-child {
+  border-radius: var(--ap-radius-sm);
+}
+
+/* ----------------------------------------------------------------
+   STAT INLINE
+   Compact inline metric with optional delta/trend.
+   Usage: <span class="ap-stat">
+            <span class="ap-stat__value">42</span>
+            <span class="ap-stat__delta ap-stat__delta--up">+12%</span>
+          </span>
+   ---------------------------------------------------------------- */
+
+.ap-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--ap-space-1);
+  font-family: var(--ap-font-mono);
+}
+
+.ap-stat__value {
+  font-size: var(--ap-text-sm);
+  font-weight: var(--ap-weight-semibold);
+  color: var(--ap-color-text);
+}
+
+.ap-stat__delta {
+  font-size: var(--ap-text-xs);
+  font-weight: var(--ap-weight-medium);
+}
+
+.ap-stat__delta--up {
+  color: var(--ap-green-text);
+}
+
+.ap-stat__delta--down {
+  color: var(--ap-red-text);
+}
+
+.ap-stat__delta--flat {
+  color: var(--ap-color-text-faint);
+}
+
+/* ----------------------------------------------------------------
+   CHIP INPUT / TAG INPUT
+   Multi-select tag entry for labels, selectors.
+   Usage: <div class="ap-chip-input">
+            <span class="ap-chip-input__chip">
+              env=prod <button class="ap-chip-input__remove">&times;</button>
+            </span>
+            <input class="ap-chip-input__field" placeholder="Add label..." />
+          </div>
+   ---------------------------------------------------------------- */
+
+.ap-chip-input {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ap-space-1);
+  padding: 4px 8px;
+  border: 1px solid var(--ap-color-border);
+  border-radius: var(--ap-radius-sm);
+  background: var(--ap-color-bg);
+  cursor: text;
+  transition: border-color var(--ap-duration-fast);
+}
+
+.ap-chip-input:focus-within {
+  border-color: var(--ap-color-accent);
+}
+
+.ap-chip-input__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: var(--ap-orange-50);
+  border: 1px solid var(--ap-orange-200);
+  border-radius: var(--ap-radius-sm);
+  font-family: var(--ap-font-mono);
+  font-size: var(--ap-text-xs);
+  color: var(--ap-orange-600);
+}
+
+.ap-chip-input__remove {
+  background: none;
+  border: none;
+  font-size: var(--ap-text-sm);
+  line-height: 1;
+  color: var(--ap-orange-400);
+  cursor: pointer;
+  padding: 0;
+}
+
+.ap-chip-input__remove:hover {
+  color: var(--ap-orange-600);
+}
+
+.ap-chip-input__field {
+  flex: 1;
+  min-width: 80px;
+  border: none;
+  outline: none;
+  background: none;
+  font-family: var(--ap-font-mono);
+  font-size: var(--ap-text-sm);
+  color: var(--ap-color-text);
+  padding: 2px 0;
+}
+
+.ap-chip-input__field::placeholder {
+  color: var(--ap-color-text-faint);
+}
