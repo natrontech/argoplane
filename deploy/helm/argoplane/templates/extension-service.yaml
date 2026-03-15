@@ -1,0 +1,20 @@
+{{- range $name, $ext := .Values.extensions }}
+{{- if $ext.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: argoplane-{{ $name }}-backend
+  namespace: {{ include "argoplane.argocdNamespace" $ }}
+  labels:
+    {{- include "argoplane.extensionLabels" (dict "name" $name "root" $) | nindent 4 }}
+spec:
+  ports:
+    - port: {{ $ext.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "argoplane.extensionSelectorLabels" (dict "name" $name) | nindent 4 }}
+{{- end }}
+{{- end }}

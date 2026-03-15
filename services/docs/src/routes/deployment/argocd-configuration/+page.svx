@@ -1,29 +1,63 @@
 ---
 title: ArgoCD Configuration
-description: Configuring ArgoCD proxy extensions and RBAC for ArgoPlane
+description: Wire up ArgoCD with proxy extensions, RBAC, custom styles, and UI bundles
 ---
+
+<script>
+  import Tabs from '$lib/components/docs/Tabs.svelte';
+  import Callout from '$lib/components/docs/Callout.svelte';
+  import Accordion from '$lib/components/docs/Accordion.svelte';
+</script>
 
 # ArgoCD Configuration
 
-ArgoPlane extensions require proxy routing and RBAC configuration in ArgoCD.
+After installing the ArgoPlane Helm chart, you need to configure ArgoCD to route extension requests, mount custom styles, and load UI bundles. The chart deploys backends and generates ConfigMaps with all the config you need. This page walks through wiring it up.
 
-## Proxy extensions
+## How ArgoCD extensions work
 
-ArgoCD routes extension API calls from the UI to backend services via its proxy mechanism. Configure this in `argocd-cm` ConfigMap or a separate ConfigMap:
+ArgoCD extensions have three layers:
 
-```json
-{
-  "extension.config.metrics": "services:\n- url: http://argoplane-metrics-backend.argocd.svc:8080\n",
-  "extension.config.backups": "services:\n- url: http://argoplane-backups-backend.argocd.svc:8081\n",
-  "extension.config.networking": "services:\n- url: http://argoplane-networking-backend.argocd.svc:8082\n"
-}
+1. **UI bundle** (JavaScript): registers tabs, panels, or pages via `window.extensionsAPI`. ArgoCD loads any file matching `extension*.js` from `/tmp/extensions/` inside the argocd-server pod.
+2. **Proxy routing** (`argocd-cm`): maps `/extensions/<name>/*` requests to a backend service URL.
+3. **RBAC** (`argocd-rbac-cm`): grants roles permission to invoke specific extensions.
+
+The Helm chart handles layer 2 and 3 via ConfigMaps. Layer 1 (UI bundles) needs an init container or sidecar on argocd-server.
+
+## Step 1: Enable proxy extensions
+
+Tell ArgoCD to enable the proxy extension mechanism:
+
+```bash
+kubectl -n argocd patch cm argocd-cmd-params-cm --type merge \
+  -p '{"data":{"server.enable.proxy.extension":"true"}}'
 ```
 
-Each extension gets a route at `/extensions/<name>/*` that proxies to its backend service URL.
+## Step 2: Add proxy routing
 
-## RBAC
+The chart generates `argoplane-proxy-config` with the correct routing entries. Merge them into `argocd-cm`:
 
-Extensions require explicit RBAC in ArgoCD v3. Add to `argocd-rbac-cm`:
+```bash
+kubectl -n argocd patch cm argocd-cm --type merge -p '{
+  "data": {
+    "extension.config.metrics": "services:\n- url: http://argoplane-metrics-backend.argocd.svc:8080\n",
+    "extension.config.backups": "services:\n- url: http://argoplane-backups-backend.argocd.svc:8081\n",
+    "extension.config.networking": "services:\n- url: http://argoplane-networking-backend.argocd.svc:8082\n"
+  }
+}'
+```
+
+Each entry routes `/extensions/<name>/*` to the corresponding backend service. ArgoCD validates the user's auth token before proxying.
+
+## Step 3: Configure RBAC
+
+ArgoCD v3 requires explicit RBAC for extensions. The chart generates `argoplane-rbac-config` with policies. View them:
+
+```bash
+kubectl -n argocd get cm argoplane-rbac-config \
+  -o jsonpath='{.data.argoplane-policy\.csv}'
+```
+
+Add the output to your `argocd-rbac-cm` ConfigMap's `policy.csv` field:
 
 ```
 p, role:admin, extensions, invoke, metrics, allow
@@ -32,19 +66,429 @@ p, role:admin, extensions, invoke, networking, allow
 
 p, role:developer, extensions, invoke, metrics, allow
 p, role:developer, extensions, invoke, backups, allow
-p, role:developer, extensions, invoke, networking, allow
 ```
+
+<Callout type="warning">
+  Without explicit RBAC, users will see extension tabs but get 403 errors when loading data. Every role that should use extensions needs an `extensions, invoke` policy.
+</Callout>
+
+## Step 4: Load UI extension bundles
+
+ArgoCD discovers UI extensions by scanning `/tmp/extensions/` for files matching `extension*.js`. The recommended approach for production is an **init container** that copies bundles from a ConfigMap or OCI image.
+
+### Option A: Init container with ConfigMap (recommended)
+
+Package your built extension bundles into a ConfigMap, then use an init container to copy them into the shared `/tmp/extensions/` volume.
+
+**1. Create a ConfigMap from the built bundles:**
+
+```bash
+kubectl -n argocd create configmap argoplane-ui-extensions \
+  --from-file=extension-metrics.js=extensions/metrics/ui/dist/extension-metrics.js \
+  --from-file=extension-backups.js=extensions/backups/ui/dist/extension-backups.js \
+  --from-file=extension-networking.js=extensions/networking/ui/dist/extension-networking.js \
+  --dry-run=client -o yaml | kubectl apply --server-side -f -
+```
+
+**2. Patch argocd-server with an init container and shared volume:**
+
+```bash
+kubectl -n argocd patch deployment argocd-server --type json -p '[
+  {
+    "op": "add",
+    "path": "/spec/template/spec/volumes/-",
+    "value": {
+      "name": "argoplane-extensions",
+      "configMap": {
+        "name": "argoplane-ui-extensions"
+      }
+    }
+  },
+  {
+    "op": "add",
+    "path": "/spec/template/spec/initContainers",
+    "value": [{
+      "name": "copy-argoplane-extensions",
+      "image": "busybox:1.36",
+      "command": ["sh", "-c",
+        "cp /extensions-src/*.js /tmp/extensions/"
+      ],
+      "volumeMounts": [
+        {
+          "name": "argoplane-extensions",
+          "mountPath": "/extensions-src",
+          "readOnly": true
+        },
+        {
+          "name": "extensions",
+          "mountPath": "/tmp/extensions"
+        }
+      ]
+    }]
+  }
+]'
+```
+
+<Callout type="info">
+  The init container copies from the ConfigMap mount (read-only) to the `/tmp/extensions` emptyDir volume. ArgoCD's main container reads from the same emptyDir. This survives pod restarts because the ConfigMap is persistent.
+</Callout>
+
+**Why an init container instead of a direct volume mount?** ArgoCD expects files directly in `/tmp/extensions/`, but ConfigMap volume mounts create a directory structure with symlinks. The init container flattens the files into the expected location. It also allows combining extensions from multiple sources.
+
+### Option B: Init container with OCI image
+
+For production, package UI bundles into a lightweight OCI image and use it as an init container:
+
+```dockerfile
+# Dockerfile.ui-extensions
+FROM scratch
+COPY extensions/metrics/ui/dist/extension-metrics.js /extensions/
+COPY extensions/backups/ui/dist/extension-backups.js /extensions/
+COPY extensions/networking/ui/dist/extension-networking.js /extensions/
+```
+
+```bash
+docker build -t ghcr.io/natrontech/argoplane-ui-extensions:v0.1.0 \
+  -f Dockerfile.ui-extensions .
+```
+
+Then in ArgoCD's deployment (or via Kustomize/Helm values):
+
+```yaml
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: argoplane-extensions
+          image: ghcr.io/natrontech/argoplane-ui-extensions:v0.1.0
+          command: ["cp", "-r", "/extensions/.", "/tmp/extensions/"]
+          volumeMounts:
+            - name: extensions
+              mountPath: /tmp/extensions
+      containers:
+        - name: argocd-server
+          volumeMounts:
+            - name: extensions
+              mountPath: /tmp/extensions
+      volumes:
+        - name: extensions
+          emptyDir: {}
+```
+
+This approach is cleaner for CI/CD pipelines: build once, tag with version, deploy via image reference.
+
+### Option C: kubectl cp (development only)
+
+For local development, copy bundles directly into the running pod:
+
+```bash
+ARGOCD_POD=$(kubectl -n argocd get pods \
+  -l app.kubernetes.io/name=argocd-server \
+  -o jsonpath='{.items[0].metadata.name}')
+
+kubectl exec -n argocd $ARGOCD_POD -- mkdir -p /tmp/extensions
+
+for ext in metrics backups networking; do
+  kubectl cp extensions/$ext/ui/dist/extension-$ext.js \
+    argocd/$ARGOCD_POD:/tmp/extensions/extension-$ext.js
+done
+```
+
+<Callout type="warning">
+  Files in `/tmp/extensions/` are ephemeral. They are lost when the pod restarts. Use init containers (Option A or B) for anything beyond local development.
+</Callout>
+
+## Step 5: Custom styles (optional)
+
+The Helm chart can deploy a ConfigMap with the ArgoPlane CSS theme and login wallpaper. Enable it with `argocd.styles.enabled=true`.
+
+**1. Tell ArgoCD where to find the CSS:**
+
+```bash
+kubectl -n argocd patch cm argocd-cm --type merge \
+  -p '{"data":{"ui.cssurl":"./custom/argoplane.css"}}'
+```
+
+**2. Mount the styles ConfigMap into argocd-server:**
+
+```bash
+kubectl -n argocd patch deployment argocd-server --type json -p '[
+  {
+    "op": "add",
+    "path": "/spec/template/spec/volumes/-",
+    "value": {
+      "name": "argoplane-styles",
+      "configMap": { "name": "argoplane-styles" }
+    }
+  },
+  {
+    "op": "add",
+    "path": "/spec/template/spec/containers/0/volumeMounts/-",
+    "value": {
+      "name": "argoplane-styles",
+      "mountPath": "/shared/app/custom"
+    }
+  }
+]'
+```
+
+ArgoCD serves files from `/shared/app/custom/` at the relative URL `./custom/`. The CSS transforms ArgoCD's UI with ArgoPlane's pixel-art aesthetic: flat design, warm grays, pastel orange accent.
+
+## Step 6: Branding (optional)
+
+Enable `argocd.branding.enabled=true` to deploy the branding JS extension. Mount it:
+
+```bash
+kubectl -n argocd patch deployment argocd-server --type json -p '[
+  {
+    "op": "add",
+    "path": "/spec/template/spec/volumes/-",
+    "value": {
+      "name": "argoplane-branding",
+      "configMap": { "name": "argoplane-links" }
+    }
+  },
+  {
+    "op": "add",
+    "path": "/spec/template/spec/containers/0/volumeMounts/-",
+    "value": {
+      "name": "argoplane-branding",
+      "mountPath": "/tmp/extensions/branding",
+      "readOnly": true
+    }
+  }
+]'
+```
+
+## Step 7: Restart argocd-server
+
+After all patches:
+
+```bash
+kubectl -n argocd rollout restart deployment argocd-server
+kubectl -n argocd rollout status deployment argocd-server
+```
+
+## Complete example: Kustomize overlay
+
+For production, manage all ArgoCD patches as a Kustomize overlay instead of imperative kubectl commands.
+
+Create `argocd-patches/kustomization.yaml`:
+
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: argocd
+
+patches:
+  # Enable proxy extensions
+  - target:
+      kind: ConfigMap
+      name: argocd-cmd-params-cm
+    patch: |
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: argocd-cmd-params-cm
+      data:
+        server.enable.proxy.extension: "true"
+
+  # Add proxy routing + CSS URL
+  - target:
+      kind: ConfigMap
+      name: argocd-cm
+    patch: |
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: argocd-cm
+      data:
+        ui.cssurl: "./custom/argoplane.css"
+        extension.config.metrics: |
+          services:
+          - url: http://argoplane-metrics-backend.argocd.svc:8080
+        extension.config.backups: |
+          services:
+          - url: http://argoplane-backups-backend.argocd.svc:8081
+        extension.config.networking: |
+          services:
+          - url: http://argoplane-networking-backend.argocd.svc:8082
+
+  # RBAC for extensions
+  - target:
+      kind: ConfigMap
+      name: argocd-rbac-cm
+    patch: |
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: argocd-rbac-cm
+      data:
+        policy.csv: |
+          p, role:admin, extensions, invoke, metrics, allow
+          p, role:admin, extensions, invoke, backups, allow
+          p, role:admin, extensions, invoke, networking, allow
+          p, role:developer, extensions, invoke, metrics, allow
+          p, role:developer, extensions, invoke, backups, allow
+        policy.default: role:admin
+
+  # Patch argocd-server with init container + volume mounts
+  - target:
+      kind: Deployment
+      name: argocd-server
+    patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: argocd-server
+      spec:
+        template:
+          spec:
+            initContainers:
+              - name: copy-argoplane-extensions
+                image: busybox:1.36
+                command:
+                  - sh
+                  - -c
+                  - cp /extensions-src/*.js /tmp/extensions/
+                volumeMounts:
+                  - name: argoplane-extensions
+                    mountPath: /extensions-src
+                    readOnly: true
+                  - name: extensions
+                    mountPath: /tmp/extensions
+            containers:
+              - name: argocd-server
+                volumeMounts:
+                  - name: argoplane-styles
+                    mountPath: /shared/app/custom
+                  - name: argoplane-branding
+                    mountPath: /tmp/extensions/branding
+                    readOnly: true
+            volumes:
+              - name: argoplane-extensions
+                configMap:
+                  name: argoplane-ui-extensions
+              - name: argoplane-styles
+                configMap:
+                  name: argoplane-styles
+              - name: argoplane-branding
+                configMap:
+                  name: argoplane-links
+              - name: extensions
+                emptyDir: {}
+```
+
+Apply with:
+
+```bash
+kubectl apply -k argocd-patches/
+```
+
+## Complete example: ArgoCD Application (GitOps)
+
+Deploy ArgoPlane and its ArgoCD configuration together as a single ArgoCD Application:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argoplane
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    # ArgoPlane Helm chart (backends, ConfigMaps)
+    - repoURL: https://github.com/natrontech/argoplane
+      path: deploy/helm/argoplane
+      targetRevision: main
+      helm:
+        valueFiles:
+          - values-prod.yaml
+
+    # ArgoCD patches (proxy config, RBAC, init containers)
+    - repoURL: https://github.com/your-org/platform-config
+      path: argocd-patches
+      targetRevision: main
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+```
+
+<Callout type="info">
+  Using multiple sources lets you keep the ArgoPlane chart separate from your organization's ArgoCD patches. The chart handles backends. Your config repo handles the ArgoCD integration.
+</Callout>
 
 ## ArgoCD v3 changes
 
-Key ArgoCD v3 changes to be aware of:
+Key changes in ArgoCD v3 that affect extension configuration:
 
-- Fine-grained RBAC: `update`/`delete` on applications no longer cascades to sub-resources
-- Logs RBAC is always enforced (users need explicit `logs, get` permission)
-- Extensions require explicit RBAC: `p, role:<role>, extensions, invoke, <name>, allow`
-- Annotation-based resource tracking is the default (not label-based)
-- Resource health is stored in Redis by default
+| Change | Impact |
+|--------|--------|
+| Fine-grained RBAC | `update`/`delete` on applications no longer cascades to sub-resources. Grant `update/*` and `delete/*` explicitly if needed. |
+| Logs RBAC enforced | Users need explicit `logs, get` permission. |
+| Extensions require RBAC | Every extension needs `p, role:<role>, extensions, invoke, <name>, allow`. |
+| Annotation-based tracking | Resource tracking uses annotations by default, not labels. |
+| Health in Redis | Resource health is stored in Redis, not in Application status. |
 
-## Custom CSS
+## Troubleshooting
 
-ArgoPlane includes custom CSS for the ArgoCD UI. Apply it as a ConfigMap mount or inline style injection. The CSS file is at `deploy/argocd/argoplane-styles.css`.
+<Accordion title="Extension tab shows but data doesn't load (403)">
+
+Missing RBAC. Add `p, role:<your-role>, extensions, invoke, <extension-name>, allow` to `argocd-rbac-cm`.
+
+</Accordion>
+
+<Accordion title="Extension tab doesn't appear at all">
+
+UI bundle not loaded. Check if the file exists in the pod:
+
+```bash
+kubectl exec -n argocd deploy/argocd-server -- ls /tmp/extensions/
+```
+
+If empty, the init container or kubectl cp step didn't work. Check init container logs:
+
+```bash
+kubectl logs -n argocd deploy/argocd-server -c copy-argoplane-extensions
+```
+
+</Accordion>
+
+<Accordion title="Proxy error: extension not found">
+
+Proxy routing not configured. Verify `argocd-cm` has the `extension.config.<name>` entry:
+
+```bash
+kubectl -n argocd get cm argocd-cm -o yaml | grep extension.config
+```
+
+Also verify `server.enable.proxy.extension` is `"true"` in `argocd-cmd-params-cm`.
+
+</Accordion>
+
+<Accordion title="Custom CSS not applied">
+
+Check the volume mount and CSS URL:
+
+```bash
+# Verify the file is mounted
+kubectl exec -n argocd deploy/argocd-server -- ls /shared/app/custom/
+
+# Verify ui.cssurl is set
+kubectl -n argocd get cm argocd-cm -o jsonpath='{.data.ui\.cssurl}'
+```
+
+</Accordion>
+
+<Accordion title="Extensions disappear after pod restart">
+
+You're using `kubectl cp` (ephemeral). Switch to an init container with a ConfigMap or OCI image (Option A or B above) for persistent extension loading.
+
+</Accordion>

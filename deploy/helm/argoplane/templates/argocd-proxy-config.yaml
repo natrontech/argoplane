@@ -1,0 +1,28 @@
+{{- if .Values.argocd.proxyConfig.enabled }}
+{{- $ns := include "argoplane.argocdNamespace" . }}
+{{- $enabledExtensions := dict }}
+{{- range $name, $ext := .Values.extensions }}
+{{- if $ext.enabled }}
+{{- $_ := set $enabledExtensions $name $ext }}
+{{- end }}
+{{- end }}
+{{- if $enabledExtensions }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argoplane-proxy-config
+  namespace: {{ $ns }}
+  labels:
+    {{- include "argoplane.labels" . | nindent 4 }}
+  annotations:
+    # This ConfigMap documents the proxy configuration.
+    # Apply these entries to your argocd-cm ConfigMap to enable proxy routing.
+    argoplane.io/apply-to: argocd-cm
+data:
+  {{- range $name, $ext := $enabledExtensions }}
+  extension.config.{{ $name }}: |
+    services:
+    - url: http://argoplane-{{ $name }}-backend.{{ $ns }}.svc:{{ $ext.port }}
+  {{- end }}
+{{- end }}
+{{- end }}

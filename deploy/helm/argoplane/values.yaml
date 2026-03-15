@@ -1,0 +1,191 @@
+# ArgoPlane Helm Chart Values
+# https://github.com/natrontech/argoplane
+
+# -- Global settings
+global:
+  # -- Image pull secrets for all deployments
+  imagePullSecrets: []
+  # -- Common labels applied to all resources
+  commonLabels: {}
+
+# -- ArgoCD namespace where extensions are deployed
+argocd:
+  # -- Namespace where ArgoCD is installed
+  namespace: argocd
+
+  # -- Proxy extension configuration (patches argocd-cm)
+  # Automatically generates proxy routing for all enabled extensions.
+  proxyConfig:
+    enabled: true
+
+  # -- RBAC configuration (patches argocd-rbac-cm)
+  rbac:
+    enabled: true
+    # -- Role-to-extension mapping. Each entry grants a role access to invoke extensions.
+    roles:
+      - role: admin
+        extensions: ["*"]
+      # - role: developer
+      #   extensions: ["metrics", "backups"]
+
+  # -- Custom ArgoPlane styles for ArgoCD UI
+  # Deploys a ConfigMap with the ArgoPlane CSS theme and login wallpaper,
+  # then mounts it into argocd-server at /shared/app/custom/.
+  styles:
+    enabled: false
+    # -- ConfigMap name for custom styles
+    configMapName: argoplane-styles
+
+  # -- ArgoPlane branding (click-to-navigate links on sidebar/login logo)
+  # Deploys a ConfigMap with the branding JS, mounted into argocd-server
+  # as an extension at /tmp/extensions/branding/.
+  branding:
+    enabled: false
+
+
+# -- Extension backends
+# Each extension is deployed as a Deployment + Service.
+# Set `enabled: true` to deploy an extension.
+extensions:
+  metrics:
+    enabled: true
+    # -- Backend image
+    image:
+      repository: ghcr.io/natrontech/argoplane-metrics-backend
+      tag: ""  # defaults to .Chart.AppVersion
+      pullPolicy: IfNotPresent
+    # -- Number of replicas
+    replicas: 1
+    # -- Service port
+    port: 8080
+    # -- Environment variables passed to the backend container
+    env:
+      PROMETHEUS_URL: "http://kube-prometheus-kube-prome-prometheus.monitoring.svc:9090"
+      LOG_LEVEL: "info"
+    # -- Extra environment variables (list format)
+    extraEnv: []
+    # -- Resource requests and limits
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+    # -- Pod annotations
+    podAnnotations: {}
+    # -- Node selector
+    nodeSelector: {}
+    # -- Tolerations
+    tolerations: []
+    # -- Affinity rules
+    affinity: {}
+    # -- ServiceAccount configuration
+    serviceAccount:
+      # -- Create a dedicated ServiceAccount
+      create: false
+      # -- Annotations for the ServiceAccount
+      annotations: {}
+    # -- RBAC rules for the extension (creates ClusterRole + ClusterRoleBinding)
+    rbac:
+      rules: []
+
+  backups:
+    enabled: true
+    image:
+      repository: ghcr.io/natrontech/argoplane-backups-backend
+      tag: ""
+      pullPolicy: IfNotPresent
+    replicas: 1
+    port: 8081
+    env:
+      VELERO_NAMESPACE: "velero"
+      LOG_LEVEL: "info"
+    extraEnv: []
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+    podAnnotations: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    serviceAccount:
+      create: true
+      annotations: {}
+    rbac:
+      rules:
+        - apiGroups: ["velero.io"]
+          resources: ["schedules", "backups", "restores", "backupstoragelocations", "downloadrequests", "podvolumebackups", "podvolumerestores"]
+          verbs: ["get", "list", "watch"]
+        - apiGroups: ["velero.io"]
+          resources: ["backups", "restores", "downloadrequests", "deletebackuprequests"]
+          verbs: ["create", "delete"]
+        - apiGroups: ["velero.io"]
+          resources: ["schedules"]
+          verbs: ["patch"]
+
+  networking:
+    enabled: false
+    image:
+      repository: ghcr.io/natrontech/argoplane-networking-backend
+      tag: ""
+      pullPolicy: IfNotPresent
+    replicas: 1
+    port: 8082
+    env:
+      HUBBLE_RELAY_URL: "hubble-relay.kube-system.svc:80"
+      LOG_LEVEL: "info"
+    extraEnv: []
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+    podAnnotations: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    serviceAccount:
+      create: true
+      annotations: {}
+    rbac:
+      rules:
+        - apiGroups: ["cilium.io"]
+          resources: ["ciliumnetworkpolicies", "ciliumclusterwidenetworkpolicies", "ciliumendpoints", "ciliumidentities"]
+          verbs: ["get", "list", "watch"]
+
+# -- Optional ArgoPlane services (docs site, portal)
+services:
+  docs:
+    enabled: false
+    image:
+      repository: ghcr.io/natrontech/argoplane-docs
+      tag: ""
+      pullPolicy: IfNotPresent
+    replicas: 1
+    port: 3000
+    # -- Service type (ClusterIP, NodePort, LoadBalancer)
+    serviceType: ClusterIP
+    resources:
+      requests:
+        cpu: 25m
+        memory: 32Mi
+      limits:
+        memory: 64Mi
+    podAnnotations: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    ingress:
+      enabled: false
+      className: ""
+      annotations: {}
+      hosts:
+        - host: docs.argoplane.io
+          paths:
+            - path: /
+              pathType: Prefix
+      tls: []

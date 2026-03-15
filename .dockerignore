@@ -5,7 +5,8 @@ tmp
 tests
 docs
 hack
-deploy
+deploy/helm
+deploy/extensions
 *.md
 LICENSE
 Makefile

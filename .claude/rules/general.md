@@ -54,6 +54,12 @@ Never manually edit files with `.gen.go` suffix or `generated.go`. Regenerate fr
 
 ## Deployment
 
-- Docker images tagged with git commit hash
-- Kustomize overlays for ArgoCD server patches (init containers, proxy config)
-- Helm chart for the full ArgoPlane stack (optional)
+**Production: Helm chart** at `deploy/helm/argoplane/`. Deploys extension backends, services, proxy config, RBAC policies, custom styles, and branding. Each extension is a toggle in `values.yaml`. The chart generates ConfigMaps that users merge into ArgoCD's own config.
+
+**UI extension bundles** are packaged into an init container image (`deploy/docker/Dockerfile.ui-extensions`). This image runs as an init container on argocd-server, copying JS bundles into `/tmp/extensions/`. Build with `make build-ui-extensions-image`.
+
+**Development: Makefile** workflow uses `kubectl apply` and `kubectl cp` for fast iteration. Not for production.
+
+- Backend Docker images tagged with git commit hash (or `dev` locally)
+- UI extensions init container image: `ghcr.io/natrontech/argoplane-ui-extensions:<version>`
+- Helm chart handles everything except patching ArgoCD's own ConfigMaps/Deployment (documented in NOTES.txt)

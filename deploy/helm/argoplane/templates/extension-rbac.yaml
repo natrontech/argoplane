@@ -1,0 +1,46 @@
+{{- range $name, $ext := .Values.extensions }}
+{{- if and $ext.enabled $ext.serviceAccount }}
+{{- if $ext.serviceAccount.create }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argoplane-{{ $name }}-backend
+  namespace: {{ include "argoplane.argocdNamespace" $ }}
+  labels:
+    {{- include "argoplane.extensionLabels" (dict "name" $name "root" $) | nindent 4 }}
+  {{- with $ext.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- if and $ext.enabled $ext.rbac }}
+{{- if $ext.rbac.rules }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argoplane-{{ $name }}
+  labels:
+    {{- include "argoplane.extensionLabels" (dict "name" $name "root" $) | nindent 4 }}
+rules:
+  {{- toYaml $ext.rbac.rules | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argoplane-{{ $name }}
+  labels:
+    {{- include "argoplane.extensionLabels" (dict "name" $name "root" $) | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argoplane-{{ $name }}
+subjects:
+  - kind: ServiceAccount
+    name: argoplane-{{ $name }}-backend
+    namespace: {{ include "argoplane.argocdNamespace" $ }}
+{{- end }}
+{{- end }}
+{{- end }}

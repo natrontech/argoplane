@@ -1,0 +1,13 @@
+{{- if .Values.argocd.branding.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argoplane-links
+  namespace: {{ include "argoplane.argocdNamespace" . }}
+  labels:
+    {{- include "argoplane.labels" . | nindent 4 }}
+    app.kubernetes.io/component: branding
+data:
+  extension-argoplane-links.js: |
+{{ .Files.Get "files/argoplane-links.js" | indent 4 }}
+{{- end }}

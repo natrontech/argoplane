@@ -65,10 +65,14 @@ extensions/
     ui/
     backend/         # Go service querying Velero
   ...
+services/
+  docs/              # Documentation site (SvelteKit + mdsvex)
+deploy/
+  helm/argoplane/    # Helm chart for production deployment
+  docker/            # Dockerfiles (UI extensions init container)
+  argocd/            # ArgoCD configuration (styles, proxy config, branding)
+  extensions/        # Per-extension deployment manifests (dev)
 hack/                # Kind cluster, ArgoCD setup, dev scripts
-deploy/              # Helm charts, Kustomize overlays
-  argocd/            # ArgoCD configuration (ConfigMaps, patches)
-  extensions/        # Per-extension deployment manifests
 tests/               # Integration tests (Go, against kind cluster)
 docs/
   styleguide/        # Multi-page visual reference (open index.html in browser)
@@ -104,7 +108,15 @@ make clean-all           # Destroy everything
 - `make argocd` installs ArgoCD in the cluster (idempotent)
 - `make dev-infra` sets up the full local stack
 - `make build-extensions` builds all UI extension bundles
+- `make build-backends` builds all backend Docker images
+- `make build-ui-extensions-image` builds the UI extensions init container image
+- `make load-extensions` loads backend + UI extensions images into kind
+- `make deploy-extensions` deploys backends, UI bundles, and proxy config
 - `make test-integration` runs integration tests against the kind cluster
+
+## Deployment
+
+For production, use the Helm chart at `deploy/helm/argoplane/`. It deploys extension backends, proxy config, RBAC, styles, and branding ConfigMaps. UI bundles are loaded via an init container image (`deploy/docker/Dockerfile.ui-extensions`). See `services/docs/` for full deployment and ArgoCD configuration docs.
 
 ## License
 

@@ -35,6 +35,37 @@ helm install argoplane deploy/helm/argoplane/ \
 
 This deploys the **metrics** and **backups** extensions by default. Networking is disabled by default (requires Cilium).
 
+After install, configure ArgoCD to route extension requests. See [ArgoCD Configuration](/deployment/argocd-configuration) for the full walkthrough, or use the quick setup below.
+
+### Quick setup (all-in-one)
+
+After `helm install`, run this to wire everything up:
+
+```bash
+# Enable proxy extensions + add routing
+kubectl -n argocd patch cm argocd-cmd-params-cm --type merge \
+  -p '{"data":{"server.enable.proxy.extension":"true"}}'
+
+kubectl -n argocd patch cm argocd-cm --type merge -p '{
+  "data": {
+    "extension.config.metrics": "services:\n- url: http://argoplane-metrics-backend.argocd.svc:8080\n",
+    "extension.config.backups": "services:\n- url: http://argoplane-backups-backend.argocd.svc:8081\n"
+  }
+}'
+
+# Grant RBAC
+kubectl -n argocd patch cm argocd-rbac-cm --type merge -p '{
+  "data": {
+    "policy.csv": "p, role:admin, extensions, invoke, metrics, allow\np, role:admin, extensions, invoke, backups, allow\n"
+  }
+}'
+
+# Restart to pick up changes
+kubectl -n argocd rollout restart deployment argocd-server
+```
+
+For custom styles, branding, init containers, and Kustomize/GitOps examples, see [ArgoCD Configuration](/deployment/argocd-configuration).
+
 ## Configuration
 
 ### Enable/disable extensions

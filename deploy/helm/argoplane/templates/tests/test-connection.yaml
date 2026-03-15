@@ -1,0 +1,27 @@
+{{- range $name, $ext := .Values.extensions }}
+{{- if $ext.enabled }}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: argoplane-test-{{ $name }}
+  namespace: {{ include "argoplane.argocdNamespace" $ }}
+  labels:
+    {{- include "argoplane.extensionLabels" (dict "name" $name "root" $) | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: test
+      image: busybox:1.36
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "Testing argoplane-{{ $name }}-backend health endpoint..."
+          wget -qO- --timeout=5 http://argoplane-{{ $name }}-backend.{{ include "argoplane.argocdNamespace" $ }}.svc:{{ $ext.port }}/healthz
+          echo ""
+          echo "PASS: {{ $name }} backend is healthy"
+{{- end }}
+{{- end }}
