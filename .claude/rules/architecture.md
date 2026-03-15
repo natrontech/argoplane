@@ -1,22 +1,25 @@
 # Architecture & Design Principles
 
-## Extensions First
+## Two-Layer Architecture
 
-ArgoPlane is a collection of ArgoCD UI extensions, not a standalone application. Every feature ships as an extension that lives inside ArgoCD's UI. Don't build a separate portal unless there's a compelling reason ArgoCD's extension system can't handle it.
+ArgoPlane has two loosely coupled layers:
 
-## Discoverability First
+1. **ArgoCD extensions**: operational tools that attach to resources and applications inside ArgoCD's UI. These are the core product today. They focus on Observe (metrics, logs, backups, alerts, networking, traces) and Secure (policies, certificates).
+2. **ArgoPlane Portal** (future): a separate SvelteKit application that adds platform discoverability, self-service, and aggregated views on top of ArgoCD. It consumes ArgoCD's APIs and extension backends but is not required. Extensions work standalone.
 
-The core value of ArgoPlane is making platform capabilities visible to developers. Extensions should not only show the status of existing resources, but also expose what the platform offers. Every extension should answer two questions:
+## Extensions: Operational Visibility
 
-1. **"What's happening?"** (status of deployed resources)
-2. **"What's available?"** (platform capabilities the developer could use)
+Extensions answer the question: **"What's happening with my app?"** They show metrics, logs, alerts, backup status, network flows, policy violations, and other operational data in context.
 
-For example, a storage extension doesn't just show PVC status. It also shows which StorageClasses are available and what they offer. A networking extension doesn't just show policies. It also shows which IngressClasses and GatewayClasses the developer can target.
+Extensions fall into two categories:
+- **Observe**: workload visibility (metrics, logs, traces, backups, alerts, networking, scaling)
+- **Secure**: security and compliance (policies, certificates)
 
-Extensions fall into three categories:
-- **Discover**: platform capabilities (Kubernetes API resources like StorageClasses, CRDs, operators, node pools)
-- **Observe**: workload visibility (metrics, logs, traces, backups)
-- **Secure**: security and compliance (vulnerabilities, policies, secrets, certificates)
+## Portal: Discoverability and Self-Service (Future)
+
+The portal answers: **"What does my platform offer, and how do I use it?"** This includes StorageClasses, IngressClasses, CRDs, operators, node pools, Crossplane XRDs, and guided self-service workflows. ArgoCD's extension system is too restrictive for catalog-style browsing and form-based workflows, so the portal handles those.
+
+The portal leverages ArgoCD (Applications, RBAC, sync status) and extension backends (metrics, alerts) but never replaces them. Power users can stay in ArgoCD with extensions alone.
 
 ## Extension Architecture
 
@@ -56,10 +59,6 @@ ArgoCD v3 changes to be aware of:
 - Extensions require explicit RBAC: `p, role:developer, extensions, invoke, <name>, allow`
 - Annotation-based resource tracking is the default (not label-based).
 - Resource health is stored in Redis by default, not in `.status.resources[].health`.
-
-## Crossplane for Abstractions
-
-When platform teams want to offer self-service resources (databases, caches, storage), use Crossplane XRDs and compositions. ArgoPlane extensions surface these in the UI. Don't build custom operators when Crossplane can compose existing ones.
 
 ## Don't Reinvent
 

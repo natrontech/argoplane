@@ -4,17 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**ArgoPlane** is a suite of ArgoCD UI extensions that makes platform capabilities discoverable to developers. Instead of building a separate portal, ArgoPlane meets developers where they already are: inside ArgoCD.
+**ArgoPlane** is a two-layer developer platform built on ArgoCD:
+
+1. **ArgoCD extensions**: best-in-class operational tools (metrics, logs, backups, alerts, networking, policies, traces) that live inside ArgoCD's UI. These work standalone for power users.
+2. **ArgoPlane Portal** (future): a separate developer portal layer that adds platform discoverability, self-service, and aggregated views on top of ArgoCD. Loosely coupled: extensions never depend on the portal.
 
 ## Core Idea
 
-Developers deploying through ArgoCD can see if their app is synced. What they can't see: which StorageClasses are available, what IngressClasses exist, which CRDs and operators they can use, what scheduling constraints apply, or what policies are in place. That information lives in the cluster but is invisible without kubectl access and tribal knowledge.
+Developers deploying through ArgoCD can see if their app is synced. What they can't see: their logs, alerts, backup status, network flows, policy violations, or what the platform offers. ArgoPlane's extensions surface operational visibility inside ArgoCD. The portal (later) adds discoverability and self-service that ArgoCD's extension system can't handle well.
 
-ArgoPlane surfaces all of this inside ArgoCD's UI. Extensions fall into three categories:
+Extensions fall into two categories:
 
-- **Discover**: platform capabilities (StorageClasses, IngressClasses, GatewayClasses, CRDs, operators, node pools, scheduling options)
-- **Observe**: workload visibility (metrics, logs, traces, backups, scaling, costs)
-- **Secure**: security and compliance (vulnerabilities, policies, secrets, certificates)
+- **Observe**: workload visibility (metrics, logs, traces, backups, alerts, networking, scaling)
+- **Secure**: security and compliance (policies, certificates)
 
 ## Architecture
 
@@ -29,13 +31,13 @@ Every ArgoPlane feature follows the same pattern:
 ### Key Components
 
 - **ArgoCD v3.3.3**: GitOps engine, UI host, RBAC, proxy extension routing
-- **Kubernetes API**: Primary source for platform discoverability (StorageClasses, IngressClasses, CRDs, nodes, policies)
-- **Crossplane**: Abstraction layer for self-service platform resources (XRDs/compositions)
-- **Prometheus**: Metrics source for the metrics extension
-- **Velero**: Backup/restore, surfaced via the backups extension
-- **Cilium/Hubble**: Network visibility (future)
-- **External Secrets Operator**: Secrets management visibility (future)
-- **Trivy/Grype**: Image scan results (future)
+- **Prometheus**: Metrics and alerts (metrics + alerts extensions)
+- **Loki**: Log aggregation (logs extension)
+- **Velero**: Backup/restore (backups extension)
+- **Cilium/Hubble**: Network visibility (networking extension)
+- **Kyverno**: Policy enforcement (policies extension)
+- **Tempo/Jaeger**: Distributed tracing (traces extension, future)
+- **cert-manager**: Certificate lifecycle (certificates extension, future)
 
 ### Multi-Tenancy
 
@@ -73,19 +75,15 @@ docs/
   extension-roadmap.md
 ```
 
-## Current Scope (v0.1)
+## Current Scope
 
-Building first: **Metrics** (Prometheus) and **Backups** (Velero) extensions.
+**Done (Phase 1):** Metrics (Prometheus), Backups (Velero), Networking (Cilium/Hubble)
 
-Next priority: **Platform** extension (system-level page surfacing StorageClasses, IngressClasses, GatewayClasses, CRDs, operators, node pools, scheduling options from the Kubernetes API).
+**Next (Phase 2):** Logs (Loki), Policies (Kyverno), Alerts (Prometheus Rules / Alertmanager)
 
-Out of scope for now:
-- Self-service catalog / Crossplane XRDs (planned, not started)
-- Logs (Loki)
-- Security / image scans
-- Secrets / External Secrets
-- Policies (Kyverno, OPA)
-- Image builds (BuildKit, CI status)
+**Future (Phase 3):** Traces (Tempo/Jaeger), Certificates (cert-manager), Scaling (HPA/KEDA)
+
+**Phase 4:** ArgoPlane Portal (SvelteKit). Platform discoverability, self-service catalog (Crossplane), aggregated views. Planned separately.
 
 See [`docs/extension-roadmap.md`](docs/extension-roadmap.md) for the full phased roadmap.
 
