@@ -1,6 +1,73 @@
 import * as React from 'react';
 import { colors, fonts, fontSize, fontWeight, spacing } from '@argoplane/shared';
 
+// ============================================================
+// JSON detection and formatting
+// ============================================================
+
+function tryFormatJSON(content: string): string | null {
+  const trimmed = content.trim();
+  if (!(trimmed.startsWith('{') || trimmed.startsWith('['))) return null;
+  try {
+    const parsed = JSON.parse(trimmed);
+    return JSON.stringify(parsed, null, 2);
+  } catch {
+    return null;
+  }
+}
+
+// JSON syntax highlighting colors
+const JSON_COLORS = {
+  key: '#93C5FD',      // blue
+  string: '#6BCB77',   // green
+  number: '#FFD93D',   // yellow
+  boolean: '#FF9F43',  // orange
+  null: '#A8A29E',     // gray
+  brace: '#E2E8F0',    // light gray
+};
+
+function highlightJsonLine(line: string, searchTerm: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  let key = 0;
+
+  // Tokenize JSON line: keys, string values, numbers, booleans, null, braces
+  const tokenRegex = /("(?:[^"\\]|\\.)*")\s*:|("(?:[^"\\]|\\.)*")|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|(\btrue\b|\bfalse\b)|(\bnull\b)|([{}\[\],:])/g;
+  const tokens: { start: number; end: number; text: string; color: string }[] = [];
+
+  let match;
+  while ((match = tokenRegex.exec(line)) !== null) {
+    let color = colors.gray100;
+    if (match[1]) color = JSON_COLORS.key;         // key (quoted string before colon)
+    else if (match[2]) color = JSON_COLORS.string;  // string value
+    else if (match[3]) color = JSON_COLORS.number;  // number
+    else if (match[4]) color = JSON_COLORS.boolean;  // boolean
+    else if (match[5]) color = JSON_COLORS.null;     // null
+    else if (match[6]) color = JSON_COLORS.brace;    // structural
+    tokens.push({ start: match.index, end: match.index + match[0].length, text: match[0], color });
+  }
+
+  if (tokens.length === 0 && !searchTerm) {
+    return [<span key={0}>{line}</span>];
+  }
+
+  // Build colored segments
+  let pos = 0;
+  const segments: { text: string; color?: string }[] = [];
+  for (const t of tokens) {
+    if (t.start > pos) segments.push({ text: line.slice(pos, t.start) });
+    segments.push({ text: t.text, color: t.color });
+    pos = t.end;
+  }
+  if (pos < line.length) segments.push({ text: line.slice(pos) });
+  if (segments.length === 0) segments.push({ text: line });
+
+  return applySearchHighlight(segments, searchTerm, parts, key);
+}
+
+// ============================================================
+// Structured log highlighting (key=value format)
+// ============================================================
+
 const LOG_LEVEL_COLORS: Record<string, string> = {
   'error': '#FF6B6B',
   'warning': '#FFD93D',
@@ -44,6 +111,19 @@ function highlightLogLine(line: string, searchTerm: string): React.ReactNode[] {
   if (pos < line.length) segments.push({ text: line.slice(pos) });
   if (segments.length === 0) segments.push({ text: line });
 
+  return applySearchHighlight(segments, searchTerm, parts, key);
+}
+
+// ============================================================
+// Shared search highlight logic
+// ============================================================
+
+function applySearchHighlight(
+  segments: { text: string; color?: string }[],
+  searchTerm: string,
+  parts: React.ReactNode[],
+  key: number,
+): React.ReactNode[] {
   for (const seg of segments) {
     if (searchTerm && seg.text.toLowerCase().includes(searchTerm.toLowerCase())) {
       const lc = seg.text.toLowerCase();
@@ -61,19 +141,35 @@ function highlightLogLine(line: string, searchTerm: string): React.ReactNode[] {
       parts.push(<span key={key++} style={seg.color ? { color: seg.color } : undefined}>{seg.text}</span>);
     }
   }
-
   return parts;
 }
+
+// ============================================================
+// LogViewer component
+// ============================================================
 
 export const LogViewer: React.FC<{ title: string; content: string; onClose: () => void }> = ({ title, content, onClose }) => {
   const [search, setSearch] = React.useState('');
 
-  const lines = React.useMemo(() => (content || '').split('\n'), [content]);
+  // Detect JSON and pretty-print it
+  const displayContent = React.useMemo(() => {
+    if (!content) return content;
+    return tryFormatJSON(content) || content;
+  }, [content]);
+
+  const isJson = React.useMemo(() => {
+    if (!content) return false;
+    return tryFormatJSON(content) !== null;
+  }, [content]);
+
+  const lines = React.useMemo(() => (displayContent || '').split('\n'), [displayContent]);
   const matchCount = React.useMemo(() => {
     if (!search) return 0;
     const lc = search.toLowerCase();
     return lines.filter(l => l.toLowerCase().includes(lc)).length;
   }, [lines, search]);
+
+  const highlightLine = isJson ? highlightJsonLine : highlightLogLine;
 
   return (
     <div style={{ marginTop: spacing[3], border: `1px solid ${colors.gray200}`, borderRadius: 4, overflow: 'hidden' }}>
@@ -89,7 +185,7 @@ export const LogViewer: React.FC<{ title: string; content: string; onClose: () =
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search logs..."
+              placeholder="Search..."
               style={{
                 width: '100%', padding: `3px ${spacing[2]}px`, border: `1px solid ${colors.gray200}`,
                 borderRadius: 4, fontSize: fontSize.xs, fontFamily: fonts.mono, color: colors.gray800,
@@ -106,11 +202,11 @@ export const LogViewer: React.FC<{ title: string; content: string; onClose: () =
         fontSize: fontSize.xs, fontFamily: fonts.mono, lineHeight: 1.5,
         maxHeight: 400, overflowY: 'auto', overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all' as const,
       }}>
-        {content ? lines.map((line, i) => {
+        {displayContent ? lines.map((line, i) => {
           if (search && !line.toLowerCase().includes(search.toLowerCase())) {
-            return <div key={i} style={{ opacity: 0.3 }}>{highlightLogLine(line, '')}</div>;
+            return <div key={i} style={{ opacity: 0.3 }}>{highlightLine(line, '')}</div>;
           }
-          return <div key={i}>{highlightLogLine(line, search)}</div>;
+          return <div key={i}>{highlightLine(line, search)}</div>;
         }) : '(empty)'}
       </pre>
     </div>
