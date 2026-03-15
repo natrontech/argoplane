@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"crypto/sha256"
@@ -124,8 +125,8 @@ func (h *LogsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 }
 
 // fetchContent downloads from the pre-signed URL and decompresses gzip if needed.
-func (h *LogsHandler) fetchContent(ctx context.Context, url string) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+func (h *LogsHandler) fetchContent(ctx context.Context, rawURL string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("building request: %w", err)
 	}
@@ -140,32 +141,35 @@ func (h *LogsHandler) fetchContent(ctx context.Context, url string) (string, err
 		return "", fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 
-	var reader io.Reader = resp.Body
-
-	// Decompress if gzip (Velero stores logs as .gz).
-	if strings.HasSuffix(url, ".gz") || resp.Header.Get("Content-Encoding") == "gzip" || resp.Header.Get("Content-Type") == "application/x-gzip" {
-		gz, gzErr := gzip.NewReader(resp.Body)
-		if gzErr != nil {
-			return "", fmt.Errorf("decompressing gzip: %w", gzErr)
-		}
-		defer gz.Close()
-		reader = gz
-	}
-
-	// Limit to 2MB to avoid blowing up memory.
-	const maxSize = 2 * 1024 * 1024
-	limited := io.LimitReader(reader, maxSize)
-	data, err := io.ReadAll(limited)
+	// Read the raw body first (limited to 4MB compressed).
+	const maxCompressed = 4 * 1024 * 1024
+	rawData, err := io.ReadAll(io.LimitReader(resp.Body, maxCompressed))
 	if err != nil {
-		return "", fmt.Errorf("reading content: %w", err)
+		return "", fmt.Errorf("reading response: %w", err)
 	}
 
-	result := string(data)
-	if len(data) == maxSize {
-		result += "\n\n... (truncated, content exceeds 2MB)"
+	// Always try gzip first. Velero stores all logs/results as .gz files,
+	// but the pre-signed URL has query params so suffix detection is unreliable.
+	gz, gzErr := gzip.NewReader(bytes.NewReader(rawData))
+	if gzErr == nil {
+		defer gz.Close()
+		const maxSize = 2 * 1024 * 1024
+		decompressed, readErr := io.ReadAll(io.LimitReader(gz, maxSize))
+		if readErr == nil {
+			result := string(decompressed)
+			if len(decompressed) == maxSize {
+				result += "\n\n... (truncated, content exceeds 2MB)"
+			}
+			return result, nil
+		}
 	}
 
-	return result, nil
+	// Not gzip, return as plain text.
+	const maxSize = 2 * 1024 * 1024
+	if len(rawData) > maxSize {
+		return string(rawData[:maxSize]) + "\n\n... (truncated, content exceeds 2MB)", nil
+	}
+	return string(rawData), nil
 }
 
 func (h *LogsHandler) pollDownloadURL(ctx context.Context, name string) (string, error) {
