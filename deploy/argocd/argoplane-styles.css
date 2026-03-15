@@ -864,13 +864,13 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Login form inputs: aggressive selectors to beat ArgoCD defaults */
-.login .argo-form-row input,
+.login .argo-form-row input:not([type="checkbox"]):not([type="radio"]),
 .login__box input[type="text"],
 .login__box input[type="password"],
-.login__box .argo-field input,
+.login__box .argo-field input:not([type="checkbox"]):not([type="radio"]),
 .login__box .argo-form-row input[type="text"],
 .login__box .argo-form-row input[type="password"],
-.login input {
+.login input:not([type="checkbox"]):not([type="radio"]) {
   border: 1px solid var(--ap-gray-200) !important;
   border-radius: var(--ap-radius-sm) !important;
   font-family: var(--ap-font-mono) !important;
@@ -886,9 +886,9 @@ h1, h2, h3, h4, h5, h6 {
   transition: border-color 100ms ease !important;
 }
 
-.login .argo-form-row input:focus,
-.login__box input:focus,
-.login input:focus {
+.login .argo-form-row input:not([type="checkbox"]):not([type="radio"]):focus,
+.login__box input:not([type="checkbox"]):not([type="radio"]):focus,
+.login input:not([type="checkbox"]):not([type="radio"]):focus {
   border-color: var(--ap-orange-500) !important;
   outline: none !important;
 }
@@ -1211,16 +1211,16 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--ap-gray-100) !important;
 }
 
-.theme-dark .login .argo-form-row input,
+.theme-dark .login .argo-form-row input:not([type="checkbox"]):not([type="radio"]),
 .theme-dark .login__box input[type="text"],
 .theme-dark .login__box input[type="password"],
-.theme-dark .login__box .argo-field input {
+.theme-dark .login__box .argo-field input:not([type="checkbox"]):not([type="radio"]) {
   border-color: var(--ap-gray-600) !important;
   background: var(--ap-gray-900) !important;
   color: var(--ap-gray-100) !important;
 }
 
-.theme-dark .login .argo-form-row input:focus,
+.theme-dark .login .argo-form-row input:not([type="checkbox"]):not([type="radio"]):focus,
 .theme-dark .login__box input[type="text"]:focus,
 .theme-dark .login__box input[type="password"]:focus {
   border-color: var(--ap-orange-400) !important;
