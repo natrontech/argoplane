@@ -39,8 +39,8 @@
 	<Sidebar isOpen={sidebarOpen} />
 
 	<main class="pt-12 lg:pl-60 xl:pr-50">
-		<div class="mx-auto max-w-3xl px-6 py-8">
-			<article class="prose">
+		<div class="mx-auto max-w-3xl overflow-hidden px-6 py-8">
+			<article class="prose min-w-0">
 				{@render children()}
 			</article>
 			<PrevNext />

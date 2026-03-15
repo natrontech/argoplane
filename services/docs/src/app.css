@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Enable class-based dark mode */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ArgoPlane Tailwind v4 theme */
 @theme {
   /* Colors: Orange accent */
@@ -58,6 +61,13 @@
   /* Transitions */
   --transition-fast: 100ms;
   --transition-normal: 150ms;
+
+  /* Breakpoints (must be explicit when overriding --spacing) */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
 }
 
 /* Base styles */
@@ -96,8 +106,9 @@ body {
 
 /* Prose styles for markdown content */
 .prose {
-  max-width: 768px;
+  max-width: 100%;
   line-height: 1.7;
+  overflow-wrap: break-word;
 }
 
 .prose h1 {
@@ -177,40 +188,35 @@ body {
   border-radius: var(--radius-md);
   border: 1px solid var(--color-gray-200);
   overflow-x: auto;
+  max-width: 100%;
 }
 
 .dark .prose pre {
   border-color: var(--color-gray-700);
 }
 
+/* Shiki code block styling */
 .prose pre code {
+  display: block;
   background: none;
   border: none;
-  padding: 0;
-  font-size: var(--text-sm);
-}
-
-/* Shiki code block styling */
-.prose pre .shiki {
   padding: 16px;
+  font-size: var(--text-sm);
   overflow-x: auto;
-  border-radius: var(--radius-md);
+  line-height: 1.6;
 }
 
-.prose pre .shiki.github-light {
-  display: block;
+/* Shiki dual theme: swap color to --shiki-dark in dark mode */
+.dark .prose pre code span {
+  color: var(--shiki-dark) !important;
 }
 
-.prose pre .shiki.github-dark {
-  display: none;
+.prose pre {
+  background: var(--color-gray-50) !important;
 }
 
-.dark .prose pre .shiki.github-light {
-  display: none;
-}
-
-.dark .prose pre .shiki.github-dark {
-  display: block;
+.dark .prose pre {
+  background: var(--color-gray-800) !important;
 }
 
 .prose ul, .prose ol {
@@ -252,6 +258,8 @@ body {
   border-collapse: collapse;
   margin: 16px 0;
   font-size: var(--text-sm);
+  display: block;
+  overflow-x: auto;
 }
 
 .prose th {
@@ -273,11 +281,15 @@ body {
 .prose td {
   padding: 8px 12px;
   border-bottom: 1px solid var(--color-gray-200);
-  font-family: var(--font-mono);
+  color: var(--color-gray-700);
 }
 
 .dark .prose td {
-  border-bottom-color: var(--color-gray-700);
+  color: var(--color-gray-300);
+}
+
+.prose td code {
+  font-family: var(--font-mono);
 }
 
 .prose hr {
