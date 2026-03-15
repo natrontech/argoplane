@@ -31,7 +31,7 @@ spec:
             - name: LOG_LEVEL
               value: "info"
             - name: HUBBLE_RELAY_URL
-              value: "hubble-relay.kube-system.svc:4245"
+              value: "hubble-relay.kube-system.svc:80"
           livenessProbe:
             httpGet:
               path: /healthz
