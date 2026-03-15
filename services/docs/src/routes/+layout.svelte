@@ -62,8 +62,40 @@
 		});
 	}
 
+	function addHeadingAnchors() {
+		if (!browser) return;
+		document.querySelectorAll('.prose h1[id], .prose h2[id], .prose h3[id]').forEach((heading) => {
+			if (heading.querySelector('.heading-anchor')) return;
+			const id = heading.getAttribute('id');
+			if (!id) return;
+
+			heading.classList.add('heading-with-anchor');
+
+			const btn = document.createElement('button');
+			btn.className = 'heading-anchor';
+			btn.setAttribute('aria-label', 'Copy link');
+			btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
+			btn.addEventListener('click', (e) => {
+				e.preventDefault();
+				const url = `${window.location.origin}${window.location.pathname}#${id}`;
+				navigator.clipboard.writeText(url).then(() => {
+					btn.classList.add('copied');
+					btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+					setTimeout(() => {
+						btn.classList.remove('copied');
+						btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
+					}, 1500);
+				});
+			});
+			heading.appendChild(btn);
+		});
+	}
+
 	afterNavigate(() => {
-		setTimeout(addCopyButtons, 50);
+		setTimeout(() => {
+			addCopyButtons();
+			addHeadingAnchors();
+		}, 50);
 	});
 </script>
 
