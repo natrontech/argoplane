@@ -25,7 +25,7 @@ import {
 } from '../types';
 
 // ============================================================
-// ArgoCD resource linking
+// ArgoCD SPA-safe navigation
 // ============================================================
 
 function resourceNodeUrl(
@@ -42,15 +42,24 @@ function resourceNodeUrl(
   return `${base}?${params.toString()}`;
 }
 
-function podUrl(appNs: string, appName: string, podNamespace: string, podName: string): string {
-  return resourceNodeUrl(appNs, appName, '', 'Pod', podNamespace, podName);
+/** Navigate within ArgoCD's SPA without a full page reload. */
+function navigateSPA(url: string) {
+  window.history.pushState(null, '', url);
+  // ArgoCD's React router listens for popstate events.
+  window.dispatchEvent(new PopStateEvent('popstate'));
 }
 
-function policyUrl(appNs: string, appName: string, policy: PolicySummary): string {
+function openPod(appNs: string, appName: string, podNs: string, podName: string) {
+  navigateSPA(resourceNodeUrl(appNs, appName, '', 'Pod', podNs, podName));
+}
+
+function openPolicy(appNs: string, appName: string, policy: PolicySummary) {
+  const group = 'cilium.io';
   if (policy.scope === 'clusterwide') {
-    return resourceNodeUrl(appNs, appName, 'cilium.io', 'CiliumClusterwideNetworkPolicy', '', policy.name);
+    navigateSPA(resourceNodeUrl(appNs, appName, group, 'CiliumClusterwideNetworkPolicy', '', policy.name));
+  } else {
+    navigateSPA(resourceNodeUrl(appNs, appName, group, 'CiliumNetworkPolicy', policy.namespace || '', policy.name));
   }
-  return resourceNodeUrl(appNs, appName, 'cilium.io', 'CiliumNetworkPolicy', policy.namespace || '', policy.name);
 }
 
 // ============================================================
@@ -167,15 +176,15 @@ const SortableHeader: React.FC<{
   );
 };
 
-/** Clickable resource link styled as inline monospace text. */
+/** Clickable resource link that navigates within ArgoCD's SPA. */
 const ResourceLink: React.FC<{
-  href: string;
+  onClick: () => void;
   children: React.ReactNode;
   title?: string;
   color?: string;
-}> = ({ href, children, title, color }) => (
-  <a
-    href={href}
+}> = ({ onClick, children, title, color }) => (
+  <span
+    onClick={(e) => { e.stopPropagation(); onClick(); }}
     title={title}
     style={{
       ...linkStyle,
@@ -183,7 +192,7 @@ const ResourceLink: React.FC<{
     }}
   >
     {children}
-  </a>
+  </span>
 );
 
 // ============================================================
@@ -529,8 +538,8 @@ const FlowRow: React.FC<{
       <td style={ellipsisTd} title={srcDisplay}>
         {srcLinkable ? (
           <ResourceLink
-            href={podUrl(appNamespace, appName, f.sourceNamespace, f.sourcePod)}
-            title={`Open ${f.sourcePod} flows`}
+            onClick={() => openPod(appNamespace, appName, f.sourceNamespace, f.sourcePod)}
+            title={`Open ${f.sourcePod}`}
           >
             {srcDisplay}
           </ResourceLink>
@@ -539,8 +548,8 @@ const FlowRow: React.FC<{
       <td style={ellipsisTd} title={dstDisplay}>
         {dstLinkable ? (
           <ResourceLink
-            href={podUrl(appNamespace, appName, f.destNamespace, f.destPod)}
-            title={`Open ${f.destPod} flows`}
+            onClick={() => openPod(appNamespace, appName, f.destNamespace, f.destPod)}
+            title={`Open ${f.destPod}`}
           >
             {dstDisplay}
           </ResourceLink>
@@ -557,14 +566,14 @@ const FlowRow: React.FC<{
             {matchingPolicies.slice(0, 2).map((p) => {
               const inTree = isPolicyInTree(p);
               return inTree ? (
-                <a
+                <span
                   key={p.name}
-                  href={policyUrl(appNamespace, appName, p)}
+                  onClick={() => openPolicy(appNamespace, appName, p)}
                   style={policyChipLink}
                   title={`Open ${p.name} in resource tree`}
                 >
                   {p.name}
-                </a>
+                </span>
               ) : (
                 <span
                   key={p.name}
@@ -608,7 +617,7 @@ const PolicyRow: React.FC<{
     <tr>
       <td style={{ ...tdStyle, fontWeight: fontWeight.semibold }}>
         {inTree ? (
-          <ResourceLink href={policyUrl(appNamespace, appName, p)} title={`Open ${p.name} in resource tree`}>
+          <ResourceLink onClick={() => openPolicy(appNamespace, appName, p)} title={`Open ${p.name} in resource tree`}>
             {p.name}
           </ResourceLink>
         ) : (

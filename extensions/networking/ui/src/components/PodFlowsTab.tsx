@@ -25,22 +25,31 @@ import {
 } from '../types';
 
 // ============================================================
-// ArgoCD resource linking
+// ArgoCD SPA-safe navigation
 // ============================================================
 
-function podUrl(appNs: string, appName: string, podNs: string, podName: string): string {
-  const nodeKey = `/Pod/${podNs}/${podName}/0`;
+function navigateSPA(url: string) {
+  window.history.pushState(null, '', url);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+}
+
+function resourceNodeUrl(appNs: string, appName: string, group: string, kind: string, ns: string, name: string): string {
+  const nodeKey = `${group}/${kind}/${ns}/${name}/0`;
   const base = `/applications/${appNs}/${appName}`;
   return `${base}?${new URLSearchParams({ node: nodeKey }).toString()}`;
 }
 
-function policyNodeUrl(appNs: string, appName: string, policy: PolicySummary): string {
+function openPod(appNs: string, appName: string, podNs: string, podName: string) {
+  navigateSPA(resourceNodeUrl(appNs, appName, '', 'Pod', podNs, podName));
+}
+
+function openPolicy(appNs: string, appName: string, policy: PolicySummary) {
   const group = 'cilium.io';
-  const kind = policy.scope === 'clusterwide' ? 'CiliumClusterwideNetworkPolicy' : 'CiliumNetworkPolicy';
-  const ns = policy.scope === 'clusterwide' ? '' : (policy.namespace || '');
-  const nodeKey = `${group}/${kind}/${ns}/${policy.name}/0`;
-  const base = `/applications/${appNs}/${appName}`;
-  return `${base}?${new URLSearchParams({ node: nodeKey }).toString()}`;
+  if (policy.scope === 'clusterwide') {
+    navigateSPA(resourceNodeUrl(appNs, appName, group, 'CiliumClusterwideNetworkPolicy', '', policy.name));
+  } else {
+    navigateSPA(resourceNodeUrl(appNs, appName, group, 'CiliumNetworkPolicy', policy.namespace || '', policy.name));
+  }
 }
 
 // ============================================================
@@ -264,13 +273,13 @@ export const PodFlowsTab: React.FC<{ resource: any; tree?: any; application: any
                         </td>
                         <td style={{ ...tdStyle, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={peerDisplay}>
                           {peerLinkable ? (
-                            <a
-                              href={podUrl(appNamespace, appName, peerNs, peerPod)}
+                            <span
+                              onClick={() => openPod(appNamespace, appName, peerNs, peerPod)}
                               style={peerLinkStyle}
-                              title={`Open ${peerPod} flows`}
+                              title={`Open ${peerPod}`}
                             >
                               {peerDisplay}
-                            </a>
+                            </span>
                           ) : peerDisplay}
                         </td>
                         <td style={tdStyle}>{f.protocol}</td>
@@ -282,9 +291,9 @@ export const PodFlowsTab: React.FC<{ resource: any; tree?: any; application: any
                               {matchingPolicies.slice(0, 2).map((p) => {
                                 const inTree = isPolicyInTree(p);
                                 return inTree ? (
-                                  <a key={p.name} href={policyNodeUrl(appNamespace, appName, p)} style={policyChipLink} title={`Open ${p.name}`}>
+                                  <span key={p.name} onClick={() => openPolicy(appNamespace, appName, p)} style={policyChipLink} title={`Open ${p.name}`}>
                                     {p.name}
-                                  </a>
+                                  </span>
                                 ) : (
                                   <span key={p.name} style={policyChipPlain} title={`${p.ownership} policy: ${p.name}`}>
                                     {p.name}
