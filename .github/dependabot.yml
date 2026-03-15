@@ -1,0 +1,81 @@
+version: 2
+updates:
+  # Go modules - metrics backend
+  - package-ecosystem: gomod
+    directory: /extensions/metrics/backend
+    schedule:
+      interval: monthly
+    groups:
+      go-dependencies:
+        patterns:
+          - "*"
+
+  # Go modules - backups backend
+  - package-ecosystem: gomod
+    directory: /extensions/backups/backend
+    schedule:
+      interval: monthly
+    groups:
+      go-dependencies:
+        patterns:
+          - "*"
+
+  # Go modules - integration tests
+  - package-ecosystem: gomod
+    directory: /tests
+    schedule:
+      interval: monthly
+    groups:
+      go-dependencies:
+        patterns:
+          - "*"
+
+  # npm - metrics UI
+  - package-ecosystem: npm
+    directory: /extensions/metrics/ui
+    schedule:
+      interval: monthly
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+
+  # npm - backups UI
+  - package-ecosystem: npm
+    directory: /extensions/backups/ui
+    schedule:
+      interval: monthly
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+
+  # Docker - metrics backend
+  - package-ecosystem: docker
+    directory: /extensions/metrics/backend
+    schedule:
+      interval: monthly
+    groups:
+      docker-dependencies:
+        patterns:
+          - "*"
+
+  # Docker - backups backend
+  - package-ecosystem: docker
+    directory: /extensions/backups/backend
+    schedule:
+      interval: monthly
+    groups:
+      docker-dependencies:
+        patterns:
+          - "*"
+
+  # GitHub Actions
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      github-actions:
+        patterns:
+          - "*"

@@ -51,6 +51,7 @@ extensions/$ARGUMENTS/
 - Run `go mod tidy` in the backend directory
 - Run `npm install` in the ui directory
 - Test build: `npm run build` in ui, `go build -o /tmp/test ./cmd/` in backend
+- Add dependabot entries in `.github/dependabot.yml` for the new extension (gomod, npm, docker ecosystems with monthly schedule and grouped updates)
 
 ## Naming Convention
 
