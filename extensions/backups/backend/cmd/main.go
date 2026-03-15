@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -11,11 +10,16 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
+
+	"github.com/natrontech/argoplane/extensions/backups/backend/internal/handler"
 )
 
 type Config struct {
-	Port     string `envconfig:"PORT" default:"8081"`
-	LogLevel string `envconfig:"LOG_LEVEL" default:"info"`
+	Port            string `envconfig:"PORT" default:"8081"`
+	LogLevel        string `envconfig:"LOG_LEVEL" default:"info"`
+	VeleroNamespace string `envconfig:"VELERO_NAMESPACE" default:"velero"`
 }
 
 func main() {
@@ -27,10 +31,33 @@ func main() {
 
 	setupLogging(config.LogLevel)
 
+	kubeConfig, err := rest.InClusterConfig()
+	if err != nil {
+		slog.Error("failed to create in-cluster config", "error", err)
+		os.Exit(1)
+	}
+
+	dynClient, err := dynamic.NewForConfig(kubeConfig)
+	if err != nil {
+		slog.Error("failed to create dynamic client", "error", err)
+		os.Exit(1)
+	}
+
+	// Create handlers.
+	storageHandler := handler.NewStorageHandler(dynClient, config.VeleroNamespace)
+	schedulesHandler := handler.NewSchedulesHandler(dynClient, config.VeleroNamespace)
+	backupsHandler := handler.NewBackupsHandler(dynClient, config.VeleroNamespace)
+	restoresHandler := handler.NewRestoresHandler(dynClient, config.VeleroNamespace)
+	overviewHandler := handler.NewOverviewHandler(dynClient, config.VeleroNamespace)
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/v1/status", handleBackupStatus)
-	mux.HandleFunc("GET /api/v1/backups", handleListBackups)
-	mux.HandleFunc("POST /api/v1/backups", handleCreateBackup)
+	mux.HandleFunc("GET /api/v1/storage-locations", storageHandler.Handle)
+	mux.HandleFunc("GET /api/v1/schedules", schedulesHandler.Handle)
+	mux.HandleFunc("GET /api/v1/backups", backupsHandler.Handle)
+	mux.HandleFunc("POST /api/v1/backups", backupsHandler.HandleCreate)
+	mux.HandleFunc("GET /api/v1/restores", restoresHandler.Handle)
+	mux.HandleFunc("POST /api/v1/restores", restoresHandler.HandleCreate)
+	mux.HandleFunc("POST /api/v1/overview", overviewHandler.Handle)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -46,7 +73,7 @@ func main() {
 	defer cancel()
 
 	go func() {
-		slog.Info("starting backups backend", "port", config.Port)
+		slog.Info("starting backups backend", "port", config.Port, "veleroNamespace", config.VeleroNamespace)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("server error", "error", err)
 			os.Exit(1)
@@ -77,75 +104,4 @@ func setupLogging(level string) {
 		logLevel = slog.LevelInfo
 	}
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel})))
-}
-
-func handleBackupStatus(w http.ResponseWriter, r *http.Request) {
-	namespace := r.URL.Query().Get("namespace")
-	if namespace == "" {
-		http.Error(w, `{"error":"namespace is required"}`, http.StatusBadRequest)
-		return
-	}
-
-	username := r.Header.Get("Argocd-Username")
-	slog.Debug("backup status request", "namespace", namespace, "user", username)
-
-	// TODO: Query backup provider CRDs via Kubernetes API for actual status
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"status":     "completed",
-		"lastBackup": time.Now().Add(-2 * time.Hour).Format(time.RFC3339),
-	})
-}
-
-func handleListBackups(w http.ResponseWriter, r *http.Request) {
-	namespace := r.URL.Query().Get("namespace")
-	if namespace == "" {
-		http.Error(w, `{"error":"namespace is required"}`, http.StatusBadRequest)
-		return
-	}
-
-	username := r.Header.Get("Argocd-Username")
-	slog.Debug("list backups request", "namespace", namespace, "user", username)
-
-	// TODO: Query backup provider CRDs for the given namespace
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, `[
-		{
-			"name": "backup-%s-daily-1",
-			"status": "Completed",
-			"startTimestamp": "%s",
-			"completionTimestamp": "%s",
-			"includedNamespaces": ["%s"]
-		}
-	]`, namespace,
-		time.Now().Add(-2*time.Hour).Format(time.RFC3339),
-		time.Now().Add(-90*time.Minute).Format(time.RFC3339),
-		namespace,
-	)
-}
-
-func handleCreateBackup(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Namespace string `json:"namespace"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
-		return
-	}
-
-	if req.Namespace == "" {
-		http.Error(w, `{"error":"namespace is required"}`, http.StatusBadRequest)
-		return
-	}
-
-	username := r.Header.Get("Argocd-Username")
-	slog.Info("creating backup", "namespace", req.Namespace, "user", username)
-
-	// TODO: Create a backup CR via Kubernetes API
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusAccepted)
-	json.NewEncoder(w).Encode(map[string]string{
-		"status":  "accepted",
-		"message": fmt.Sprintf("Backup triggered for namespace %s", req.Namespace),
-	})
 }
