@@ -26,20 +26,30 @@
 			const pagefind = await (new Function('return import("/pagefind/pagefind.js")'))();
 			await pagefind.init();
 			pagefindUI = pagefind;
+			pagefindFailed = false;
 		} catch {
-			// Pagefind not available (dev mode)
+			pagefindFailed = true;
 		}
 	}
 
 	let query = $state('');
 	let results: any[] = $state([]);
 	let loading = $state(false);
+	let pagefindFailed = $state(false);
 
 	async function search(q: string) {
 		query = q;
-		if (!pagefindUI || !q.trim()) {
+		if (!q.trim()) {
 			results = [];
 			return;
+		}
+		if (!pagefindUI) {
+			// Try loading again in case it wasn't ready
+			await loadPagefind();
+			if (!pagefindUI) {
+				results = [];
+				return;
+			}
 		}
 		loading = true;
 		try {
@@ -120,14 +130,18 @@
 
 			<!-- Results -->
 			<div class="max-h-80 overflow-y-auto p-2">
-				{#if loading}
+				{#if pagefindFailed}
+					<div class="px-3 py-4 text-center text-xs text-gray-400">
+						Search index not available. Run <code class="rounded-sm bg-gray-100 px-1 py-0.5 font-mono dark:bg-gray-800">npm run build</code> first, then <code class="rounded-sm bg-gray-100 px-1 py-0.5 font-mono dark:bg-gray-800">npm run preview</code>.
+					</div>
+				{:else if loading}
 					<div class="px-3 py-4 text-center text-xs text-gray-400">Searching...</div>
 				{:else if query && results.length === 0}
 					<div class="px-3 py-4 text-center text-xs text-gray-400">No results for "{query}"</div>
 				{:else if results.length > 0}
 					{#each results as result}
 						<a
-							href={result.url}
+							href={result.url.replace(/\.html$/, '')}
 							class="block rounded-md px-3 py-2 no-underline transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
 						>
 							<div class="text-sm font-medium text-gray-800 dark:text-gray-100">{result.meta?.title || result.url}</div>

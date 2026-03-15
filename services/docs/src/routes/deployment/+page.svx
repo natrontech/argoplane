@@ -3,78 +3,263 @@ title: Deployment
 description: Deploying ArgoPlane to a Kubernetes cluster
 ---
 
+<script>
+  import Tabs from '$lib/components/docs/Tabs.svelte';
+  import Callout from '$lib/components/docs/Callout.svelte';
+</script>
+
 # Deployment
 
-ArgoPlane extensions are deployed alongside ArgoCD in your Kubernetes cluster. Each extension backend runs as a separate Deployment with a Service.
+ArgoPlane ships as a Helm chart that deploys extension backends alongside ArgoCD. Enable the extensions you need, configure ArgoCD, done.
 
-## Components to deploy
+## Prerequisites
 
-For each extension, you need:
+- ArgoCD v3.x installed and running
+- `kubectl` access to the cluster
+- Helm 3.x
+- Backend dependencies installed (Prometheus for metrics, Velero for backups, Cilium for networking)
 
-1. **Backend Deployment + Service**: Go HTTP server in the `argocd` namespace
-2. **UI bundle**: JavaScript file loaded into the argocd-server pod at `/tmp/extensions/`
-3. **Proxy configuration**: ConfigMap entry routing `/extensions/<name>/*` to the backend
-4. **RBAC**: Policy rules allowing users to invoke the extension
+## Install with Helm
 
-## Deployment manifests
+```bash
+helm install argoplane oci://ghcr.io/natrontech/charts/argoplane \
+  --namespace argocd
+```
 
-Extension manifests live in `deploy/extensions/<name>/deployment.yaml`:
+Or from a local checkout:
+
+```bash
+helm install argoplane deploy/helm/argoplane/ \
+  --namespace argocd
+```
+
+This deploys the **metrics** and **backups** extensions by default. Networking is disabled by default (requires Cilium).
+
+## Configuration
+
+### Enable/disable extensions
+
+Each extension is a toggle in `values.yaml`:
 
 ```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: argoplane-metrics-backend
-  namespace: argocd
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: argoplane-metrics-backend
-  template:
-    spec:
-      containers:
-        - name: backend
-          image: argoplane-metrics-backend:latest
-          ports:
-            - containerPort: 8080
-          env:
-            - name: PROMETHEUS_URL
-              value: "http://prometheus-server.monitoring:9090"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: argoplane-metrics-backend
-  namespace: argocd
-spec:
-  selector:
-    app: argoplane-metrics-backend
-  ports:
-    - port: 8080
-      targetPort: 8080
+extensions:
+  metrics:
+    enabled: true
+    env:
+      PROMETHEUS_URL: "http://prometheus:9090"
+  backups:
+    enabled: true
+    env:
+      VELERO_NAMESPACE: "velero"
+  networking:
+    enabled: false
+    env:
+      HUBBLE_RELAY_URL: "hubble-relay.kube-system.svc:80"
 ```
 
-## UI bundle loading
-
-UI extension bundles are loaded as init containers or volume mounts into the argocd-server pod. The built JavaScript file must be placed at `/tmp/extensions/extension-<name>.js`.
-
-## Docker images
-
-Backend images are tagged with the git commit hash:
+Enable networking:
 
 ```bash
-docker build -t argoplane-metrics-backend:$(git rev-parse --short HEAD) .
+helm upgrade argoplane deploy/helm/argoplane/ \
+  --namespace argocd \
+  --set extensions.networking.enabled=true
 ```
 
-## Quick deploy (local dev)
+### Custom values file
+
+For production, create a `values-prod.yaml`:
+
+```yaml
+extensions:
+  metrics:
+    enabled: true
+    image:
+      repository: ghcr.io/natrontech/argoplane-metrics-backend
+      tag: "v0.1.0"
+    env:
+      PROMETHEUS_URL: "http://prometheus-operated.monitoring.svc:9090"
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        memory: 256Mi
+
+  backups:
+    enabled: true
+    image:
+      repository: ghcr.io/natrontech/argoplane-backups-backend
+      tag: "v0.1.0"
+
+  networking:
+    enabled: true
+    image:
+      repository: ghcr.io/natrontech/argoplane-networking-backend
+      tag: "v0.1.0"
+
+argocd:
+  namespace: argocd
+  rbac:
+    roles:
+      - role: admin
+        extensions: ["*"]
+      - role: developer
+        extensions: ["metrics", "backups"]
+
+services:
+  docs:
+    enabled: true
+    ingress:
+      enabled: true
+      className: nginx
+      hosts:
+        - host: docs.argoplane.io
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - secretName: argoplane-docs-tls
+          hosts:
+            - docs.argoplane.io
+```
 
 ```bash
-make deploy-extensions
+helm upgrade argoplane deploy/helm/argoplane/ \
+  --namespace argocd \
+  -f values-prod.yaml
 ```
 
-This builds all backends, loads images into kind, applies manifests, copies UI bundles, and configures the proxy.
+## What the chart deploys
+
+For each enabled extension:
+
+| Resource | Name | Purpose |
+|----------|------|---------|
+| Deployment | `argoplane-<name>-backend` | Go HTTP backend |
+| Service | `argoplane-<name>-backend` | Internal service |
+| ServiceAccount | `argoplane-<name>-backend` | If RBAC rules are defined |
+| ClusterRole | `argoplane-<name>` | If RBAC rules are defined |
+| ClusterRoleBinding | `argoplane-<name>` | Binds role to ServiceAccount |
+
+Plus two ConfigMaps with the proxy and RBAC config you need to merge into ArgoCD.
+
+## Post-install: wire up ArgoCD
+
+After `helm install`, you need to tell ArgoCD about the extensions. The chart generates two ConfigMaps with the configuration to merge.
+
+### 1. Proxy routing
+
+The chart creates `argoplane-proxy-config` with the extension routing entries. Merge them into `argocd-cm`:
+
+```bash
+# View what needs to be added
+kubectl -n argocd get cm argoplane-proxy-config -o yaml
+
+# Patch argocd-cm
+kubectl -n argocd patch cm argocd-cm --type merge -p '{
+  "data": {
+    "extension.config.metrics": "services:\n- url: http://argoplane-metrics-backend.argocd.svc:8080\n",
+    "extension.config.backups": "services:\n- url: http://argoplane-backups-backend.argocd.svc:8081\n"
+  }
+}'
+```
+
+### 2. Enable proxy extensions
+
+```bash
+kubectl -n argocd patch cm argocd-cmd-params-cm --type merge \
+  -p '{"data":{"server.enable.proxy.extension":"true"}}'
+```
+
+### 3. RBAC
+
+The chart creates `argoplane-rbac-config` with the RBAC policies. Merge them into `argocd-rbac-cm`:
+
+```bash
+# View generated policies
+kubectl -n argocd get cm argoplane-rbac-config -o yaml
+```
+
+Add the policies to your existing `argocd-rbac-cm` `policy.csv` field.
+
+### 4. Restart ArgoCD
+
+```bash
+kubectl -n argocd rollout restart deployment argocd-server
+```
+
+## Deploy via ArgoCD (GitOps)
+
+ArgoPlane can deploy itself via ArgoCD. Store your `values.yaml` in a Git repo and create an ArgoCD Application:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argoplane
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/natrontech/argoplane
+    path: deploy/helm/argoplane
+    targetRevision: main
+    helm:
+      valueFiles:
+        - values-prod.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+```
+
+<Callout type="info">
+  The proxy config and RBAC still need to be merged into ArgoCD's own ConfigMaps manually or via a separate mechanism. The chart generates the config but doesn't modify ArgoCD's ConfigMaps directly to avoid ownership conflicts.
+</Callout>
+
+## Adding a new extension
+
+To deploy a custom extension with the chart, add an entry to the `extensions` map in your values file:
+
+```yaml
+extensions:
+  my-custom-ext:
+    enabled: true
+    image:
+      repository: my-registry/my-extension-backend
+      tag: "1.0.0"
+    port: 8090
+    env:
+      MY_CONFIG: "value"
+    serviceAccount:
+      create: true
+    rbac:
+      rules:
+        - apiGroups: ["my-group.io"]
+          resources: ["myresources"]
+          verbs: ["get", "list", "watch"]
+```
+
+The chart will generate all required resources (Deployment, Service, ServiceAccount, ClusterRole, ClusterRoleBinding) and include the extension in the proxy and RBAC ConfigMaps.
+
+## Local development
+
+For local development with kind, continue using the Makefile workflow:
+
+```bash
+make dev-infra           # kind cluster + ArgoCD + operators
+make build-extensions    # build UI bundles
+make build-backends      # build Docker images
+make load-extensions     # load images into kind
+make deploy-extensions   # deploy to cluster
+```
+
+The Helm chart is for production and staging environments. The Makefile handles the dev-specific concerns (kind cluster, image loading, kubectl cp for UI bundles).
 
 ## Next
 
-- [ArgoCD Configuration](/deployment/argocd-configuration): proxy routing and RBAC setup
+- [ArgoCD Configuration](/deployment/argocd-configuration): detailed proxy routing and RBAC setup
+- [Architecture](/architecture): how extensions work under the hood
