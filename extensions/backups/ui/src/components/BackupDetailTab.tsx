@@ -100,16 +100,18 @@ export const BackupDetailTab: React.FC<{ resource: any; tree?: any; application:
   const project = application?.spec?.project || 'default';
 
   const [logsLoading, setLogsLoading] = React.useState(false);
+  const [logsError, setLogsError] = React.useState<string | null>(null);
   const inProgress = phase === 'InProgress' || phase === 'New';
   const itemPercent = totalItems > 0 ? Math.round((itemsBackedUp / totalItems) * 100) : 0;
 
   const openLogs = React.useCallback(async (kind: 'BackupLog' | 'BackupResults') => {
     setLogsLoading(true);
+    setLogsError(null);
     try {
       const result = await fetchLogs(backupName, kind, appNamespace, appName, project);
       window.open(result.downloadURL, '_blank');
-    } catch {
-      // silently fail
+    } catch (err: any) {
+      setLogsError(`Could not fetch ${kind === 'BackupLog' ? 'logs' : 'results'}: ${err.message || 'unknown error'}. Velero DownloadRequest CRD may not be installed.`);
     }
     setLogsLoading(false);
   }, [backupName, appNamespace, appName, project]);
@@ -131,13 +133,16 @@ export const BackupDetailTab: React.FC<{ resource: any; tree?: any; application:
     return () => clearInterval(i);
   }, [inProgress, loadRestores]);
 
+  const [restoreError, setRestoreError] = React.useState<string | null>(null);
+
   const handleRestore = React.useCallback(async () => {
     setRestoring(true);
+    setRestoreError(null);
     try {
       await createRestore(backupName, backupNs, appNamespace, appName, project);
       setTimeout(loadRestores, 2000);
-    } catch {
-      // silently fail
+    } catch (err: any) {
+      setRestoreError(`Failed to create restore: ${err.message || 'unknown error'}`);
     } finally {
       setRestoring(false);
     }
@@ -223,6 +228,18 @@ export const BackupDetailTab: React.FC<{ resource: any; tree?: any; application:
           </>
         )}
       </div>
+
+      {/* Error messages */}
+      {logsError && (
+        <div style={{ ...alertBoxStyle, background: '#FFF8E1', borderColor: '#FFD54F', color: '#8D6E00', marginBottom: spacing[4] }}>
+          {logsError}
+        </div>
+      )}
+      {restoreError && (
+        <div style={alertBoxStyle}>
+          {restoreError}
+        </div>
+      )}
 
       {/* Restores from this backup */}
       <div style={sectionTitle}>RESTORES FROM THIS BACKUP</div>
