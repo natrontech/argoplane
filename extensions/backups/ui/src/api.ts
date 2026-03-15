@@ -4,6 +4,8 @@ import {
   RestoreSummary,
   ResourceRef,
   RestoreOptions,
+  PodVolumeBackupSummary,
+  PodVolumeRestoreSummary,
 } from './types';
 
 function proxyHeaders(appNamespace: string, appName: string, project: string) {
@@ -118,6 +120,75 @@ export async function createRestore(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchPodVolumeBackups(
+  backup: string,
+  appNamespace: string,
+  appName: string,
+  project: string
+): Promise<PodVolumeBackupSummary[]> {
+  const params = new URLSearchParams({ backup });
+  const response = await fetch(`/extensions/backups/api/v1/pod-volume-backups?${params}`, {
+    headers: proxyHeaders(appNamespace, appName, project),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchPodVolumeRestores(
+  restore: string,
+  appNamespace: string,
+  appName: string,
+  project: string
+): Promise<PodVolumeRestoreSummary[]> {
+  const params = new URLSearchParams({ restore });
+  const response = await fetch(`/extensions/backups/api/v1/pod-volume-restores?${params}`, {
+    headers: proxyHeaders(appNamespace, appName, project),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function toggleSchedulePause(
+  name: string,
+  paused: boolean,
+  appNamespace: string,
+  appName: string,
+  project: string
+): Promise<{ name: string; paused: boolean }> {
+  const response = await fetch(`/extensions/backups/api/v1/schedules/${encodeURIComponent(name)}`, {
+    method: 'PATCH',
+    headers: {
+      ...proxyHeaders(appNamespace, appName, project),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ paused }),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function deleteBackup(
+  name: string,
+  appNamespace: string,
+  appName: string,
+  project: string
+): Promise<{ name: string }> {
+  const response = await fetch(`/extensions/backups/api/v1/backups/${encodeURIComponent(name)}`, {
+    method: 'DELETE',
+    headers: proxyHeaders(appNamespace, appName, project),
   });
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${response.statusText}`);

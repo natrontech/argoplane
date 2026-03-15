@@ -16,11 +16,14 @@ metadata:
     app.kubernetes.io/part-of: argoplane
 rules:
   - apiGroups: ["velero.io"]
-    resources: ["schedules", "backups", "restores", "backupstoragelocations", "downloadrequests"]
+    resources: ["schedules", "backups", "restores", "backupstoragelocations", "downloadrequests", "podvolumebackups", "podvolumerestores"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["velero.io"]
-    resources: ["backups", "restores", "downloadrequests"]
+    resources: ["backups", "restores", "downloadrequests", "deletebackuprequests"]
     verbs: ["create", "delete"]
+  - apiGroups: ["velero.io"]
+    resources: ["schedules"]
+    verbs: ["patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

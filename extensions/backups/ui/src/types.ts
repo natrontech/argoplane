@@ -85,3 +85,35 @@ export interface ResourceRef {
   namespace: string;
   name: string;
 }
+
+export interface PodVolumeBackupSummary {
+  name: string;
+  namespace: string;
+  phase: string;
+  backupName: string;
+  podName: string;
+  podNamespace: string;
+  volume: string;
+  uploaderType?: string;
+  startTimestamp?: string;
+  completionTimestamp?: string;
+  bytesDone: number;
+  totalBytes: number;
+  message?: string;
+}
+
+export interface PodVolumeRestoreSummary {
+  name: string;
+  namespace: string;
+  phase: string;
+  restoreName: string;
+  podName: string;
+  podNamespace: string;
+  volume: string;
+  uploaderType?: string;
+  startTimestamp?: string;
+  completionTimestamp?: string;
+  bytesDone: number;
+  totalBytes: number;
+  message?: string;
+}

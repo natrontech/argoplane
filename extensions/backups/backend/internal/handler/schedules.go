@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 
 	"github.com/natrontech/argoplane/extensions/backups/backend/internal/types"
@@ -50,6 +52,49 @@ func (h *SchedulesHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	WriteJSON(w, schedules)
+}
+
+// HandleTogglePause toggles the paused state of a schedule.
+func (h *SchedulesHandler) HandleTogglePause(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if name == "" {
+		WriteError(w, http.StatusBadRequest, "schedule name is required")
+		return
+	}
+
+	var req struct {
+		Paused bool `json:"paused"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	defer r.Body.Close()
+
+	username := r.Header.Get("Argocd-Username")
+	slog.Info("toggling schedule pause", "name", name, "paused", req.Paused, "user", username)
+
+	patch := []byte(`{"spec":{"paused":` + boolStr(req.Paused) + `}}`)
+	_, err := h.client.Resource(types.ScheduleGVR).Namespace(h.veleroNamespace).Patch(
+		r.Context(), name, k8stypes.MergePatchType, patch, metav1.PatchOptions{},
+	)
+	if err != nil {
+		slog.Error("failed to patch schedule", "error", err, "name", name)
+		WriteError(w, http.StatusInternalServerError, "failed to update schedule")
+		return
+	}
+
+	WriteJSON(w, map[string]interface{}{
+		"name":   name,
+		"paused": req.Paused,
+	})
+}
+
+func boolStr(b bool) string {
+	if b {
+		return "true"
+	}
+	return "false"
 }
 
 // coversNamespace returns true if the schedule covers the target namespace.

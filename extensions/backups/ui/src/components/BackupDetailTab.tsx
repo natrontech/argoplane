@@ -12,8 +12,8 @@ import {
   spacing,
   panel,
 } from '@argoplane/shared';
-import { fetchRestores, createRestore, fetchLogs } from '../api';
-import { RestoreSummary } from '../types';
+import { fetchRestores, createRestore, fetchLogs, fetchPodVolumeBackups, deleteBackup } from '../api';
+import { RestoreSummary, PodVolumeBackupSummary } from '../types';
 import { LogViewer } from './LogViewer';
 
 // ============================================================
@@ -46,6 +46,13 @@ function duration(start?: string, end?: string): string {
   const hours = Math.floor(mins / 60);
   const remMins = mins % 60;
   return `${hours}h ${remMins}m`;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
 }
 
 type PhaseVariant = 'green' | 'red' | 'orange' | 'gray';
@@ -103,8 +110,32 @@ export const BackupDetailTab: React.FC<{ resource: any; tree?: any; application:
   const [logsLoading, setLogsLoading] = React.useState(false);
   const [logsError, setLogsError] = React.useState<string | null>(null);
   const [logsContent, setLogsContent] = React.useState<{ title: string; text: string } | null>(null);
+  const [pvbs, setPvbs] = React.useState<PodVolumeBackupSummary[]>([]);
+  const [pvbsLoaded, setPvbsLoaded] = React.useState(false);
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
+  const [deleteMsg, setDeleteMsg] = React.useState<string | null>(null);
   const inProgress = phase === 'InProgress' || phase === 'New';
   const itemPercent = totalItems > 0 ? Math.round((itemsBackedUp / totalItems) * 100) : 0;
+
+  React.useEffect(() => {
+    fetchPodVolumeBackups(backupName, appNamespace, appName, project)
+      .then(setPvbs)
+      .catch(() => setPvbs([]))
+      .finally(() => setPvbsLoaded(true));
+  }, [backupName, appNamespace, appName, project]);
+
+  const handleDelete = React.useCallback(async () => {
+    setDeleting(true);
+    try {
+      await deleteBackup(backupName, appNamespace, appName, project);
+      setDeleteMsg(`Delete request created for backup "${backupName}".`);
+      setConfirmDelete(false);
+    } catch (err: any) {
+      setDeleteMsg(`Failed to delete: ${err.message || 'unknown error'}`);
+    }
+    setDeleting(false);
+  }, [backupName, appNamespace, appName, project]);
 
   const openLogs = React.useCallback(async (kind: 'BackupLog' | 'BackupResults') => {
     setLogsLoading(true);
@@ -195,6 +226,43 @@ export const BackupDetailTab: React.FC<{ resource: any; tree?: any; application:
         </div>
       </div>
 
+      {/* PodVolumeBackups */}
+      {pvbsLoaded && pvbs.length > 0 && (
+        <div style={{ paddingBottom: spacing[4], borderBottom: `1px solid ${colors.gray200}`, marginBottom: spacing[4] }}>
+          <div style={{ fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.gray500, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: spacing[2] }}>
+            File-System Backups ({pvbs.length})
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', borderSpacing: 0 }}>
+              <thead><tr>
+                <th style={thStyle}>Phase</th>
+                <th style={thStyle}>Pod</th>
+                <th style={thStyle}>Volume</th>
+                <th style={thStyle}>Uploader</th>
+                <th style={thStyle}>Progress</th>
+                <th style={thStyle}>Started</th>
+              </tr></thead>
+              <tbody>
+                {pvbs.map((pvb) => (
+                  <tr key={pvb.name}>
+                    <td style={tdStyle}><Tag variant={phaseToVariant(pvb.phase)}>{pvb.phase}</Tag></td>
+                    <td style={tdStyle}>{pvb.podNamespace}/{pvb.podName}</td>
+                    <td style={tdStyle}>{pvb.volume}</td>
+                    <td style={tdStyle}>{pvb.uploaderType || '-'}</td>
+                    <td style={tdStyle}>
+                      {pvb.totalBytes > 0 ? (
+                        <span>{formatBytes(pvb.bytesDone)} / {formatBytes(pvb.totalBytes)}</span>
+                      ) : '-'}
+                    </td>
+                    <td style={tdStyle}>{timeAgo(pvb.startTimestamp)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Errors & warnings detail */}
       {failureReason && (
         <div style={alertBoxStyle}>
@@ -211,7 +279,7 @@ export const BackupDetailTab: React.FC<{ resource: any; tree?: any; application:
       )}
 
       {/* Action buttons */}
-      <div style={{ display: 'flex', gap: spacing[2], marginBottom: spacing[4], flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: spacing[2], marginBottom: spacing[4], flexWrap: 'wrap', alignItems: 'center' }}>
         {phase === 'Completed' && (
           <Button primary onClick={handleRestore} disabled={restoring}>
             {restoring ? 'Restoring...' : 'Restore from this Backup'}
@@ -227,9 +295,25 @@ export const BackupDetailTab: React.FC<{ resource: any; tree?: any; application:
                 View Results
               </Button>
             )}
+            {!confirmDelete ? (
+              <Button danger onClick={() => setConfirmDelete(true)}>Delete Backup</Button>
+            ) : (
+              <span style={{ display: 'flex', alignItems: 'center', gap: spacing[2] }}>
+                <span style={{ fontSize: fontSize.sm, color: colors.redText }}>Delete "{backupName}"?</span>
+                <Button danger onClick={handleDelete} disabled={deleting}>{deleting ? 'Deleting...' : 'Confirm'}</Button>
+                <Button onClick={() => setConfirmDelete(false)} disabled={deleting}>Cancel</Button>
+              </span>
+            )}
           </>
         )}
       </div>
+
+      {/* Delete message */}
+      {deleteMsg && (
+        <div style={{ marginBottom: spacing[4], padding: spacing[3], background: deleteMsg.startsWith('Failed') ? colors.redLight : '#E8F5E9', border: `1px solid ${deleteMsg.startsWith('Failed') ? colors.red : '#66BB6A'}`, borderRadius: 4, fontSize: fontSize.sm, fontFamily: fonts.mono, color: deleteMsg.startsWith('Failed') ? colors.redText : '#2E7D32' }}>
+          {deleteMsg}
+        </div>
+      )}
 
       {/* Error messages */}
       {logsError && (
