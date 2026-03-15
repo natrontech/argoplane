@@ -133,10 +133,18 @@ export const ScheduleBackupsTab: React.FC<{ resource: any; tree?: any; applicati
           {excludedNs.length > 0 && <KV label="Excluded Namespaces" value={excludedNs.join(', ')} />}
         </div>
         <div style={{ marginTop: spacing[3] }}>
-          <Button primary onClick={handleTriggerBackup} disabled={triggering || paused}>
-            {triggering ? 'Triggering...' : 'Trigger Backup'}
-          </Button>
-          {paused && <span style={{ marginLeft: spacing[2], fontSize: fontSize.sm, color: colors.gray400 }}>Schedule is paused</span>}
+          {(() => {
+            const isPlatformLike = includedNs.length === 0 || includedNs.length > 1;
+            return (
+              <>
+                <Button primary onClick={handleTriggerBackup} disabled={triggering || paused || isPlatformLike}>
+                  {triggering ? 'Triggering...' : 'Trigger Backup'}
+                </Button>
+                {paused && <span style={{ marginLeft: spacing[2], fontSize: fontSize.sm, color: colors.gray400 }}>Schedule is paused</span>}
+                {isPlatformLike && !paused && <span style={{ marginLeft: spacing[2], fontSize: fontSize.sm, color: colors.gray400 }}>Cannot trigger: schedule covers {includedNs.length === 0 ? 'all namespaces' : 'multiple namespaces'}</span>}
+              </>
+            );
+          })()}
         </div>
         {triggerError && (
           <div style={{ marginTop: spacing[2], padding: spacing[3], background: colors.redLight, border: `1px solid ${colors.red}`, borderRadius: 4, fontSize: fontSize.sm, fontFamily: fonts.mono, color: colors.redText }}>
