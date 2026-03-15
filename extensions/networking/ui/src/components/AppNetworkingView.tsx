@@ -142,7 +142,7 @@ export const AppNetworkingView: React.FC<AppViewProps> = ({ application, tree })
   const platformPolicies = policies.filter((p) => p.ownership === 'platform');
 
   return (
-    <div style={panel}>
+    <div style={rootPanel}>
       <SectionHeader title="NETWORKING" />
 
       <MetaRow items={[
@@ -227,11 +227,13 @@ export const AppNetworkingView: React.FC<AppViewProps> = ({ application, tree })
           </div>
 
           {filteredFlows.length > 0 ? (
-            <DataTable columns={['Time', 'Direction', 'Source', 'Destination', 'Protocol', 'Verdict']}>
-              {filteredFlows.map((f, i) => (
-                <FlowRow key={i} flow={f} />
-              ))}
-            </DataTable>
+            <div style={tableWrap}>
+              <DataTable columns={['Time', 'Direction', 'Source', 'Destination', 'Protocol', 'Verdict']}>
+                {filteredFlows.map((f, i) => (
+                  <FlowRow key={i} flow={f} />
+                ))}
+              </DataTable>
+            </div>
           ) : (
             <EmptyState message={`No flows recorded in the last ${timeRange}`} />
           )}
@@ -249,14 +251,16 @@ export const AppNetworkingView: React.FC<AppViewProps> = ({ application, tree })
         <SectionHeader title="NETWORK POLICIES" />
 
         {policies.length > 0 ? (
-          <DataTable columns={['Name', 'Scope', 'Owner', 'Selector', 'Ingress', 'Egress', 'Created']}>
-            {appPolicies.map((p) => (
-              <PolicyRow key={`app-${p.scope}-${p.name}`} policy={p} />
-            ))}
-            {platformPolicies.map((p) => (
-              <PolicyRow key={`plat-${p.scope}-${p.name}`} policy={p} />
-            ))}
-          </DataTable>
+          <div style={tableWrap}>
+            <DataTable columns={['Name', 'Scope', 'Owner', 'Selector', 'Ingress', 'Egress', 'Created']}>
+              {appPolicies.map((p) => (
+                <PolicyRow key={`app-${p.scope}-${p.name}`} policy={p} />
+              ))}
+              {platformPolicies.map((p) => (
+                <PolicyRow key={`plat-${p.scope}-${p.name}`} policy={p} />
+              ))}
+            </DataTable>
+          </div>
         ) : (
           <EmptyState message={`No network policies found in ${namespace}`} />
         )}
@@ -278,8 +282,9 @@ export const AppNetworkingView: React.FC<AppViewProps> = ({ application, tree })
         </div>
 
         {endpointsExpanded && endpoints.length > 0 && (
-          <DataTable columns={['Pod', 'IP', 'Identity', 'Ingress Policy', 'Egress Policy', 'State']}>
-            {endpoints.map((ep) => (
+          <div style={tableWrap}>
+            <DataTable columns={['Pod', 'IP', 'Identity', 'Ingress Policy', 'Egress Policy', 'State']}>
+              {endpoints.map((ep) => (
               <tr key={ep.name}>
                 <Cell>{ep.name}</Cell>
                 <Cell>{ep.ipv4 || ep.ipv6 || '-'}</Cell>
@@ -302,9 +307,10 @@ export const AppNetworkingView: React.FC<AppViewProps> = ({ application, tree })
                     label={ep.state || 'unknown'}
                   />
                 </Cell>
-              </tr>
-            ))}
-          </DataTable>
+                </tr>
+              ))}
+            </DataTable>
+          </div>
         )}
 
         {endpointsExpanded && endpoints.length === 0 && (
@@ -403,6 +409,16 @@ const PolicyRow: React.FC<{ policy: PolicySummary }> = ({ policy }) => {
 };
 
 // --- Styles ---
+
+const rootPanel: React.CSSProperties = {
+  ...panel,
+  overflow: 'hidden',
+  maxWidth: '100%',
+};
+
+const tableWrap: React.CSSProperties = {
+  overflowX: 'auto',
+};
 
 const headerRow: React.CSSProperties = {
   display: 'flex',
