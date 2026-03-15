@@ -43,6 +43,12 @@ export interface DiscoveredMetric {
   query: string;
 }
 
+export interface PerPodSeries {
+  metric: string;
+  unit: string;
+  pods: Array<{ pod: string; series: DataPoint[] }>;
+}
+
 export interface ExtensionProps {
   resource: any;
   tree: any;

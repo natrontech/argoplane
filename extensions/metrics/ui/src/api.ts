@@ -1,4 +1,4 @@
-import { MetricData, TimeSeriesMetric, TimeRange, PodMetric, CustomQueryResult, DiscoveredMetric } from './types';
+import { MetricData, TimeSeriesMetric, TimeRange, PodMetric, CustomQueryResult, DiscoveredMetric, PerPodSeries } from './types';
 
 interface AppMetricsResponse {
   summary: MetricData[];
@@ -67,6 +67,16 @@ export function fetchDiscoverMetrics(
   const params = new URLSearchParams({ namespace });
   if (search) params.set('search', search);
   return jsonFetch(`/extensions/metrics/api/v1/discover?${params}`, argoHeaders(appNamespace, appName, project));
+}
+
+export function fetchPerPodSeries(
+  namespace: string, name: string, kind: string, range: TimeRange,
+  appNamespace: string, appName: string, project: string,
+  pods?: string[]
+): Promise<PerPodSeries[]> {
+  const params = new URLSearchParams({ namespace, name, kind, range });
+  if (pods && pods.length > 0) params.set('pods', pods.join(','));
+  return jsonFetch(`/extensions/metrics/api/v1/per-pod-series?${params}`, argoHeaders(appNamespace, appName, project));
 }
 
 export function fetchLabelNames(

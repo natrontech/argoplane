@@ -37,11 +37,13 @@ func main() {
 	customHandler := handler.NewCustom(promClient)
 	discoverHandler := handler.NewDiscover(promClient)
 	labelsHandler := handler.NewLabels(promClient)
+	perPodHandler := handler.NewPerPod(promClient)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/resource-metrics", resourceHandler.Handle)
 	mux.HandleFunc("GET /api/v1/app-metrics", appHandler.Handle)
 	mux.HandleFunc("GET /api/v1/pod-breakdown", podsHandler.Handle)
+	mux.HandleFunc("GET /api/v1/per-pod-series", perPodHandler.Handle)
 	mux.HandleFunc("GET /api/v1/query", customHandler.Handle)
 	mux.HandleFunc("GET /api/v1/discover", discoverHandler.Handle)
 	mux.HandleFunc("GET /api/v1/labels", labelsHandler.Handle)

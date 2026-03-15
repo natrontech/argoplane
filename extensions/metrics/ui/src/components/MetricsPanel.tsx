@@ -2,31 +2,34 @@ import * as React from 'react';
 import {
   Loading,
   EmptyState,
+  SectionHeader,
   MetricCard,
   MetaRow,
   Button,
   colors,
+  fonts,
+  fontSize,
+  fontWeight,
   panel,
   spacing,
+  radius,
 } from '@argoplane/shared';
-import { fetchMetrics, fetchTimeSeriesMetrics } from '../api';
-import { ExtensionProps, MetricData, TimeSeriesMetric, TimeRange } from '../types';
-import { SparklineChart } from './SparklineChart';
+import { fetchMetrics, fetchPodBreakdown, fetchPerPodSeries } from '../api';
+import { ExtensionProps, MetricData, PodMetric, PerPodSeries, TimeRange } from '../types';
+import { MultiSeriesChart } from './MultiSeriesChart';
 import { TimeRangeSelector } from './TimeRangeSelector';
-import { PodBreakdown } from './PodBreakdown';
 
-const CHART_COLORS: Record<string, string> = {
-  'CPU Usage': colors.orange500,
-  'Memory Usage': colors.blueSolid,
-  'Network RX': colors.greenSolid,
-  'Network TX': colors.yellowSolid,
-};
+const SERIES_COLORS = [
+  colors.orange500, colors.blueSolid, colors.greenSolid, colors.yellowSolid,
+  colors.red, colors.gray500, colors.orange300, colors.blue,
+];
 
 const REFRESH_INTERVAL = 30_000;
 
 export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }) => {
   const [metrics, setMetrics] = React.useState<MetricData[]>([]);
-  const [timeSeries, setTimeSeries] = React.useState<TimeSeriesMetric[]>([]);
+  const [pods, setPods] = React.useState<PodMetric[]>([]);
+  const [perPod, setPerPod] = React.useState<PerPodSeries[]>([]);
   const [timeRange, setTimeRange] = React.useState<TimeRange>('1h');
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -38,23 +41,38 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
 
-  const showPodBreakdown = kind === 'Deployment' || kind === 'StatefulSet';
+  const isWorkload = kind === 'Deployment' || kind === 'StatefulSet';
 
   const fetchAll = React.useCallback(() => {
     if (!namespace || !name) return;
 
-    const instantP = fetchMetrics(namespace, name, kind, appNamespace, appName, project);
-    const rangeP = fetchTimeSeriesMetrics(namespace, name, kind, timeRange, appNamespace, appName, project);
+    const promises: Promise<any>[] = [
+      fetchMetrics(namespace, name, kind, appNamespace, appName, project),
+    ];
 
-    Promise.all([instantP, rangeP])
-      .then(([instant, series]) => {
+    if (isWorkload) {
+      promises.push(
+        fetchPodBreakdown(namespace, name, kind, appNamespace, appName, project).catch(() => []),
+        fetchPerPodSeries(namespace, name, kind, timeRange, appNamespace, appName, project).catch(() => []),
+      );
+    } else {
+      // Pod: fetch per-pod series for just this pod
+      promises.push(
+        Promise.resolve([]),
+        fetchPerPodSeries(namespace, name, 'Pod', timeRange, appNamespace, appName, project).catch(() => []),
+      );
+    }
+
+    Promise.all(promises)
+      .then(([instant, podList, podSeries]) => {
         setMetrics(instant);
-        setTimeSeries(series);
+        setPods(podList);
+        setPerPod(podSeries);
         setError(null);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [namespace, name, kind, timeRange, appNamespace, appName, project]);
+  }, [namespace, name, kind, isWorkload, timeRange, appNamespace, appName, project]);
 
   React.useEffect(() => {
     setLoading(true);
@@ -77,7 +95,7 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
     );
   }
 
-  if (metrics.length === 0 && timeSeries.length === 0) {
+  if (metrics.length === 0 && perPod.length === 0) {
     return <EmptyState message={`No metrics available for ${kind} ${namespace}/${name}`} />;
   }
 
@@ -89,48 +107,83 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
           { label: 'Kind', value: kind },
           { label: 'Namespace', value: namespace },
           { label: 'Resource', value: name },
+          ...(isWorkload && pods.length > 0 ? [{ label: 'Pods', value: String(pods.length) }] : []),
         ]} />
         <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
       </div>
 
-      {/* Summary cards */}
+      {/* Summary cards (aggregate) */}
       <div style={cardGrid}>
         {metrics.map((m) => (
           <MetricCard key={m.name} label={m.name} value={m.value} unit={m.unit} />
         ))}
       </div>
 
-      {/* Charts */}
-      {timeSeries.length > 0 && (
-        <div style={chartGrid}>
-          {timeSeries.map((ts) => (
-            <SparklineChart
-              key={ts.name}
-              title={ts.name}
-              unit={ts.unit}
-              data={ts.series}
-              color={CHART_COLORS[ts.name] || colors.orange500}
-              height={180}
-              timeRange={timeRange}
-            />
-          ))}
+      {/* Per-pod multi-line charts (Grafana-style) */}
+      {perPod.length > 0 && (
+        <div style={{ marginTop: spacing[5] }}>
+          <SectionHeader title={isWorkload ? 'USAGE BY POD' : 'USAGE OVER TIME'} />
+          <div style={chartGrid}>
+            {perPod.map((pps) => (
+              <MultiSeriesChart
+                key={pps.metric}
+                title={pps.metric}
+                unit={pps.unit}
+                series={pps.pods.map((p) => ({ label: p.pod, series: p.series }))}
+                colors={SERIES_COLORS}
+                height={200}
+                timeRange={timeRange}
+              />
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Pod breakdown */}
-      {showPodBreakdown && (
-        <PodBreakdown
-          namespace={namespace}
-          name={name}
-          kind={kind}
-          appNamespace={appNamespace}
-          appName={appName}
-          project={project}
-        />
+      {/* Pod table (workloads only) */}
+      {isWorkload && pods.length > 0 && (
+        <div style={{ marginTop: spacing[5] }}>
+          <SectionHeader title="POD DETAILS" />
+          <div style={podTableWrap}>
+            <table style={podTable}>
+              <thead>
+                <tr>
+                  <th style={th}>Pod</th>
+                  <th style={th}>CPU</th>
+                  <th style={th}>Memory</th>
+                  <th style={th}>Net RX</th>
+                  <th style={th}>Net TX</th>
+                  <th style={th}>Restarts</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pods.map((p, i) => (
+                  <tr key={p.pod}>
+                    <td style={td}>
+                      <span style={{ ...podDot, background: SERIES_COLORS[i % SERIES_COLORS.length] }} />
+                      {p.pod}
+                    </td>
+                    <td style={td}>{p.cpu}m</td>
+                    <td style={td}>{p.memory} MiB</td>
+                    <td style={td}>{p.netRx} KB/s</td>
+                    <td style={td}>{p.netTx} KB/s</td>
+                    <td style={{
+                      ...td,
+                      color: Number(p.restarts) > 0 ? colors.redText : undefined,
+                    }}>
+                      {p.restarts}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </div>
   );
 };
+
+// --- Styles ---
 
 const headerRow: React.CSSProperties = {
   display: 'flex',
@@ -149,7 +202,43 @@ const cardGrid: React.CSSProperties = {
 
 const chartGrid: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(2, 1fr)',
+  gridTemplateColumns: '1fr 1fr',
   gap: spacing[3],
-  marginTop: spacing[5],
+};
+
+const podTableWrap: React.CSSProperties = {
+  overflowX: 'auto',
+};
+
+const podTable: React.CSSProperties = {
+  width: '100%',
+  borderCollapse: 'collapse',
+  fontFamily: fonts.mono,
+  fontSize: fontSize.sm,
+};
+
+const th: React.CSSProperties = {
+  fontSize: fontSize.xs,
+  fontWeight: fontWeight.semibold,
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+  color: colors.gray500,
+  padding: `${spacing[2]}px ${spacing[3]}px`,
+  borderBottom: `2px solid ${colors.gray200}`,
+  textAlign: 'left',
+};
+
+const td: React.CSSProperties = {
+  padding: `${spacing[2]}px ${spacing[3]}px`,
+  borderBottom: `1px solid ${colors.gray100}`,
+  color: colors.gray800,
+};
+
+const podDot: React.CSSProperties = {
+  display: 'inline-block',
+  width: 8,
+  height: 8,
+  borderRadius: 1,
+  marginRight: spacing[2],
+  verticalAlign: 'middle',
 };
