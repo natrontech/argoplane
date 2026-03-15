@@ -104,19 +104,33 @@ body {
   image-rendering: crisp-edges;
 }
 
-/* Hide the "Argo CD" text wordmark, show "ArgoPlane" via text replacement */
+/* Hide the "Argo CD" text wordmark, replace with "ArgoCD by ArgoPlane" */
 .sidebar__logo__text-logo {
   display: none !important;
 }
 
-/* Add ArgoPlane text next to logo */
+/* "ArgoCD" as primary text */
 .sidebar__logo-container::before {
-  content: "ArgoPlane";
+  content: "ArgoCD";
+  display: block;
   font-family: var(--ap-font-body) !important;
   font-size: 16px;
   font-weight: 700;
   color: var(--ap-gray-100);
   letter-spacing: 0.5px;
+  line-height: 1.2;
+}
+
+/* "by ArgoPlane" as subtitle */
+.sidebar__logo-container::after {
+  content: "by ArgoPlane";
+  display: block;
+  font-family: var(--ap-font-body) !important;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--ap-gray-400);
+  letter-spacing: 0.3px;
+  margin-top: 1px;
 }
 
 .sidebar__logo__character:hover {
@@ -136,15 +150,16 @@ body {
   color: var(--ap-gray-100) !important;
 }
 
-/* Sidebar nav items */
+/* Sidebar nav items: transparent left border on all items prevents layout shift */
 .sidebar__nav-item {
   border-radius: 0 !important;
+  border-left: 3px solid transparent !important;
   transition: background 100ms ease !important;
 }
 
 .sidebar__nav-item--active {
   background: var(--ap-gray-800) !important;
-  border-left: 3px solid var(--ap-orange-500) !important;
+  border-left-color: var(--ap-orange-500) !important;
 }
 
 .sidebar__nav-item:hover {
@@ -880,14 +895,26 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--ap-orange-600) !important;
 }
 
-/* Login form inputs */
-.login .argo-form-row input {
+/* Login form inputs: need high specificity to override ArgoCD defaults */
+.login .argo-form-row input,
+.login__box input[type="text"],
+.login__box input[type="password"],
+.login__box .argo-field input {
   border: 1px solid var(--ap-gray-200) !important;
   border-radius: var(--ap-radius-sm) !important;
   font-family: var(--ap-font-mono) !important;
+  font-size: 13px !important;
+  padding: 8px 12px !important;
+  background: white !important;
+  color: var(--ap-gray-800) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
-.login .argo-form-row input:focus {
+.login .argo-form-row input:focus,
+.login__box input[type="text"]:focus,
+.login__box input[type="password"]:focus,
+.login__box .argo-field input:focus {
   border-color: var(--ap-orange-500) !important;
   outline: none !important;
 }
@@ -1229,13 +1256,18 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--ap-gray-100) !important;
 }
 
-.theme-dark .login .argo-form-row input {
+.theme-dark .login .argo-form-row input,
+.theme-dark .login__box input[type="text"],
+.theme-dark .login__box input[type="password"],
+.theme-dark .login__box .argo-field input {
   border-color: var(--ap-gray-600) !important;
   background: var(--ap-gray-900) !important;
   color: var(--ap-gray-100) !important;
 }
 
-.theme-dark .login .argo-form-row input:focus {
+.theme-dark .login .argo-form-row input:focus,
+.theme-dark .login__box input[type="text"]:focus,
+.theme-dark .login__box input[type="password"]:focus {
   border-color: var(--ap-orange-400) !important;
 }
 
