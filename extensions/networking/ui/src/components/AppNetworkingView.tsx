@@ -5,7 +5,6 @@ import {
   Tag,
   Button,
   Input,
-  SectionHeader,
   colors,
   fonts,
   fontSize,
@@ -16,6 +15,7 @@ import {
 import { fetchPoliciesWithOwnership, fetchEndpoints, fetchFlows } from '../api';
 import {
   PolicySummary,
+  EndpointSummary,
   FlowSummary,
   FlowsResponse,
   ResourceRef,
@@ -23,6 +23,79 @@ import {
   DirectionFilter,
   TimeRange,
 } from '../types';
+
+// ============================================================
+// ArgoCD resource linking
+// ============================================================
+
+function resourceNodeUrl(
+  appNamespace: string,
+  appName: string,
+  group: string,
+  kind: string,
+  namespace: string,
+  name: string,
+  tab?: string,
+): string {
+  const nodeKey = `${group}/${kind}/${namespace}/${name}/0`;
+  const base = `/applications/${appNamespace}/${appName}`;
+  const params = new URLSearchParams({ node: nodeKey });
+  if (tab) params.set('tab', tab);
+  return `${base}?${params.toString()}`;
+}
+
+function podUrl(appNs: string, appName: string, podNamespace: string, podName: string, tab?: string): string {
+  return resourceNodeUrl(appNs, appName, '', 'Pod', podNamespace, podName, tab);
+}
+
+function policyUrl(appNs: string, appName: string, policy: PolicySummary): string {
+  if (policy.scope === 'clusterwide') {
+    return resourceNodeUrl(appNs, appName, 'cilium.io', 'CiliumClusterwideNetworkPolicy', '', policy.name);
+  }
+  return resourceNodeUrl(appNs, appName, 'cilium.io', 'CiliumNetworkPolicy', policy.namespace || '', policy.name);
+}
+
+// ============================================================
+// Policy-to-flow matching
+// ============================================================
+
+function findMatchingPolicies(
+  flow: FlowSummary,
+  policies: PolicySummary[],
+  endpoints: EndpointSummary[],
+): PolicySummary[] {
+  if (flow.verdict !== 'DROPPED') return [];
+
+  // Determine which pod the policy should select.
+  // For ingress drops: the dest pod is being blocked from receiving.
+  // For egress drops: the source pod is being blocked from sending.
+  const targetPod = flow.direction === 'INGRESS' ? flow.destPod : flow.sourcePod;
+  const targetNs = flow.direction === 'INGRESS' ? flow.destNamespace : flow.sourceNamespace;
+  if (!targetPod) return [];
+
+  // Find the endpoint for this pod to get its labels.
+  const ep = endpoints.find((e) => e.name === targetPod && e.namespace === targetNs);
+  const podLabels = ep?.labels || {};
+
+  return policies.filter((p) => {
+    // Direction match: ingress drop needs ingress rules, egress drop needs egress rules.
+    if (flow.direction === 'INGRESS' && !p.hasIngress) return false;
+    if (flow.direction === 'EGRESS' && !p.hasEgress) return false;
+
+    // Namespace match for namespace-scoped policies.
+    if (p.scope === 'namespace' && p.namespace && p.namespace !== targetNs) return false;
+
+    // Selector match: if policy has an endpointSelector, check against pod labels.
+    if (p.endpointSelector && Object.keys(p.endpointSelector).length > 0) {
+      return Object.entries(p.endpointSelector).every(
+        ([k, v]) => podLabels[`k8s:${k}`] === v || podLabels[k] === v,
+      );
+    }
+
+    // No selector (selects all pods in namespace).
+    return true;
+  });
+}
 
 // ============================================================
 // Sorting
@@ -54,7 +127,7 @@ function sortFlows(flows: FlowSummary[], field: SortField, dir: SortDir): FlowSu
 }
 
 // ============================================================
-// Flow table sub-component
+// Shared sub-components
 // ============================================================
 
 const VerdictBadge: React.FC<{ verdict: string }> = ({ verdict }) => {
@@ -96,6 +169,25 @@ const SortableHeader: React.FC<{
   );
 };
 
+/** Clickable resource link styled as inline monospace text. */
+const ResourceLink: React.FC<{
+  href: string;
+  children: React.ReactNode;
+  title?: string;
+  color?: string;
+}> = ({ href, children, title, color }) => (
+  <a
+    href={href}
+    title={title}
+    style={{
+      ...linkStyle,
+      color: color || colors.blueText,
+    }}
+  >
+    {children}
+  </a>
+);
+
 // ============================================================
 // Main component
 // ============================================================
@@ -105,6 +197,7 @@ const PAGE_SIZE = 50;
 
 export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ application, tree }) => {
   const [policies, setPolicies] = React.useState<PolicySummary[]>([]);
+  const [endpoints, setEndpoints] = React.useState<EndpointSummary[]>([]);
   const [flowsResponse, setFlowsResponse] = React.useState<FlowsResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -130,13 +223,35 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
       .map((n: any) => ({ group: n.group || '', kind: n.kind, namespace: n.namespace || '', name: n.name }));
   }, [tree, namespace]);
 
+  // Build a Set of tree node keys for fast "is this resource in our app?" checks.
+  const treeNodeKeys = React.useMemo(() => {
+    const keys = new Set<string>();
+    if (!tree?.nodes) return keys;
+    for (const n of tree.nodes) {
+      keys.add(`${n.group || ''}/${n.kind}/${n.namespace || ''}/${n.name}`);
+    }
+    return keys;
+  }, [tree]);
+
+  const isPodInTree = React.useCallback((podNs: string, podName: string) => {
+    return treeNodeKeys.has(`/Pod/${podNs}/${podName}`);
+  }, [treeNodeKeys]);
+
+  const isPolicyInTree = React.useCallback((policy: PolicySummary) => {
+    if (policy.scope === 'clusterwide') {
+      return treeNodeKeys.has(`cilium.io/CiliumClusterwideNetworkPolicy//${policy.name}`);
+    }
+    return treeNodeKeys.has(`cilium.io/CiliumNetworkPolicy/${policy.namespace || ''}/${policy.name}`);
+  }, [treeNodeKeys]);
+
   const fetchAll = React.useCallback(() => {
     if (!namespace) return;
     const policiesP = fetchPoliciesWithOwnership(namespace, resourceRefs, appNamespace, appName, project).catch(() => [] as PolicySummary[]);
+    const endpointsP = fetchEndpoints(namespace, appNamespace, appName, project).catch(() => [] as EndpointSummary[]);
     const flowsP = fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter, directionFilter).catch(() => ({ flows: [], hubble: false } as FlowsResponse));
 
-    Promise.all([policiesP, flowsP])
-      .then(([pol, fl]) => { setPolicies(pol); setFlowsResponse(fl); setError(null); })
+    Promise.all([policiesP, endpointsP, flowsP])
+      .then(([pol, ep, fl]) => { setPolicies(pol); setEndpoints(ep); setFlowsResponse(fl); setError(null); })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [namespace, appNamespace, appName, project, resourceRefs, timeRange, verdictFilter, directionFilter]);
@@ -171,6 +286,20 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
 
   const sortedFlows = React.useMemo(() => sortFlows(filteredFlows, sortField, sortDir), [filteredFlows, sortField, sortDir]);
 
+  // Count dropped flows per policy for the policies tab.
+  const policyDropCounts = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    const droppedFlows = flows.filter((f) => f.verdict === 'DROPPED');
+    for (const f of droppedFlows) {
+      const matching = findMatchingPolicies(f, policies, endpoints);
+      for (const p of matching) {
+        const key = `${p.scope}-${p.name}`;
+        counts.set(key, (counts.get(key) || 0) + 1);
+      }
+    }
+    return counts;
+  }, [flows, policies, endpoints]);
+
   const totalPages = Math.max(1, Math.ceil(sortedFlows.length / PAGE_SIZE));
   const pageFlows = sortedFlows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
@@ -181,6 +310,18 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
       setSortField(field);
       setSortDir(field === 'time' ? 'desc' : 'asc');
     }
+  };
+
+  // Navigate to policies tab filtered by a specific policy name.
+  const showPolicyInTab = (policyName: string) => {
+    setActiveTab('policies');
+    setSearch(policyName);
+  };
+
+  // Navigate to flows tab filtered by a pod name.
+  const showFlowsForPod = (podName: string) => {
+    setActiveTab('flows');
+    setSearch(podName);
   };
 
   if (loading) return <div style={panel}><Loading /></div>;
@@ -227,10 +368,10 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
 
       {/* === Tabs === */}
       <div style={tabBar}>
-        <button style={tab(activeTab === 'flows')} onClick={() => setActiveTab('flows')}>
-          Flows {hubbleAvailable && `(${filteredFlows.length})`}
+        <button style={tab(activeTab === 'flows')} onClick={() => { setActiveTab('flows'); setSearch(''); }}>
+          Flows {hubbleAvailable && `(${flows.length})`}
         </button>
-        <button style={tab(activeTab === 'policies')} onClick={() => setActiveTab('policies')}>
+        <button style={tab(activeTab === 'policies')} onClick={() => { setActiveTab('policies'); setSearch(''); }}>
           Policies ({policies.length})
         </button>
       </div>
@@ -270,12 +411,23 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
                           <SortableHeader label="Proto" field="protocol" currentField={sortField} currentDir={sortDir} onSort={handleSort} />
                           <SortableHeader label="Port" field="port" currentField={sortField} currentDir={sortDir} onSort={handleSort} />
                           <th style={thStyle}>Drop Reason</th>
-                          <th style={thStyle}>Summary</th>
+                          <th style={thStyle}>Policy</th>
                         </tr>
                       </thead>
                       <tbody>
                         {pageFlows.map((f, i) => (
-                          <FlowRow key={`${f.time}-${i}`} flow={f} namespace={namespace} />
+                          <FlowRow
+                            key={`${f.time}-${i}`}
+                            flow={f}
+                            namespace={namespace}
+                            appNamespace={appNamespace}
+                            appName={appName}
+                            policies={policies}
+                            endpoints={endpoints}
+                            isPodInTree={isPodInTree}
+                            isPolicyInTree={isPolicyInTree}
+                            onPolicyClick={showPolicyInTab}
+                          />
                         ))}
                       </tbody>
                     </table>
@@ -312,12 +464,21 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
                     <th style={thStyle}>Selector</th>
                     <th style={thStyle}>Ingress</th>
                     <th style={thStyle}>Egress</th>
+                    <th style={thStyle}>Drops</th>
                     <th style={thStyle}>Created</th>
                   </tr>
                 </thead>
                 <tbody>
                   {policies.map((p) => (
-                    <PolicyRow key={`${p.scope}-${p.name}`} policy={p} />
+                    <PolicyRow
+                      key={`${p.scope}-${p.name}`}
+                      policy={p}
+                      appNamespace={appNamespace}
+                      appName={appName}
+                      isPolicyInTree={isPolicyInTree}
+                      dropCount={policyDropCounts.get(`${p.scope}-${p.name}`) || 0}
+                      onDropCountClick={() => { setActiveTab('flows'); setVerdictFilter('dropped'); setSearch(''); }}
+                    />
                   ))}
                 </tbody>
               </table>
@@ -333,7 +494,17 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
 // Row components
 // ============================================================
 
-const FlowRow: React.FC<{ flow: FlowSummary; namespace: string }> = ({ flow: f, namespace }) => {
+const FlowRow: React.FC<{
+  flow: FlowSummary;
+  namespace: string;
+  appNamespace: string;
+  appName: string;
+  policies: PolicySummary[];
+  endpoints: EndpointSummary[];
+  isPodInTree: (ns: string, name: string) => boolean;
+  isPolicyInTree: (policy: PolicySummary) => boolean;
+  onPolicyClick: (name: string) => void;
+}> = ({ flow: f, namespace, appNamespace, appName, policies, endpoints, isPodInTree, isPolicyInTree, onPolicyClick }) => {
   const srcDisplay = f.sourcePod
     ? (f.sourceNamespace !== namespace ? `${f.sourceNamespace}/${f.sourcePod}` : f.sourcePod)
     : f.sourceIP || 'unknown';
@@ -341,37 +512,111 @@ const FlowRow: React.FC<{ flow: FlowSummary; namespace: string }> = ({ flow: f, 
     ? (f.destNamespace !== namespace ? `${f.destNamespace}/${f.destPod}` : f.destPod)
     : f.destDNS || f.destIP || 'unknown';
 
-  const time = formatTime(f.time);
+  const srcLinkable = f.sourcePod && isPodInTree(f.sourceNamespace, f.sourcePod);
+  const dstLinkable = f.destPod && isPodInTree(f.destNamespace, f.destPod);
+
   const isDrop = f.verdict === 'DROPPED';
+
+  // Find matching policies for dropped flows.
+  const matchingPolicies = React.useMemo(
+    () => isDrop ? findMatchingPolicies(f, policies, endpoints) : [],
+    [f, isDrop, policies, endpoints],
+  );
 
   return (
     <tr style={isDrop ? dropRowStyle : undefined}>
-      <td style={tdStyle}>{time}</td>
+      <td style={tdStyle}>{formatTime(f.time)}</td>
       <td style={tdStyle}><VerdictBadge verdict={f.verdict} /></td>
       <td style={tdStyle}><DirectionBadge direction={f.direction} /></td>
-      <td style={{ ...tdStyle, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={srcDisplay}>{srcDisplay}</td>
-      <td style={{ ...tdStyle, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={dstDisplay}>{dstDisplay}</td>
+      <td style={ellipsisTd} title={srcDisplay}>
+        {srcLinkable ? (
+          <ResourceLink
+            href={podUrl(appNamespace, appName, f.sourceNamespace, f.sourcePod, 'extension:Flows')}
+            title={`Open ${f.sourcePod} flows`}
+          >
+            {srcDisplay}
+          </ResourceLink>
+        ) : srcDisplay}
+      </td>
+      <td style={ellipsisTd} title={dstDisplay}>
+        {dstLinkable ? (
+          <ResourceLink
+            href={podUrl(appNamespace, appName, f.destNamespace, f.destPod, 'extension:Flows')}
+            title={`Open ${f.destPod} flows`}
+          >
+            {dstDisplay}
+          </ResourceLink>
+        ) : dstDisplay}
+      </td>
       <td style={tdStyle}>{f.protocol}</td>
       <td style={tdStyle}>{f.destPort || '-'}</td>
       <td style={{ ...tdStyle, color: f.dropReason ? colors.redText : colors.gray400 }}>
         {f.dropReason || '-'}
       </td>
-      <td style={{ ...tdStyle, color: colors.gray500, maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={f.summary}>
-        {f.summary}
+      <td style={tdStyle}>
+        {matchingPolicies.length > 0 ? (
+          <div style={policyChipRow}>
+            {matchingPolicies.slice(0, 2).map((p) => {
+              const inTree = isPolicyInTree(p);
+              return inTree ? (
+                <a
+                  key={p.name}
+                  href={policyUrl(appNamespace, appName, p)}
+                  style={policyChipLink}
+                  title={`Open ${p.name} in resource tree`}
+                >
+                  {p.name}
+                </a>
+              ) : (
+                <span
+                  key={p.name}
+                  style={policyChipPlain}
+                  onClick={() => onPolicyClick(p.name)}
+                  title={`View ${p.name} in policies tab`}
+                >
+                  {p.name}
+                </span>
+              );
+            })}
+            {matchingPolicies.length > 2 && (
+              <span style={policyChipPlain}>+{matchingPolicies.length - 2}</span>
+            )}
+          </div>
+        ) : isDrop ? (
+          <span style={{ color: colors.gray400, fontSize: fontSize.xs }}>unknown</span>
+        ) : (
+          <span style={{ color: colors.gray300, fontSize: fontSize.xs }}>-</span>
+        )}
       </td>
     </tr>
   );
 };
 
-const PolicyRow: React.FC<{ policy: PolicySummary }> = ({ policy: p }) => {
+const PolicyRow: React.FC<{
+  policy: PolicySummary;
+  appNamespace: string;
+  appName: string;
+  isPolicyInTree: (policy: PolicySummary) => boolean;
+  dropCount: number;
+  onDropCountClick: () => void;
+}> = ({ policy: p, appNamespace, appName, isPolicyInTree, dropCount, onDropCountClick }) => {
   const sel = p.endpointSelector
     ? Object.entries(p.endpointSelector).map(([k, v]) => `${k}=${v}`).join(', ')
     : 'all pods';
   const created = formatTime(p.creationTimestamp);
+  const inTree = isPolicyInTree(p);
 
   return (
     <tr>
-      <td style={{ ...tdStyle, fontWeight: fontWeight.semibold }}>{p.name}</td>
+      <td style={{ ...tdStyle, fontWeight: fontWeight.semibold }}>
+        {inTree ? (
+          <ResourceLink href={policyUrl(appNamespace, appName, p)} title={`Open ${p.name} in resource tree`}>
+            {p.name}
+          </ResourceLink>
+        ) : (
+          p.name
+        )}
+      </td>
       <td style={tdStyle}>
         <Tag variant={p.scope === 'clusterwide' ? 'orange' : 'gray'}>{p.scope}</Tag>
       </td>
@@ -386,6 +631,15 @@ const PolicyRow: React.FC<{ policy: PolicySummary }> = ({ policy: p }) => {
       </td>
       <td style={tdStyle}>
         {p.hasEgress ? <span style={{ color: colors.orange600 }}>{p.egressRuleCount} rules</span> : <span style={{ color: colors.gray400 }}>-</span>}
+      </td>
+      <td style={tdStyle}>
+        {dropCount > 0 ? (
+          <span style={dropCountLink} onClick={onDropCountClick} title="View dropped flows">
+            {dropCount} drops
+          </span>
+        ) : (
+          <span style={{ color: colors.gray400 }}>0</span>
+        )}
       </td>
       <td style={tdStyle}>{created}</td>
     </tr>
@@ -550,8 +804,68 @@ const tdStyle: React.CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
+const ellipsisTd: React.CSSProperties = {
+  ...tdStyle,
+  maxWidth: 180,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+
 const dropRowStyle: React.CSSProperties = {
   background: colors.redLight,
+};
+
+const linkStyle: React.CSSProperties = {
+  fontFamily: fonts.mono,
+  fontSize: fontSize.sm,
+  textDecoration: 'none',
+  cursor: 'pointer',
+  borderBottom: `1px dotted currentColor`,
+};
+
+const policyChipRow: React.CSSProperties = {
+  display: 'flex',
+  gap: 4,
+  flexWrap: 'wrap',
+  alignItems: 'center',
+};
+
+const policyChipBase: React.CSSProperties = {
+  display: 'inline-block',
+  padding: '1px 6px',
+  borderRadius: 2,
+  fontSize: 10,
+  fontFamily: fonts.mono,
+  fontWeight: fontWeight.medium,
+  maxWidth: 120,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  cursor: 'pointer',
+};
+
+const policyChipLink: React.CSSProperties = {
+  ...policyChipBase,
+  background: colors.blueLight,
+  color: colors.blueText,
+  textDecoration: 'none',
+  border: `1px solid ${colors.blue}`,
+};
+
+const policyChipPlain: React.CSSProperties = {
+  ...policyChipBase,
+  background: colors.gray100,
+  color: colors.gray600,
+  border: `1px solid ${colors.gray200}`,
+};
+
+const dropCountLink: React.CSSProperties = {
+  color: colors.redText,
+  fontFamily: fonts.mono,
+  fontSize: fontSize.sm,
+  cursor: 'pointer',
+  borderBottom: `1px dotted ${colors.redText}`,
 };
 
 const notice: React.CSSProperties = {
