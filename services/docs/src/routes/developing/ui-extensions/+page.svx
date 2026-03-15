@@ -1,0 +1,99 @@
+---
+title: UI Extensions
+description: Building React/TypeScript ArgoCD UI extensions
+---
+
+# UI Extensions
+
+ArgoCD extensions run inside ArgoCD's React runtime. React is provided globally by ArgoCD. Do not bundle React.
+
+## Build configuration
+
+Configure webpack externals to use ArgoCD's React:
+
+```javascript
+externals: { react: "React", "react-dom": "ReactDOM" }
+```
+
+The build output must be a single JS file matching `extension(.*)\.js`, built as IIFE or UMD (not ES modules).
+
+## Extension registration
+
+Every extension entry point registers via `window.extensionsAPI`:
+
+```typescript
+((window: any) => {
+  window.extensionsAPI.registerResourceExtension(
+    MyComponent,
+    'apps',           // Kubernetes API group ('' for core)
+    'Deployment',     // Kubernetes resource kind
+    'Metrics',        // Tab title
+    { icon: 'fa-chart-line' }
+  );
+})(window);
+```
+
+### Registration methods
+
+| Method | Use case |
+|--------|----------|
+| `registerResourceExtension(component, group, kind, title, opts?)` | Resource detail tabs |
+| `registerSystemLevelExtension(component, title, path, icon)` | Sidebar pages |
+| `registerStatusPanelExtension(component, title, id, flyout?)` | App status bar items |
+| `registerAppViewExtension(component, title, icon, shouldDisplay?)` | App detail views |
+| `registerTopBarActionMenuExt(component, title, id, flyout?, shouldDisplay?, icon?, isMiddle?)` | Action buttons |
+
+## Component props
+
+Resource extensions receive:
+
+```typescript
+interface ExtensionProps {
+  resource: any;      // Full Kubernetes resource object
+  tree: any;          // Resource tree (parent/child relationships)
+  application: any;   // ArgoCD Application object
+}
+```
+
+Status panel extensions receive `openFlyout()` in props for sliding panels.
+
+## Proxy API calls
+
+Extensions call their backend through ArgoCD's proxy:
+
+```typescript
+const response = await fetch(
+  `/extensions/metrics/api/v1/query?query=${encodeURIComponent(query)}`,
+  {
+    headers: {
+      'Argocd-Application-Name': `${namespace}:${appName}`,
+      'Argocd-Project-Name': project,
+    },
+  }
+);
+```
+
+The `argocd.token` cookie is sent automatically. ArgoCD validates auth before proxying.
+
+## Shared component library
+
+The `@argoplane/shared` package provides React components and theme tokens:
+
+```typescript
+import {
+  StatusBadge, SectionHeader, MetricCard, Card,
+  Button, DataTable, Cell, MetaRow, EmptyState,
+  Loading, Tag, ProgressBar, Input, PixelDots
+} from '@argoplane/shared';
+```
+
+All components follow the ArgoPlane design system: 4px grid, 1px borders, max 4px radius, no shadows.
+
+## TypeScript conventions
+
+- Strict mode enabled
+- No `any` except for ArgoCD extension API types (which are untyped)
+- Prefer `interface` over `type` for object shapes
+- Components: PascalCase (`MetricsPanel.tsx`)
+- Hooks: `use` prefix (`useMetrics.ts`)
+- Types: PascalCase, no `I` prefix (`BackupStatus`)

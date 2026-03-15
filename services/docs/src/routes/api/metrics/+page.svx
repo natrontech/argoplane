@@ -1,0 +1,82 @@
+---
+title: Metrics API
+description: Metrics extension backend API reference
+---
+
+# Metrics API
+
+The metrics backend exposes a JSON HTTP API consumed by the UI extension via ArgoCD's proxy at `/extensions/metrics/`.
+
+## Endpoints
+
+### Query metrics
+
+```
+GET /api/v1/metrics?query={promql}&start={time}&end={time}&step={duration}
+```
+
+Query Prometheus for time-series data.
+
+**Parameters:**
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `query` | string | Yes | PromQL query expression |
+| `start` | string | No | Start time (RFC3339 or Unix timestamp) |
+| `end` | string | No | End time (RFC3339 or Unix timestamp) |
+| `step` | string | No | Query resolution step (e.g., `15s`, `1m`) |
+
+**Response:**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "resultType": "matrix",
+    "result": [
+      {
+        "metric": { "pod": "guestbook-ui-abc123" },
+        "values": [[1710000000, "0.05"], [1710000015, "0.06"]]
+      }
+    ]
+  }
+}
+```
+
+### List label values
+
+```
+GET /api/v1/metrics/labels?label={name}&match={selector}
+```
+
+List available values for a Prometheus label.
+
+**Parameters:**
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `label` | string | Yes | Label name to query |
+| `match` | string | No | Series selector to filter results |
+
+**Response:**
+
+```json
+{
+  "status": "success",
+  "data": ["guestbook-ui-abc123", "guestbook-ui-def456"]
+}
+```
+
+## Headers
+
+All requests receive ArgoCD identity headers. The backend uses `Argocd-Target-Cluster-URL` to determine which Prometheus instance to query.
+
+## Error responses
+
+```json
+{
+  "status": "error",
+  "error": "bad_data",
+  "message": "invalid PromQL expression"
+}
+```

@@ -1,0 +1,92 @@
+---
+title: Networking API
+description: Networking extension backend API reference
+---
+
+# Networking API
+
+The networking backend exposes a JSON HTTP API consumed by the UI extension via ArgoCD's proxy at `/extensions/networking/`.
+
+## Endpoints
+
+### List policies
+
+```
+GET /api/v1/policies?namespace={ns}&app={appName}
+```
+
+List Cilium network policies for an application or namespace.
+
+**Parameters:**
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `namespace` | string | No | Filter by namespace |
+| `app` | string | No | Filter by ArgoCD application name |
+
+**Response:**
+
+```json
+{
+  "policies": [
+    {
+      "name": "allow-guestbook-ingress",
+      "namespace": "default",
+      "kind": "CiliumNetworkPolicy",
+      "endpointSelector": { "matchLabels": { "app": "guestbook-ui" } },
+      "ingressRuleCount": 2,
+      "egressRuleCount": 0
+    }
+  ],
+  "clusterPolicies": [
+    {
+      "name": "platform-default-deny",
+      "kind": "CiliumClusterwideNetworkPolicy",
+      "endpointSelector": {},
+      "ingressRuleCount": 0,
+      "egressRuleCount": 1
+    }
+  ]
+}
+```
+
+### Query flows
+
+```
+GET /api/v1/flows?namespace={ns}&pod={podName}&since={duration}
+```
+
+Query Hubble network flows.
+
+**Parameters:**
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `namespace` | string | No | Filter by namespace |
+| `pod` | string | No | Filter by pod name |
+| `since` | string | No | Time window (e.g., `5m`, `1h`) |
+
+**Response:**
+
+```json
+{
+  "flows": [
+    {
+      "time": "2026-03-15T10:30:00Z",
+      "source": { "namespace": "default", "pod": "guestbook-ui-abc123", "ip": "10.0.1.5" },
+      "destination": { "namespace": "default", "pod": "redis-master-def456", "ip": "10.0.1.10", "port": 6379 },
+      "verdict": "FORWARDED",
+      "protocol": "TCP"
+    }
+  ]
+}
+```
+
+## Error responses
+
+```json
+{
+  "error": "hubble_unavailable",
+  "message": "Hubble relay not reachable"
+}
+```
