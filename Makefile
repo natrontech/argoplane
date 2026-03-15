@@ -146,7 +146,7 @@ deploy-extensions: ## Deploy extension backends, UI bundles, and proxy config to
 	@kubectl -n $(ARGOCD_NS) rollout status deployment argocd-server --timeout=120s
 	@echo "==> Loading UI extension bundles into argocd-server"
 	@ARGOCD_POD=$$(kubectl get pods -n $(ARGOCD_NS) -l app.kubernetes.io/name=argocd-server \
-		-o jsonpath='{.items[0].metadata.name}'); \
+		--field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}'); \
 	kubectl exec -n $(ARGOCD_NS) $$ARGOCD_POD -- mkdir -p /tmp/extensions; \
 	for ext in $(EXTENSIONS); do \
 		echo "==> Loading $$ext UI bundle"; \
