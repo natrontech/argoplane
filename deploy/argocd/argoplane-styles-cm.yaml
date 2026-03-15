@@ -1,0 +1,10 @@
+# ArgoPlane custom styles ConfigMap
+# Generated from deploy/argocd/argoplane-styles.css
+# Mount into argocd-server at /shared/app/custom/
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-styles-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: argoplane
