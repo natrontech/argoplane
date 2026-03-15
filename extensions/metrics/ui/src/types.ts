@@ -17,6 +17,11 @@ export interface TimeSeriesMetric {
   series: DataPoint[];
 }
 
+export interface NamedSeries {
+  label: string;
+  series: DataPoint[];
+}
+
 export interface PodMetric {
   pod: string;
   cpu: string;
@@ -27,7 +32,7 @@ export interface PodMetric {
 }
 
 export interface CustomQueryResult {
-  series?: DataPoint[];
+  multiSeries?: NamedSeries[];
   samples?: Array<{ labels: Record<string, string>; value: number }>;
   error?: string;
 }

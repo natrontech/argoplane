@@ -17,7 +17,7 @@ import { ExtensionProps, MetricData, TimeSeriesMetric, TimeRange } from '../type
 import { SparklineChart } from './SparklineChart';
 import { TimeRangeSelector } from './TimeRangeSelector';
 import { PodBreakdown } from './PodBreakdown';
-import { CustomQuery } from './CustomQuery';
+import { QueryBuilder } from './QueryBuilder';
 
 const CHART_COLORS: Record<string, string> = {
   'CPU Usage': colors.orange500,
@@ -89,8 +89,8 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
 
   return (
     <div style={panel}>
-      {/* Custom query at the top */}
-      <CustomQuery
+      {/* Query builder at the top */}
+      <QueryBuilder
         namespace={namespace}
         appNamespace={appNamespace}
         appName={appName}

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -20,6 +21,11 @@ func NewCustom(prom *prometheus.Client) *Custom {
 	return &Custom{prom: prom}
 }
 
+type namedSeries struct {
+	Label  string      `json:"label"`
+	Series []dataPoint `json:"series"`
+}
+
 // Handle serves GET /api/v1/query.
 func (h *Custom) Handle(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("query")
@@ -30,7 +36,6 @@ func (h *Custom) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Basic safety: reject queries that look like they modify state
 	lower := strings.ToLower(query)
 	if strings.Contains(lower, "delete") || strings.Contains(lower, "drop") {
 		http.Error(w, `{"error":"query not allowed"}`, http.StatusForbidden)
@@ -46,26 +51,29 @@ func (h *Custom) Handle(w http.ResponseWriter, r *http.Request) {
 		end := time.Now()
 		start, step := rangeParams(timeRange, end)
 
-		series, err := h.prom.QueryRange(r.Context(), query, start, end, step)
+		allSeries, err := h.prom.QueryRange(r.Context(), query, start, end, step)
 		if err != nil {
 			slog.Warn("custom range query failed", "error", err)
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"error":  err.Error(),
-				"series": []dataPoint{},
+				"error":      err.Error(),
+				"multiSeries": []namedSeries{},
 			})
 			return
 		}
 
-		var result []dataPoint
-		if len(series) > 0 {
-			for _, dp := range series[0].Values {
-				result = append(result, dataPoint{
+		var result []namedSeries
+		for _, s := range allSeries {
+			label := seriesLabel(s.Metric)
+			ns := namedSeries{Label: label}
+			for _, dp := range s.Values {
+				ns.Series = append(ns.Series, dataPoint{
 					Time:  dp.Time.UTC().Format(time.RFC3339),
 					Value: dp.Value,
 				})
 			}
+			result = append(result, ns)
 		}
-		json.NewEncoder(w).Encode(map[string]interface{}{"series": result})
+		json.NewEncoder(w).Encode(map[string]interface{}{"multiSeries": result})
 	} else {
 		samples, err := h.prom.Query(r.Context(), query)
 		if err != nil {
@@ -90,4 +98,25 @@ func (h *Custom) Handle(w http.ResponseWriter, r *http.Request) {
 		}
 		json.NewEncoder(w).Encode(map[string]interface{}{"samples": results})
 	}
+}
+
+// seriesLabel builds a human-readable label from metric labels.
+func seriesLabel(labels map[string]string) string {
+	// Try common grouping labels
+	for _, key := range []string{"pod", "container", "namespace", "node", "instance"} {
+		if v, ok := labels[key]; ok && v != "" {
+			return fmt.Sprintf("%s=%s", key, v)
+		}
+	}
+	// Fallback: join all non-name labels
+	var parts []string
+	for k, v := range labels {
+		if k != "__name__" {
+			parts = append(parts, fmt.Sprintf("%s=%s", k, v))
+		}
+	}
+	if len(parts) > 0 {
+		return strings.Join(parts, ", ")
+	}
+	return "series"
 }
