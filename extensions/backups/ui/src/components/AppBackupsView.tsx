@@ -22,6 +22,7 @@ import {
   ResourceRef,
   RestoreOptions,
 } from '../types';
+import { LogViewer } from './LogViewer';
 
 // ============================================================
 // Helpers
@@ -420,10 +421,11 @@ const ScheduleDetail: React.FC<{
           )}
         </div>
         <div style={{ marginTop: spacing[3] }}>
-          <Button primary onClick={() => onTrigger(s.name, s.ttl)} disabled={s.paused}>
+          <Button primary onClick={() => onTrigger(s.name, s.ttl)} disabled={s.paused || s.ownership === 'platform'}>
             Trigger Backup
           </Button>
           {s.paused && <span style={{ marginLeft: spacing[2], fontSize: fontSize.sm, color: colors.gray400 }}>Schedule is paused</span>}
+          {s.ownership === 'platform' && !s.paused && <span style={{ marginLeft: spacing[2], fontSize: fontSize.sm, color: colors.gray400 }}>Cannot trigger platform schedules (may affect other namespaces)</span>}
         </div>
       </div>
     </td>
@@ -592,28 +594,6 @@ const RestoreDetail: React.FC<{ restore: RestoreSummary; appNamespace: string; a
 };
 
 // ============================================================
-// Log Viewer (inline)
-// ============================================================
-
-const LogViewer: React.FC<{ title: string; content: string; onClose: () => void }> = ({ title, content, onClose }) => (
-  <div style={{ marginTop: spacing[3], border: `1px solid ${colors.gray200}`, borderRadius: 4, overflow: 'hidden' }}>
-    <div style={{
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: `${spacing[2]}px ${spacing[3]}px`, background: colors.gray100,
-      borderBottom: `1px solid ${colors.gray200}`,
-    }}>
-      <span style={{ fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.gray500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{title}</span>
-      <span onClick={onClose} style={{ cursor: 'pointer', fontSize: fontSize.sm, color: colors.gray400, fontWeight: fontWeight.semibold }}>x</span>
-    </div>
-    <pre style={{
-      margin: 0, padding: spacing[3], background: colors.gray800, color: colors.gray100,
-      fontSize: fontSize.xs, fontFamily: fonts.mono, lineHeight: 1.5,
-      maxHeight: 400, overflowY: 'auto', overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all',
-    }}>{content || '(empty)'}</pre>
-  </div>
-);
-
-// ============================================================
 // Main component
 // ============================================================
 
@@ -682,6 +662,7 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
   const schedules = overview?.schedules || [];
   const storageLocations = overview?.storageLocations || [];
   const bsl = React.useMemo(() => bslStatus(storageLocations), [storageLocations]);
+  const platformScheduleNames = React.useMemo(() => new Set(schedules.filter(s => s.ownership === 'platform').map(s => s.name)), [schedules]);
 
   const handleCreateBackup = React.useCallback(async (ttl: string) => {
     try {
@@ -916,8 +897,11 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
                             {b.errors === 0 && b.warnings === 0 && <span style={{ color: colors.gray400 }}>-</span>}
                           </td>
                           <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
-                            {b.phase === 'Completed' && (
+                            {b.phase === 'Completed' && !platformScheduleNames.has(b.scheduleName || '') && (
                               <Button onClick={() => setRestoreTarget(b)}>Restore</Button>
+                            )}
+                            {b.phase === 'Completed' && b.scheduleName && platformScheduleNames.has(b.scheduleName) && (
+                              <span style={{ fontSize: fontSize.xs, color: colors.gray400 }}>Platform backup</span>
                             )}
                           </td>
                         </tr>

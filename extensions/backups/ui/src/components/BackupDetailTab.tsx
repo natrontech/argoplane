@@ -14,6 +14,7 @@ import {
 } from '@argoplane/shared';
 import { fetchRestores, createRestore, fetchLogs } from '../api';
 import { RestoreSummary } from '../types';
+import { LogViewer } from './LogViewer';
 
 // ============================================================
 // Helpers
@@ -244,20 +245,8 @@ export const BackupDetailTab: React.FC<{ resource: any; tree?: any; application:
 
       {/* Inline log viewer */}
       {logsContent && (
-        <div style={{ marginBottom: spacing[4], border: `1px solid ${colors.gray200}`, borderRadius: 4, overflow: 'hidden' }}>
-          <div style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: `${spacing[2]}px ${spacing[3]}px`, background: colors.gray100,
-            borderBottom: `1px solid ${colors.gray200}`,
-          }}>
-            <span style={{ fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.gray500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{logsContent.title}</span>
-            <span onClick={() => setLogsContent(null)} style={{ cursor: 'pointer', fontSize: fontSize.sm, color: colors.gray400, fontWeight: fontWeight.semibold }}>x</span>
-          </div>
-          <pre style={{
-            margin: 0, padding: spacing[3], background: colors.gray800, color: colors.gray100,
-            fontSize: fontSize.xs, fontFamily: fonts.mono, lineHeight: 1.5,
-            maxHeight: 400, overflowY: 'auto', overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all',
-          }}>{logsContent.text || '(empty)'}</pre>
+        <div style={{ marginBottom: spacing[4] }}>
+          <LogViewer title={logsContent.title} content={logsContent.text} onClose={() => setLogsContent(null)} />
         </div>
       )}
 
