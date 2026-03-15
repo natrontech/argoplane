@@ -161,6 +161,7 @@ body {
 .sidebar__nav-item {
   border-radius: 0 !important;
   border-left: 3px solid transparent !important;
+  padding-left: 12px !important;
   transition: background 100ms ease !important;
 }
 
@@ -223,26 +224,27 @@ body {
   font-family: var(--ap-font-body) !important;
 }
 
-/* Primary action buttons: orange */
+/* Primary action buttons (filled): use filter for hover so
+   inline-styled colored buttons (green sync, red delete) darken
+   instead of turning orange */
 .argo-button--base-o {
-  background: var(--ap-orange-500) !important;
-  border-color: var(--ap-orange-600) !important;
   color: white !important;
   border-radius: var(--ap-radius-sm) !important;
+  transition: filter 100ms ease !important;
 }
 
 .argo-button--base-o:hover {
-  background: var(--ap-orange-600) !important;
+  filter: brightness(0.88) !important;
 }
 
-/* Outlined buttons */
+/* Outlined / secondary buttons */
 .argo-button--base:not(.argo-button--base-o) {
   border-color: var(--ap-gray-200) !important;
 }
 
 .argo-button--base:not(.argo-button--base-o):hover {
   border-color: var(--ap-orange-300) !important;
-  background: var(--ap-orange-50) !important;
+  background: rgba(232, 147, 90, 0.08) !important;
 }
 
 /* Small buttons */
@@ -1287,7 +1289,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .theme-dark .argo-button--base:not(.argo-button--base-o):hover {
   border-color: var(--ap-orange-400) !important;
-  background: var(--ap-gray-700) !important;
+  background: rgba(232, 147, 90, 0.1) !important;
 }
 
 /* Login */
