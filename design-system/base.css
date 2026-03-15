@@ -1,0 +1,151 @@
+/* ================================================================
+   ArgoPlane Base Styles
+   Reset, typography, and foundational element styles.
+   Requires: tokens.css
+   ================================================================ */
+
+/* --- Minimal Reset --- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* --- Document --- */
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  line-height: var(--ap-leading-normal);
+  tab-size: 4;
+}
+
+body {
+  font-family: var(--ap-font-body);
+  font-size: var(--ap-text-md);
+  font-weight: var(--ap-weight-normal);
+  color: var(--ap-color-text);
+  background: var(--ap-color-bg);
+  line-height: var(--ap-leading-normal);
+}
+
+/* --- Typography --- */
+
+h1, h2, h3, h4 {
+  font-weight: var(--ap-weight-semibold);
+  line-height: var(--ap-leading-tight);
+  color: var(--ap-color-text);
+}
+
+h1 { font-size: var(--ap-text-xl); }
+h2 { font-size: var(--ap-text-lg); }
+h3 { font-size: var(--ap-text-md); font-weight: var(--ap-weight-medium); }
+h4 { font-size: var(--ap-text-sm); font-weight: var(--ap-weight-medium); }
+
+p {
+  font-size: var(--ap-text-md);
+  color: var(--ap-color-text);
+  line-height: var(--ap-leading-normal);
+}
+
+small {
+  font-size: var(--ap-text-xs);
+  color: var(--ap-color-text-muted);
+}
+
+strong {
+  font-weight: var(--ap-weight-semibold);
+}
+
+code, pre, kbd, samp {
+  font-family: var(--ap-font-mono);
+  font-size: var(--ap-text-sm);
+}
+
+code {
+  background: var(--ap-color-surface);
+  border: var(--ap-border);
+  border-radius: var(--ap-radius-sm);
+  padding: 1px 6px;
+  color: var(--ap-orange-600);
+}
+
+pre {
+  background: var(--ap-color-surface);
+  border: var(--ap-border);
+  border-radius: var(--ap-radius-md);
+  padding: var(--ap-space-4);
+  overflow-x: auto;
+  font-size: var(--ap-text-sm);
+  line-height: var(--ap-leading-normal);
+}
+
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+}
+
+a {
+  color: var(--ap-color-accent);
+  text-decoration: none;
+  transition: color var(--ap-duration-fast);
+}
+
+a:hover {
+  color: var(--ap-color-accent-hover);
+}
+
+/* --- Lists --- */
+
+ul, ol {
+  padding-left: var(--ap-space-5);
+}
+
+li {
+  font-size: var(--ap-text-md);
+  line-height: var(--ap-leading-normal);
+  margin-bottom: var(--ap-space-1);
+}
+
+/* --- Horizontal Rule --- */
+
+hr {
+  border: none;
+  height: var(--ap-border-width);
+  background: var(--ap-color-border);
+  margin: var(--ap-space-6) 0;
+}
+
+/* --- Images --- */
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* --- Selection --- */
+
+::selection {
+  background: var(--ap-orange-100);
+  color: var(--ap-gray-800);
+}
+
+[data-theme="dark"] ::selection,
+.theme-dark ::selection {
+  background: var(--ap-orange-600);
+  color: var(--ap-white);
+}
+
+/* --- Focus --- */
+
+:focus-visible {
+  outline: 2px solid var(--ap-color-accent);
+  outline-offset: 2px;
+}

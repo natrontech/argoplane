@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArgoPlane Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../design-system/tokens.css">
+<link rel="stylesheet" href="../../design-system/base.css">
+<link rel="stylesheet" href="../../design-system/components.css">
+<link rel="stylesheet" href="../../design-system/utilities.css">
+<link rel="stylesheet" href="styleguide.css">
+</head>
+<body>
+<div class="sg-layout">
+  <nav class="sg-sidebar">
+    <div class="sg-logo">
+      <div class="sg-logo__pixels">
+        <span></span><span></span><span></span><span></span>
+      </div>
+      <span class="ap-font-semibold">ArgoPlane</span>
+      <span class="ap-text-faint ap-text-xs">Design System</span>
+    </div>
+    <div class="ap-sidenav">
+      <a class="ap-sidenav__item ap-sidenav__item--active" href="index.html">Overview</a>
+      <a class="ap-sidenav__item" href="tokens.html">Tokens</a>
+      <a class="ap-sidenav__item" href="components.html">Components</a>
+      <a class="ap-sidenav__item" href="patterns.html">Patterns</a>
+    </div>
+    <div class="sg-sidebar__footer">
+      <label class="ap-toggle sg-theme-toggle">
+        <input type="checkbox" id="theme-toggle">
+        <span class="ap-toggle__track">
+          <span class="ap-toggle__thumb"></span>
+        </span>
+        <span class="ap-text-xs ap-text-muted ap-ml-auto" style="margin-left: 8px;">Dark mode</span>
+      </label>
+    </div>
+  </nav>
+
+  <main class="sg-main">
+    <div class="sg-content">
+      <h1>ArgoPlane Design System</h1>
+      <p class="ap-text-muted ap-mt-2">
+        Minimal pixel art meets modern developer tooling. One design system for all ArgoPlane surfaces:
+        ArgoCD extensions, self-service portal, documentation, and landing page.
+      </p>
+
+      <div class="ap-divider ap-mt-6 ap-mb-6"></div>
+
+      <div class="ap-section-header"><span>PHILOSOPHY</span></div>
+      <div class="ap-grid-2 ap-gap-4">
+        <div class="ap-card">
+          <h3>Pixel-crisp, not retro</h3>
+          <p class="ap-text-sm ap-text-muted ap-mt-2">
+            Everything on a 4px grid. Crisp 1px borders. 8x8 status squares. That satisfying feeling of
+            something perfectly aligned, without the 8-bit nostalgia.
+          </p>
+        </div>
+        <div class="ap-card">
+          <h3>Pastel palette</h3>
+          <p class="ap-text-sm ap-text-muted ap-mt-2">
+            Warm grays, soft status colors, and a pastel orange accent. Easy on the eyes during long
+            debugging sessions. Pops enough to convey meaning.
+          </p>
+        </div>
+        <div class="ap-card">
+          <h3>Flat and honest</h3>
+          <p class="ap-text-sm ap-text-muted ap-mt-2">
+            No shadows, no gradients, no animations over 150ms. Information density over visual flair.
+            Every pixel earns its place.
+          </p>
+        </div>
+        <div class="ap-card">
+          <h3>One system, all surfaces</h3>
+          <p class="ap-text-sm ap-text-muted ap-mt-2">
+            Same tokens, same components whether you're inside ArgoCD, on the docs site, or on the
+            landing page. CSS custom properties as the shared foundation.
+          </p>
+        </div>
+      </div>
+
+      <div class="ap-section-header ap-mt-8"><span>HOW TO USE</span></div>
+
+      <h3>Full bundle</h3>
+      <pre><code>&lt;link rel="stylesheet" href="design-system/argoplane.css"&gt;</code></pre>
+
+      <h3 class="ap-mt-4">Individual layers</h3>
+      <pre><code>&lt;link rel="stylesheet" href="design-system/tokens.css"&gt;      &lt;!-- always required --&gt;
+&lt;link rel="stylesheet" href="design-system/base.css"&gt;        &lt;!-- reset + typography --&gt;
+&lt;link rel="stylesheet" href="design-system/components.css"&gt;   &lt;!-- .ap-* component classes --&gt;
+&lt;link rel="stylesheet" href="design-system/utilities.css"&gt;    &lt;!-- .ap-flex, .ap-p-4, etc. --&gt;</code></pre>
+
+      <h3 class="ap-mt-4">React (ArgoCD extensions)</h3>
+      <p class="ap-text-sm ap-text-muted ap-mt-1">
+        Import from <code>@argoplane/shared</code> which re-exports tokens as TypeScript constants
+        and provides React components that use the same design system.
+      </p>
+      <pre><code>import { colors, spacing, StatusBadge, Button } from '@argoplane/shared';</code></pre>
+
+      <h3 class="ap-mt-4">Dark theme</h3>
+      <p class="ap-text-sm ap-text-muted ap-mt-1">
+        Add <code>data-theme="dark"</code> or class <code>theme-dark</code> to any parent element.
+        All semantic color tokens automatically switch.
+      </p>
+      <pre><code>&lt;body data-theme="dark"&gt;  &lt;!-- everything inside uses dark palette --&gt;</code></pre>
+
+      <div class="ap-section-header ap-mt-8"><span>FILE STRUCTURE</span></div>
+      <pre><code>design-system/
+  argoplane.css       # All-in-one import
+  tokens.css          # CSS custom properties (colors, spacing, type)
+  base.css            # Reset, typography, element defaults
+  components.css      # .ap-* component classes
+  utilities.css       # Layout, spacing, typography helpers
+
+extensions/shared/    # React/TypeScript wrappers
+  src/
+    theme.ts          # Token values as TS constants
+    styles.ts         # CSSProperties style objects
+    components.tsx    # React component library
+
+docs/styleguide/      # This reference (you are here)
+  index.html          # Overview
+  tokens.html         # Color, type, spacing reference
+  components.html     # Interactive component catalog
+  patterns.html       # Layout patterns and compositions</code></pre>
+
+      <div class="ap-section-header ap-mt-8"><span>ANTI-PATTERNS</span></div>
+      <div class="ap-flex-col ap-gap-2">
+        <div class="ap-alert ap-alert--error">No rounded pills or circles. Max border-radius: 4px.</div>
+        <div class="ap-alert ap-alert--error">No box shadows. Pixel art is flat.</div>
+        <div class="ap-alert ap-alert--error">No gradients. Flat colors only.</div>
+        <div class="ap-alert ap-alert--error">No animations longer than 150ms (except loading indicator).</div>
+        <div class="ap-alert ap-alert--error">No font sizes above 20px. Keep it compact.</div>
+        <div class="ap-alert ap-alert--error">No emoji in UI. Use pixel squares and symbols.</div>
+        <div class="ap-alert ap-alert--error">No hardcoded colors. Always use tokens.</div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="styleguide.js"></script>
+</body>
+</html>

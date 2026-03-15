@@ -1,0 +1,1018 @@
+/* ================================================================
+   ArgoPlane Component Library
+   Platform-agnostic CSS classes for all ArgoPlane surfaces.
+   Requires: tokens.css
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   CARD
+   Subtle container with thin border, no shadow.
+   Usage: <div class="ap-card">...</div>
+   Variants: .ap-card--elevated (slightly lifted)
+             .ap-card--interactive (hover state)
+   ---------------------------------------------------------------- */
+
+.ap-card {
+  background: var(--ap-color-surface);
+  border: var(--ap-border);
+  border-radius: var(--ap-radius-md);
+  padding: var(--ap-space-4);
+  position: relative;
+}
+
+.ap-card--elevated {
+  background: var(--ap-color-bg);
+}
+
+.ap-card--interactive {
+  cursor: pointer;
+  transition: border-color var(--ap-duration-fast);
+}
+
+.ap-card--interactive:hover {
+  border-color: var(--ap-color-border-strong);
+}
+
+/* ----------------------------------------------------------------
+   STATUS BADGE
+   8x8 pixel square + label. The signature ArgoPlane element.
+   Usage: <span class="ap-badge ap-badge--healthy">Healthy</span>
+   Variants: --healthy, --degraded, --failed, --in-progress, --unknown
+             .ap-badge--bg (adds background pill)
+   ---------------------------------------------------------------- */
+
+.ap-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--ap-text-sm);
+  font-weight: var(--ap-weight-medium);
+  white-space: nowrap;
+}
+
+.ap-badge::before {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+/* Status colors */
+.ap-badge--healthy::before  { background: var(--ap-green-solid); }
+.ap-badge--degraded::before { background: var(--ap-yellow-solid); }
+.ap-badge--failed::before   { background: var(--ap-red-solid); }
+.ap-badge--in-progress::before { background: var(--ap-blue-solid); }
+.ap-badge--unknown::before  { background: var(--ap-gray-300); }
+
+/* Background pill variant */
+.ap-badge--bg {
+  padding: var(--ap-space-1) 10px;
+  border-radius: var(--ap-radius-sm);
+}
+
+.ap-badge--bg.ap-badge--healthy  { background: var(--ap-green-light); }
+.ap-badge--bg.ap-badge--degraded { background: var(--ap-yellow-light); }
+.ap-badge--bg.ap-badge--failed   { background: var(--ap-red-light); }
+.ap-badge--bg.ap-badge--in-progress { background: var(--ap-blue-light); }
+.ap-badge--bg.ap-badge--unknown  { background: var(--ap-gray-100); }
+
+/* ----------------------------------------------------------------
+   SECTION HEADER
+   Uppercase label with extending line.
+   Usage: <div class="ap-section-header">
+            <span>BACKUPS</span>
+          </div>
+   With action: add a second child element.
+   ---------------------------------------------------------------- */
+
+.ap-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--ap-space-2);
+  margin-bottom: var(--ap-space-5);
+  font-size: var(--ap-text-xs);
+  font-weight: var(--ap-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ap-color-text-muted);
+}
+
+.ap-section-header::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--ap-color-border);
+}
+
+/* When there's an action button, the line goes between label and action */
+.ap-section-header > *:last-child:not(:first-child) {
+  order: 1;
+}
+
+/* ----------------------------------------------------------------
+   BUTTON
+   Flat, pastel fill, 2px radius. No shadows.
+   Usage: <button class="ap-btn">Label</button>
+   Variants: .ap-btn--primary, .ap-btn--danger, :disabled
+   Sizes: .ap-btn--sm (compact)
+   ---------------------------------------------------------------- */
+
+.ap-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ap-space-2);
+  background: var(--ap-orange-100);
+  color: var(--ap-orange-600);
+  border: 1px solid var(--ap-orange-200);
+  border-radius: var(--ap-radius-sm);
+  padding: 6px var(--ap-space-3);
+  font-family: inherit;
+  font-size: var(--ap-text-sm);
+  font-weight: var(--ap-weight-medium);
+  cursor: pointer;
+  transition: background var(--ap-duration-fast);
+  white-space: nowrap;
+  text-decoration: none;
+  line-height: 1;
+}
+
+.ap-btn:hover {
+  background: var(--ap-orange-200);
+}
+
+.ap-btn--primary {
+  background: var(--ap-orange-500);
+  color: var(--ap-white);
+  border-color: var(--ap-orange-600);
+}
+
+.ap-btn--primary:hover {
+  background: var(--ap-orange-600);
+}
+
+.ap-btn--danger {
+  background: var(--ap-red-light);
+  color: var(--ap-red-text);
+  border-color: var(--ap-red);
+}
+
+.ap-btn--danger:hover {
+  background: var(--ap-red);
+  color: var(--ap-white);
+}
+
+.ap-btn--ghost {
+  background: transparent;
+  color: var(--ap-color-text-muted);
+  border-color: transparent;
+}
+
+.ap-btn--ghost:hover {
+  background: var(--ap-color-surface);
+  color: var(--ap-color-text);
+}
+
+.ap-btn:disabled,
+.ap-btn--disabled {
+  background: var(--ap-gray-100);
+  color: var(--ap-gray-400);
+  border-color: var(--ap-gray-200);
+  cursor: not-allowed;
+}
+
+.ap-btn--sm {
+  font-size: var(--ap-text-xs);
+  padding: 4px var(--ap-space-2);
+}
+
+/* ----------------------------------------------------------------
+   TABLE
+   Minimal. No alternating rows. Single-pixel borders. Mono values.
+   Usage: <table class="ap-table">...</table>
+   ---------------------------------------------------------------- */
+
+.ap-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.ap-table th {
+  font-size: var(--ap-text-xs);
+  font-weight: var(--ap-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ap-color-text-muted);
+  padding: var(--ap-space-2) var(--ap-space-3);
+  border-bottom: 2px solid var(--ap-color-border);
+  text-align: left;
+}
+
+.ap-table td {
+  font-size: var(--ap-text-sm);
+  padding: var(--ap-space-2) var(--ap-space-3);
+  border-bottom: 1px solid var(--ap-gray-100);
+  font-family: var(--ap-font-mono);
+  vertical-align: middle;
+}
+
+.ap-table tr:last-child td {
+  border-bottom: none;
+}
+
+.ap-table td.ap-table__cell--text {
+  font-family: var(--ap-font-body);
+}
+
+/* Hoverable rows */
+.ap-table--hoverable tbody tr {
+  transition: background var(--ap-duration-fast);
+}
+
+.ap-table--hoverable tbody tr:hover {
+  background: var(--ap-gray-50);
+}
+
+[data-theme="dark"] .ap-table--hoverable tbody tr:hover,
+.theme-dark .ap-table--hoverable tbody tr:hover {
+  background: var(--ap-gray-700);
+}
+
+/* Compact table */
+.ap-table--compact th,
+.ap-table--compact td {
+  padding: var(--ap-space-1) var(--ap-space-2);
+}
+
+/* ----------------------------------------------------------------
+   METRIC CARD
+   Compact value display with pixel decoration.
+   Usage: <div class="ap-metric">
+            <div class="ap-metric__value">12.5m</div>
+            <div class="ap-metric__label">CPU USAGE</div>
+          </div>
+   ---------------------------------------------------------------- */
+
+.ap-metric {
+  background: var(--ap-color-surface);
+  border: var(--ap-border);
+  border-radius: var(--ap-radius-md);
+  padding: var(--ap-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ap-space-1);
+  min-width: 120px;
+  position: relative;
+}
+
+.ap-metric__value {
+  font-size: var(--ap-text-xl);
+  font-weight: var(--ap-weight-semibold);
+  font-family: var(--ap-font-mono);
+  color: var(--ap-color-text);
+  line-height: 1;
+}
+
+.ap-metric__unit {
+  font-size: 12px;
+  font-weight: var(--ap-weight-normal);
+  color: var(--ap-color-text-faint);
+  font-family: var(--ap-font-mono);
+}
+
+.ap-metric__label {
+  font-size: var(--ap-text-xs);
+  font-weight: var(--ap-weight-medium);
+  color: var(--ap-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* ----------------------------------------------------------------
+   TAG / CHIP
+   Small labeled element for categorization.
+   Usage: <span class="ap-tag ap-tag--orange">v1.2.3</span>
+   Variants: --orange, --green, --red, --gray
+   ---------------------------------------------------------------- */
+
+.ap-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--ap-text-xs);
+  font-weight: var(--ap-weight-medium);
+  font-family: var(--ap-font-mono);
+  padding: 2px 8px;
+  border-radius: var(--ap-radius-sm);
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.ap-tag--orange {
+  background: var(--ap-orange-50);
+  color: var(--ap-orange-600);
+  border-color: var(--ap-orange-200);
+}
+
+.ap-tag--green {
+  background: var(--ap-green-light);
+  color: var(--ap-green-text);
+  border-color: var(--ap-green);
+}
+
+.ap-tag--red {
+  background: var(--ap-red-light);
+  color: var(--ap-red-text);
+  border-color: var(--ap-red);
+}
+
+.ap-tag--gray {
+  background: var(--ap-gray-100);
+  color: var(--ap-gray-600);
+  border-color: var(--ap-gray-200);
+}
+
+.ap-tag--blue {
+  background: var(--ap-blue-light);
+  color: var(--ap-blue-text);
+  border-color: var(--ap-blue);
+}
+
+/* ----------------------------------------------------------------
+   INPUT
+   Monospace input with subtle border.
+   Usage: <input class="ap-input" type="text" />
+   Variants: .ap-input--error
+   ---------------------------------------------------------------- */
+
+.ap-input {
+  font-family: var(--ap-font-mono);
+  font-size: var(--ap-text-sm);
+  padding: 6px 12px;
+  border: 1px solid var(--ap-color-border);
+  border-radius: var(--ap-radius-sm);
+  background: var(--ap-color-bg);
+  color: var(--ap-color-text);
+  outline: none;
+  transition: border-color var(--ap-duration-fast);
+  width: 100%;
+}
+
+.ap-input::placeholder {
+  color: var(--ap-color-text-faint);
+}
+
+.ap-input:focus {
+  border-color: var(--ap-color-accent);
+}
+
+.ap-input--error {
+  border-color: var(--ap-red);
+}
+
+.ap-input--error:focus {
+  border-color: var(--ap-red-text);
+}
+
+/* Select */
+.ap-select {
+  font-family: var(--ap-font-mono);
+  font-size: var(--ap-text-sm);
+  padding: 6px 32px 6px 12px;
+  border: 1px solid var(--ap-color-border);
+  border-radius: var(--ap-radius-sm);
+  background: var(--ap-color-bg);
+  color: var(--ap-color-text);
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2378716C' d='M3 4.5L6 8l3-3.5H3z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  cursor: pointer;
+  transition: border-color var(--ap-duration-fast);
+}
+
+.ap-select:focus {
+  border-color: var(--ap-color-accent);
+}
+
+/* Textarea */
+.ap-textarea {
+  font-family: var(--ap-font-mono);
+  font-size: var(--ap-text-sm);
+  padding: var(--ap-space-3);
+  border: 1px solid var(--ap-color-border);
+  border-radius: var(--ap-radius-sm);
+  background: var(--ap-color-bg);
+  color: var(--ap-color-text);
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+  width: 100%;
+  transition: border-color var(--ap-duration-fast);
+}
+
+.ap-textarea:focus {
+  border-color: var(--ap-color-accent);
+}
+
+/* Label */
+.ap-label {
+  display: block;
+  font-size: var(--ap-text-xs);
+  font-weight: var(--ap-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ap-color-text-muted);
+  margin-bottom: var(--ap-space-1);
+}
+
+/* ----------------------------------------------------------------
+   PROGRESS BAR
+   Flat, 4px height.
+   Usage: <div class="ap-progress">
+            <div class="ap-progress__fill" style="width: 72%"></div>
+          </div>
+   ---------------------------------------------------------------- */
+
+.ap-progress {
+  height: 4px;
+  background: var(--ap-gray-100);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.ap-progress__fill {
+  height: 100%;
+  background: var(--ap-orange-400);
+  transition: width var(--ap-duration-normal);
+}
+
+.ap-progress__fill--green  { background: var(--ap-green-solid); }
+.ap-progress__fill--red    { background: var(--ap-red-solid); }
+.ap-progress__fill--blue   { background: var(--ap-blue-solid); }
+
+/* ----------------------------------------------------------------
+   META ROW
+   Inline key-value pairs with interpunct separators.
+   Usage: <div class="ap-meta">
+            <span class="ap-meta__item">
+              <span class="ap-meta__key">Namespace</span>
+              <span class="ap-meta__val">default</span>
+            </span>
+            <span class="ap-meta__sep"></span>
+            ...
+          </div>
+   ---------------------------------------------------------------- */
+
+.ap-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ap-space-2);
+  font-size: var(--ap-text-sm);
+  font-family: var(--ap-font-mono);
+  color: var(--ap-color-text-muted);
+}
+
+.ap-meta__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ap-meta__key {
+  color: var(--ap-color-text-faint);
+}
+
+.ap-meta__val {
+  color: var(--ap-gray-700);
+}
+
+[data-theme="dark"] .ap-meta__val,
+.theme-dark .ap-meta__val {
+  color: var(--ap-gray-300);
+}
+
+.ap-meta__sep::after {
+  content: '\00B7';
+  color: var(--ap-gray-300);
+}
+
+/* ----------------------------------------------------------------
+   EMPTY STATE
+   Centered pixel icon + muted message.
+   Usage: <div class="ap-empty">
+            <div class="ap-empty__icon">
+              <span></span><span></span><span></span><span></span>
+            </div>
+            <p class="ap-empty__text">No backups found</p>
+          </div>
+   ---------------------------------------------------------------- */
+
+.ap-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ap-space-10);
+  gap: var(--ap-space-3);
+}
+
+.ap-empty__icon {
+  display: grid;
+  grid-template-columns: 6px 6px;
+  gap: 2px;
+}
+
+.ap-empty__icon span {
+  width: 6px;
+  height: 6px;
+  background: var(--ap-gray-200);
+  border-radius: 1px;
+}
+
+.ap-empty__text {
+  font-size: var(--ap-text-sm);
+  color: var(--ap-color-text-faint);
+}
+
+/* ----------------------------------------------------------------
+   LOADING
+   Three squares animating sequentially.
+   Usage: <div class="ap-loading">
+            <span></span><span></span><span></span>
+          </div>
+   ---------------------------------------------------------------- */
+
+.ap-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ap-space-1);
+  padding: var(--ap-space-5);
+}
+
+.ap-loading span {
+  width: 8px;
+  height: 8px;
+  background: var(--ap-gray-200);
+  border-radius: 1px;
+  animation: ap-loading-pulse 0.9s infinite;
+}
+
+.ap-loading span:nth-child(1) { animation-delay: 0s; }
+.ap-loading span:nth-child(2) { animation-delay: 0.3s; }
+.ap-loading span:nth-child(3) { animation-delay: 0.6s; }
+
+@keyframes ap-loading-pulse {
+  0%, 100% { background: var(--ap-gray-200); }
+  33%      { background: var(--ap-orange-400); }
+}
+
+/* ----------------------------------------------------------------
+   PIXEL DECORATION
+   Subtle 2x2 dot cluster for card corners.
+   Usage: <div class="ap-pixels">
+            <span></span><span></span><span></span><span></span>
+          </div>
+   ---------------------------------------------------------------- */
+
+.ap-pixels {
+  display: grid;
+  grid-template-columns: 3px 3px;
+  gap: 2px;
+  position: absolute;
+  top: var(--ap-space-2);
+  right: var(--ap-space-2);
+}
+
+.ap-pixels span {
+  width: 3px;
+  height: 3px;
+  background: var(--ap-gray-200);
+}
+
+[data-theme="dark"] .ap-pixels span,
+.theme-dark .ap-pixels span {
+  background: var(--ap-gray-600);
+}
+
+/* ----------------------------------------------------------------
+   TOOLTIP
+   Compact, dark background, monospace.
+   Usage: <span class="ap-tooltip" data-tip="Explanation">Hover me</span>
+   ---------------------------------------------------------------- */
+
+.ap-tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.ap-tooltip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ap-gray-800);
+  color: var(--ap-gray-100);
+  font-size: var(--ap-text-xs);
+  font-family: var(--ap-font-mono);
+  padding: 4px 8px;
+  border-radius: var(--ap-radius-sm);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--ap-duration-fast);
+}
+
+.ap-tooltip:hover::after {
+  opacity: 1;
+}
+
+/* ----------------------------------------------------------------
+   ALERT / NOTICE
+   Informational banner with status color.
+   Usage: <div class="ap-alert ap-alert--info">Message</div>
+   ---------------------------------------------------------------- */
+
+.ap-alert {
+  padding: var(--ap-space-3) var(--ap-space-4);
+  border: 1px solid;
+  border-radius: var(--ap-radius-md);
+  font-size: var(--ap-text-sm);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ap-space-2);
+}
+
+.ap-alert--info {
+  background: var(--ap-blue-light);
+  border-color: var(--ap-blue);
+  color: var(--ap-blue-text);
+}
+
+.ap-alert--success {
+  background: var(--ap-green-light);
+  border-color: var(--ap-green);
+  color: var(--ap-green-text);
+}
+
+.ap-alert--warning {
+  background: var(--ap-yellow-light);
+  border-color: var(--ap-yellow);
+  color: var(--ap-yellow-text);
+}
+
+.ap-alert--error {
+  background: var(--ap-red-light);
+  border-color: var(--ap-red);
+  color: var(--ap-red-text);
+}
+
+/* ----------------------------------------------------------------
+   DIVIDER
+   Thin horizontal separator.
+   ---------------------------------------------------------------- */
+
+.ap-divider {
+  height: 1px;
+  background: var(--ap-color-border);
+  border: none;
+  margin: var(--ap-space-4) 0;
+}
+
+/* ----------------------------------------------------------------
+   AVATAR / ICON PLACEHOLDER
+   Pixel-art style square placeholder.
+   Usage: <span class="ap-avatar">JL</span>
+   ---------------------------------------------------------------- */
+
+.ap-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--ap-orange-100);
+  color: var(--ap-orange-600);
+  font-size: var(--ap-text-xs);
+  font-weight: var(--ap-weight-semibold);
+  font-family: var(--ap-font-mono);
+  border-radius: var(--ap-radius-sm);
+  border: 1px solid var(--ap-orange-200);
+  flex-shrink: 0;
+}
+
+.ap-avatar--lg {
+  width: 40px;
+  height: 40px;
+  font-size: var(--ap-text-sm);
+}
+
+/* ----------------------------------------------------------------
+   BREADCRUMB
+   Slash-separated navigation trail.
+   Usage: <nav class="ap-breadcrumb">
+            <a href="#">Home</a>
+            <span>/</span>
+            <a href="#">Extensions</a>
+            <span>/</span>
+            <span>Metrics</span>
+          </nav>
+   ---------------------------------------------------------------- */
+
+.ap-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--ap-space-2);
+  font-size: var(--ap-text-sm);
+  font-family: var(--ap-font-mono);
+  color: var(--ap-color-text-faint);
+}
+
+.ap-breadcrumb a {
+  color: var(--ap-color-text-muted);
+  text-decoration: none;
+}
+
+.ap-breadcrumb a:hover {
+  color: var(--ap-color-accent);
+}
+
+.ap-breadcrumb > span:last-child {
+  color: var(--ap-color-text);
+}
+
+/* ----------------------------------------------------------------
+   KEY-VALUE LIST
+   Vertical key-value display for detail panels.
+   Usage: <dl class="ap-kv">
+            <dt>Namespace</dt><dd>default</dd>
+            <dt>Created</dt><dd>2h ago</dd>
+          </dl>
+   ---------------------------------------------------------------- */
+
+.ap-kv {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--ap-space-1) var(--ap-space-4);
+  font-size: var(--ap-text-sm);
+}
+
+.ap-kv dt {
+  color: var(--ap-color-text-muted);
+  font-weight: var(--ap-weight-medium);
+  white-space: nowrap;
+}
+
+.ap-kv dd {
+  color: var(--ap-color-text);
+  font-family: var(--ap-font-mono);
+  margin: 0;
+}
+
+/* ----------------------------------------------------------------
+   TABS
+   Flat, underline-style tab navigation.
+   Usage: <nav class="ap-tabs">
+            <button class="ap-tabs__tab ap-tabs__tab--active">Overview</button>
+            <button class="ap-tabs__tab">Details</button>
+          </nav>
+   ---------------------------------------------------------------- */
+
+.ap-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--ap-color-border);
+  gap: 0;
+}
+
+.ap-tabs__tab {
+  font-family: inherit;
+  font-size: var(--ap-text-sm);
+  font-weight: var(--ap-weight-medium);
+  color: var(--ap-color-text-muted);
+  background: none;
+  border: none;
+  padding: var(--ap-space-2) var(--ap-space-4);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color var(--ap-duration-fast), border-color var(--ap-duration-fast);
+}
+
+.ap-tabs__tab:hover {
+  color: var(--ap-color-text);
+}
+
+.ap-tabs__tab--active {
+  color: var(--ap-color-accent);
+  border-bottom-color: var(--ap-color-accent);
+}
+
+/* ----------------------------------------------------------------
+   MODAL / DIALOG
+   Overlay container.
+   Usage: <div class="ap-modal-overlay">
+            <div class="ap-modal">
+              <div class="ap-modal__header">Title</div>
+              <div class="ap-modal__body">Content</div>
+              <div class="ap-modal__footer">Actions</div>
+            </div>
+          </div>
+   ---------------------------------------------------------------- */
+
+.ap-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 25, 23, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.ap-modal {
+  background: var(--ap-color-bg);
+  border: var(--ap-border);
+  border-radius: var(--ap-radius-md);
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.ap-modal__header {
+  padding: var(--ap-space-4);
+  font-size: var(--ap-text-lg);
+  font-weight: var(--ap-weight-semibold);
+  border-bottom: var(--ap-border);
+}
+
+.ap-modal__body {
+  padding: var(--ap-space-4);
+}
+
+.ap-modal__footer {
+  padding: var(--ap-space-3) var(--ap-space-4);
+  border-top: var(--ap-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ap-space-2);
+}
+
+/* ----------------------------------------------------------------
+   BADGE COUNT
+   Small numeric indicator.
+   Usage: <span class="ap-count">12</span>
+   ---------------------------------------------------------------- */
+
+.ap-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: var(--ap-gray-100);
+  color: var(--ap-color-text-muted);
+  font-size: var(--ap-text-xs);
+  font-weight: var(--ap-weight-semibold);
+  font-family: var(--ap-font-mono);
+  border-radius: var(--ap-radius-sm);
+}
+
+.ap-count--accent {
+  background: var(--ap-orange-100);
+  color: var(--ap-orange-600);
+}
+
+/* ----------------------------------------------------------------
+   SIDEBAR NAV
+   Vertical navigation for portal/docs.
+   Usage: <nav class="ap-sidenav">
+            <a class="ap-sidenav__item ap-sidenav__item--active" href="#">Overview</a>
+            <a class="ap-sidenav__item" href="#">Settings</a>
+          </nav>
+   ---------------------------------------------------------------- */
+
+.ap-sidenav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ap-space-1);
+}
+
+.ap-sidenav__group {
+  font-size: var(--ap-text-xs);
+  font-weight: var(--ap-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ap-color-text-faint);
+  padding: var(--ap-space-2) var(--ap-space-3);
+  margin-top: var(--ap-space-3);
+}
+
+.ap-sidenav__group:first-child {
+  margin-top: 0;
+}
+
+.ap-sidenav__item {
+  display: flex;
+  align-items: center;
+  gap: var(--ap-space-2);
+  padding: var(--ap-space-2) var(--ap-space-3);
+  font-size: var(--ap-text-sm);
+  color: var(--ap-color-text-muted);
+  text-decoration: none;
+  border-radius: var(--ap-radius-sm);
+  transition: background var(--ap-duration-fast), color var(--ap-duration-fast);
+}
+
+.ap-sidenav__item:hover {
+  background: var(--ap-color-surface);
+  color: var(--ap-color-text);
+}
+
+.ap-sidenav__item--active {
+  background: var(--ap-orange-50);
+  color: var(--ap-orange-600);
+}
+
+[data-theme="dark"] .ap-sidenav__item--active,
+.theme-dark .ap-sidenav__item--active {
+  background: var(--ap-gray-700);
+  color: var(--ap-orange-400);
+}
+
+/* ----------------------------------------------------------------
+   SKELETON
+   Loading placeholder shapes.
+   Usage: <div class="ap-skeleton" style="width: 200px; height: 16px;"></div>
+   ---------------------------------------------------------------- */
+
+.ap-skeleton {
+  background: var(--ap-gray-100);
+  border-radius: var(--ap-radius-sm);
+  animation: ap-skeleton-pulse 1.5s infinite;
+}
+
+@keyframes ap-skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+
+/* ----------------------------------------------------------------
+   TOGGLE / SWITCH
+   Binary toggle control.
+   Usage: <label class="ap-toggle">
+            <input type="checkbox" />
+            <span class="ap-toggle__track">
+              <span class="ap-toggle__thumb"></span>
+            </span>
+          </label>
+   ---------------------------------------------------------------- */
+
+.ap-toggle {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.ap-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.ap-toggle__track {
+  width: 32px;
+  height: 16px;
+  background: var(--ap-gray-200);
+  border-radius: var(--ap-radius-sm);
+  position: relative;
+  transition: background var(--ap-duration-fast);
+}
+
+.ap-toggle__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  background: var(--ap-white);
+  border-radius: 1px;
+  transition: transform var(--ap-duration-fast);
+}
+
+.ap-toggle input:checked + .ap-toggle__track {
+  background: var(--ap-orange-400);
+}
+
+.ap-toggle input:checked + .ap-toggle__track .ap-toggle__thumb {
+  transform: translateX(16px);
+}
