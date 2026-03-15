@@ -48,7 +48,14 @@ No database. All state comes from Kubernetes (ArgoCD Applications, CRDs, operato
 ## Monorepo Structure
 
 ```
+design-system/       # Cross-platform CSS design tokens and component library
+  tokens.css         # CSS custom properties (single source of truth)
+  base.css           # Reset, typography, element defaults
+  components.css     # .ap-* component classes
+  utilities.css      # Layout, spacing, typography helpers
+  argoplane.css      # All-in-one import
 extensions/
+  shared/            # @argoplane/shared: React components + TS token re-exports
   metrics/
     ui/              # React/TypeScript extension bundle
     backend/         # Go service querying Prometheus
@@ -61,7 +68,9 @@ deploy/              # Helm charts, Kustomize overlays
   argocd/            # ArgoCD configuration (ConfigMaps, patches)
   extensions/        # Per-extension deployment manifests
 tests/               # Integration tests (Go, against kind cluster)
-docs/                # Design docs, ADRs
+docs/
+  styleguide/        # Multi-page visual reference (open index.html in browser)
+  extension-roadmap.md
 ```
 
 ## Current Scope (v0.1)
@@ -73,7 +82,6 @@ Next priority: **Platform** extension (system-level page surfacing StorageClasse
 Out of scope for now:
 - Self-service catalog / Crossplane XRDs (planned, not started)
 - Logs (Loki)
-- Networking (Cilium/Hubble)
 - Security / image scans
 - Secrets / External Secrets
 - Policies (Kyverno, OPA)
