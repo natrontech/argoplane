@@ -46,7 +46,16 @@ export const navigation: NavItem[] = [
 		]
 	},
 	{
-		title: 'Contributing',
-		href: '/contributing'
+		title: 'Adoption',
+		href: '/adoption'
+	},
+	{
+		title: 'Community',
+		href: '/community',
+		children: [
+			{ title: 'Overview', href: '/community' },
+			{ title: 'Contributing', href: '/contributing' },
+			{ title: 'About', href: '/about' }
+		]
 	}
 ];
