@@ -139,14 +139,24 @@ deploy-extensions: ## Deploy extension backends, UI bundles, and proxy config to
 		echo "==> Deploying $$ext backend"; \
 		kubectl apply -f deploy/extensions/$$ext/deployment.yaml; \
 	done
+	@echo "==> Restarting extension backends to pick up new images"
+	@for ext in $(EXTENSIONS); do \
+		kubectl -n $(ARGOCD_NS) rollout restart deployment argoplane-$$ext-backend 2>/dev/null || true; \
+	done
 	@echo "==> Configuring ArgoCD proxy extensions"
 	@kubectl -n $(ARGOCD_NS) patch cm argocd-cm --type merge --patch-file deploy/argocd/proxy-extensions.json
 	@echo "==> Restarting argocd-server to pick up proxy config"
 	@kubectl -n $(ARGOCD_NS) rollout restart deployment argocd-server
 	@kubectl -n $(ARGOCD_NS) rollout status deployment argocd-server --timeout=120s
+	@echo "==> Waiting for argocd-server pod to be ready"
+	@sleep 3
+	@kubectl -n $(ARGOCD_NS) wait pod -l app.kubernetes.io/name=argocd-server \
+		--for=condition=Ready --timeout=120s
 	@echo "==> Loading UI extension bundles into argocd-server"
 	@ARGOCD_POD=$$(kubectl get pods -n $(ARGOCD_NS) -l app.kubernetes.io/name=argocd-server \
-		--field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}'); \
+		-o jsonpath='{range .items[?(@.status.phase=="Running")]}{.metadata.name}{end}' | head -1); \
+	echo "    Using pod: $$ARGOCD_POD"; \
+	if [ -z "$$ARGOCD_POD" ]; then echo "ERROR: No running argocd-server pod found" && exit 1; fi; \
 	kubectl exec -n $(ARGOCD_NS) $$ARGOCD_POD -- mkdir -p /tmp/extensions; \
 	for ext in $(EXTENSIONS); do \
 		echo "==> Loading $$ext UI bundle"; \
