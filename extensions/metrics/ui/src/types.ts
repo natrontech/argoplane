@@ -17,6 +17,21 @@ export interface TimeSeriesMetric {
   series: DataPoint[];
 }
 
+export interface PodMetric {
+  pod: string;
+  cpu: string;
+  memory: string;
+  netRx: string;
+  netTx: string;
+  restarts: string;
+}
+
+export interface CustomQueryResult {
+  series?: DataPoint[];
+  samples?: Array<{ labels: Record<string, string>; value: number }>;
+  error?: string;
+}
+
 export interface ExtensionProps {
   resource: any;
   tree: any;
