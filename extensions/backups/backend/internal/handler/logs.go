@@ -2,9 +2,11 @@ package handler
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,7 +54,15 @@ func (h *LogsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	username := r.Header.Get("Argocd-Username")
 	slog.Info("creating download request", "name", name, "kind", kind, "user", username)
 
-	drName := fmt.Sprintf("argoplane-%s-%s-%d", name, kind, time.Now().Unix())
+	// Build a DNS-safe name: lowercase, max 63 chars (Kubernetes name limit).
+	// Use a short hash of the full name to avoid collisions.
+	ts := time.Now().Unix()
+	raw := fmt.Sprintf("%s-%s-%d", name, strings.ToLower(kind), ts)
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(raw)))[:8]
+	drName := fmt.Sprintf("ap-%s-%s", hash, strings.ToLower(kind))
+	if len(drName) > 63 {
+		drName = drName[:63]
+	}
 
 	dr := &unstructured.Unstructured{
 		Object: map[string]interface{}{
