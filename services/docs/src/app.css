@@ -219,6 +219,58 @@ body {
   background: var(--color-gray-800) !important;
 }
 
+/* Code block copy button */
+.code-block-wrapper {
+  position: relative;
+}
+
+.copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+  background: var(--color-gray-50);
+  color: var(--color-gray-400);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
+}
+
+.code-block-wrapper:hover .copy-btn {
+  opacity: 1;
+}
+
+.copy-btn:hover {
+  color: var(--color-gray-800);
+  background: var(--color-gray-100);
+}
+
+.copy-btn.copied {
+  color: var(--color-success-text);
+  opacity: 1;
+}
+
+.dark .copy-btn {
+  border-color: var(--color-gray-600);
+  background: var(--color-gray-700);
+  color: var(--color-gray-400);
+}
+
+.dark .copy-btn:hover {
+  color: var(--color-gray-100);
+  background: var(--color-gray-600);
+}
+
+.dark .copy-btn.copied {
+  color: var(--color-success);
+}
+
 .prose ul, .prose ol {
   margin-bottom: 12px;
   padding-left: 24px;
