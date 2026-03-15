@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { colors, fonts, fontSize, fontWeight, spacing, radius } from '@argoplane/shared';
+import { colors, fonts, fontSize, fontWeight } from '@argoplane/shared';
 import type { Status } from '@argoplane/shared';
 import { fetchOverview } from '../api';
 import { OverviewResponse, BackupSummary, ResourceRef } from '../types';
@@ -15,18 +15,7 @@ function phaseToStatus(phase?: string): Status {
   }
 }
 
-function timeAgo(iso?: string): string {
-  if (!iso) return '';
-  const diff = Date.now() - new Date(iso).getTime();
-  if (diff < 0) return 'just now';
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
-
-const statusColors: Record<Status, string> = {
+const statusClr: Record<Status, string> = {
   'healthy': colors.greenSolid,
   'degraded': colors.yellowSolid,
   'failed': colors.redSolid,
@@ -34,8 +23,19 @@ const statusColors: Record<Status, string> = {
   'unknown': colors.gray300,
 };
 
-function navigateToBackups(appNamespace: string, appName: string) {
-  window.location.href = `/applications/${appNamespace}/${appName}?resource=&extension=backups&view=Backups`;
+function timeAgo(iso?: string): string {
+  if (!iso) return '';
+  const d = Date.now() - new Date(iso).getTime();
+  if (d < 0) return 'now';
+  const m = Math.floor(d / 60000);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
+}
+
+function nav(appNs: string, app: string) {
+  window.location.href = `/applications/${appNs}/${app}?resource=&extension=backups&view=Backups`;
 }
 
 interface StatusPanelProps {
@@ -44,107 +44,77 @@ interface StatusPanelProps {
 }
 
 export const BackupStatusPanel: React.FC<StatusPanelProps> = ({ application }) => {
-  const [latestBackup, setLatestBackup] = React.useState<BackupSummary | null>(null);
-  const [scheduleCount, setScheduleCount] = React.useState(0);
+  const [latest, setLatest] = React.useState<BackupSummary | null>(null);
+  const [scheds, setScheds] = React.useState(0);
   const [loaded, setLoaded] = React.useState(false);
 
-  const appName = application?.metadata?.name || '';
-  const appNamespace = application?.metadata?.namespace || 'argocd';
-  const project = application?.spec?.project || 'default';
-  const destNamespace = application?.spec?.destination?.namespace || '';
+  const app = application?.metadata?.name || '';
+  const appNs = application?.metadata?.namespace || 'argocd';
+  const proj = application?.spec?.project || 'default';
+  const destNs = application?.spec?.destination?.namespace || '';
 
   React.useEffect(() => {
-    if (!destNamespace) return;
-    const resources: ResourceRef[] = [];
-    fetchOverview(destNamespace, resources, appNamespace, appName, project)
+    if (!destNs) return;
+    fetchOverview(destNs, [] as ResourceRef[], appNs, app, proj)
       .then((data: OverviewResponse) => {
-        if (data.recentBackups && data.recentBackups.length > 0) {
-          setLatestBackup(data.recentBackups[0]);
-        }
-        setScheduleCount(data.schedules?.length || 0);
+        if (data.recentBackups?.length > 0) setLatest(data.recentBackups[0]);
+        setScheds(data.schedules?.length || 0);
       })
       .catch(() => {})
       .finally(() => setLoaded(true));
-  }, [destNamespace, appNamespace, appName, project]);
+  }, [destNs, appNs, app, proj]);
 
   if (!loaded) return null;
 
-  const status = phaseToStatus(latestBackup?.phase);
-  const squareColor = statusColors[status] || colors.gray300;
-  const backupText = latestBackup ? timeAgo(latestBackup.startTimestamp) : 'None';
+  const st = phaseToStatus(latest?.phase);
 
   return (
-    <div
-      onClick={() => navigateToBackups(appNamespace, appName)}
-      style={container}
-      title="Last backup status and schedule count. Click to open Backups view."
+    <span
+      onClick={() => nav(appNs, app)}
+      style={wrap}
+      title="Last backup status (click for details)"
     >
-      <span style={label}>BACKUPS</span>
-      <span style={row}>
-        <span style={pill}>
-          <span style={{ ...square, background: squareColor }} />
-          <span style={pillValue}>{backupText}</span>
-        </span>
-        {scheduleCount > 0 && (
-          <span style={pill}>
-            <span style={schedLabel}>SCHED</span>
-            <span style={pillValue}>{scheduleCount}</span>
-          </span>
-        )}
-      </span>
-    </div>
+      <span style={{ ...dot, background: statusClr[st] }} />
+      <span style={val}>{latest ? timeAgo(latest.startTimestamp) : 'none'}</span>
+      {scheds > 0 && (
+        <>
+          <span style={sep} />
+          <span style={lbl}>{scheds} sched</span>
+        </>
+      )}
+    </span>
   );
 };
 
-const container: React.CSSProperties = {
+const wrap: React.CSSProperties = {
   cursor: 'pointer',
   display: 'inline-flex',
-  flexDirection: 'column',
-  gap: 2,
-};
-
-const label: React.CSSProperties = {
-  fontSize: 10,
-  fontWeight: fontWeight.semibold,
-  letterSpacing: '0.5px',
-  color: colors.gray400,
+  alignItems: 'center',
+  gap: 5,
   fontFamily: fonts.mono,
 };
 
-const row: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
-};
-
-const pill: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
-  background: colors.gray50,
-  border: `1px solid ${colors.gray200}`,
-  borderRadius: radius.md,
-  padding: '2px 8px',
-};
-
-const square: React.CSSProperties = {
+const dot: React.CSSProperties = {
   width: 8,
   height: 8,
   borderRadius: 1,
   flexShrink: 0,
 };
 
-const schedLabel: React.CSSProperties = {
-  fontSize: 10,
+const val: React.CSSProperties = {
+  fontSize: fontSize.sm,
   fontWeight: fontWeight.semibold,
-  fontFamily: fonts.mono,
-  color: colors.orange600,
-  letterSpacing: '0.3px',
+  color: colors.gray700,
 };
 
-const pillValue: React.CSSProperties = {
-  fontSize: fontSize.sm,
+const lbl: React.CSSProperties = {
+  fontSize: 11,
+  color: colors.gray400,
   fontWeight: fontWeight.medium,
-  fontFamily: fonts.mono,
-  color: colors.gray700,
+};
+
+const sep: React.CSSProperties = {
+  width: 1,
+  height: 12,
+  background: colors.gray200,
 };

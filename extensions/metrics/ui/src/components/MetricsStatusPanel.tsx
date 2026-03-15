@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { colors, fonts, fontSize, fontWeight, spacing, radius } from '@argoplane/shared';
+import { colors, fonts, fontSize, fontWeight } from '@argoplane/shared';
 import { fetchAppMetrics } from '../api';
 import { MetricData } from '../types';
 
@@ -8,125 +8,78 @@ interface StatusPanelProps {
   openFlyout?: () => void;
 }
 
-function formatCompact(value: string, unit: string): string {
-  const num = parseFloat(value) || 0;
-  if (unit === 'MiB') {
-    if (num >= 1024) return `${(num / 1024).toFixed(1)} GiB`;
-    return `${Math.round(num)} MiB`;
-  }
-  if (unit === 'm') {
-    if (num >= 1000) return `${(num / 1000).toFixed(1)} cores`;
-    return `${Math.round(num)}m`;
-  }
-  return `${value}${unit ? ' ' + unit : ''}`;
+function fmt(value: string, unit: string): string {
+  const n = parseFloat(value) || 0;
+  if (unit === 'MiB') return n >= 1024 ? `${(n / 1024).toFixed(1)}G` : `${Math.round(n)}Mi`;
+  if (unit === 'm') return n >= 1000 ? `${(n / 1000).toFixed(1)}` : `${Math.round(n)}m`;
+  return value;
 }
 
-function navigateToMetrics(appNamespace: string, appName: string) {
-  window.location.href = `/applications/${appNamespace}/${appName}?resource=&extension=metrics&view=Metrics`;
+function nav(appNs: string, app: string) {
+  window.location.href = `/applications/${appNs}/${app}?resource=&extension=metrics&view=Metrics`;
 }
-
-const REFRESH_INTERVAL = 30_000;
 
 export const MetricsStatusPanel: React.FC<StatusPanelProps> = ({ application }) => {
   const [metrics, setMetrics] = React.useState<MetricData[]>([]);
   const [loaded, setLoaded] = React.useState(false);
 
-  const namespace = application?.spec?.destination?.namespace || '';
-  const appName = application?.metadata?.name || '';
-  const appNamespace = application?.metadata?.namespace || 'argocd';
-  const project = application?.spec?.project || 'default';
-
-  const fetchData = React.useCallback(() => {
-    if (!namespace) return;
-    fetchAppMetrics(namespace, undefined, appNamespace, appName, project)
-      .then((data) => setMetrics(data.summary || []))
-      .catch(() => {})
-      .finally(() => setLoaded(true));
-  }, [namespace, appNamespace, appName, project]);
-
-  React.useEffect(() => { fetchData(); }, [fetchData]);
+  const ns = application?.spec?.destination?.namespace || '';
+  const app = application?.metadata?.name || '';
+  const appNs = application?.metadata?.namespace || 'argocd';
+  const proj = application?.spec?.project || 'default';
 
   React.useEffect(() => {
-    const interval = setInterval(fetchData, REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchData]);
+    if (!ns) return;
+    fetchAppMetrics(ns, undefined, appNs, app, proj)
+      .then((d) => setMetrics(d.summary || []))
+      .catch(() => {})
+      .finally(() => setLoaded(true));
+  }, [ns, appNs, app, proj]);
 
   if (!loaded) return null;
 
   const cpu = metrics.find((m) => m.name.toLowerCase().includes('cpu'));
   const mem = metrics.find((m) => m.name.toLowerCase().includes('mem'));
-  const pods = metrics.find((m) => m.name.toLowerCase().includes('pod'));
-
   if (!cpu && !mem) return null;
 
   return (
-    <div
-      onClick={() => navigateToMetrics(appNamespace, appName)}
-      style={container}
-      title="Total resource usage across all pods. Click to open Metrics view."
+    <span
+      onClick={() => nav(appNs, app)}
+      style={wrap}
+      title="Total CPU/Memory across all pods (click for details)"
     >
-      <span style={label}>METRICS</span>
-      <span style={row}>
-        {cpu && <Pill icon="CPU" value={formatCompact(cpu.value, cpu.unit)} />}
-        {mem && <Pill icon="MEM" value={formatCompact(mem.value, mem.unit)} />}
-        {pods && <Pill icon="PODS" value={pods.value} />}
-      </span>
-    </div>
+      {cpu && <><span style={lbl}>cpu</span><span style={val}>{fmt(cpu.value, cpu.unit)}</span></>}
+      {cpu && mem && <span style={sep} />}
+      {mem && <><span style={lbl}>mem</span><span style={val}>{fmt(mem.value, mem.unit)}</span></>}
+    </span>
   );
 };
 
-const Pill: React.FC<{ icon: string; value: string }> = ({ icon, value }) => (
-  <span style={pill}>
-    <span style={pillLabel}>{icon}</span>
-    <span style={pillValue}>{value}</span>
-  </span>
-);
-
-const container: React.CSSProperties = {
+const wrap: React.CSSProperties = {
   cursor: 'pointer',
   display: 'inline-flex',
-  flexDirection: 'column',
-  gap: 2,
+  alignItems: 'center',
+  gap: 4,
+  fontFamily: fonts.mono,
 };
 
-const label: React.CSSProperties = {
-  fontSize: 10,
-  fontWeight: fontWeight.semibold,
-  letterSpacing: '0.5px',
+const lbl: React.CSSProperties = {
+  fontSize: 11,
   color: colors.gray400,
-  fontFamily: fonts.mono,
-};
-
-const row: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
-};
-
-const pill: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 0,
-  background: colors.gray50,
-  border: `1px solid ${colors.gray200}`,
-  borderRadius: radius.md,
-  overflow: 'hidden',
-};
-
-const pillLabel: React.CSSProperties = {
-  fontSize: 10,
-  fontWeight: fontWeight.semibold,
-  fontFamily: fonts.mono,
-  color: colors.orange600,
-  background: colors.orange50,
-  padding: '2px 5px',
-  letterSpacing: '0.3px',
-};
-
-const pillValue: React.CSSProperties = {
-  fontSize: fontSize.sm,
   fontWeight: fontWeight.medium,
-  fontFamily: fonts.mono,
+  textTransform: 'uppercase',
+};
+
+const val: React.CSSProperties = {
+  fontSize: fontSize.sm,
+  fontWeight: fontWeight.semibold,
   color: colors.gray700,
-  padding: '2px 6px',
+};
+
+const sep: React.CSSProperties = {
+  width: 1,
+  height: 12,
+  background: colors.gray200,
+  marginLeft: 2,
+  marginRight: 2,
 };
