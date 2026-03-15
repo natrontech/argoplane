@@ -1,0 +1,34 @@
+{{- if .Values.argocd.rbac.enabled }}
+{{- $enabledNames := list }}
+{{- range $name, $ext := .Values.extensions }}
+{{- if $ext.enabled }}
+{{- $enabledNames = append $enabledNames $name }}
+{{- end }}
+{{- end }}
+{{- if $enabledNames }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argoplane-rbac-config
+  namespace: {{ include "argoplane.argocdNamespace" . }}
+  labels:
+    {{- include "argoplane.labels" . | nindent 4 }}
+  annotations:
+    # Merge these policies into your argocd-rbac-cm ConfigMap.
+    argoplane.io/apply-to: argocd-rbac-cm
+data:
+  argoplane-policy.csv: |
+    {{- range .Values.argocd.rbac.roles }}
+    {{- $role := .role }}
+    {{- if eq (index .extensions 0) "*" }}
+    {{- range $enabledNames }}
+    p, role:{{ $role }}, extensions, invoke, {{ . }}, allow
+    {{- end }}
+    {{- else }}
+    {{- range .extensions }}
+    p, role:{{ $role }}, extensions, invoke, {{ . }}, allow
+    {{- end }}
+    {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}

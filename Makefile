@@ -125,12 +125,19 @@ build-backends: ## Build all backend Docker images
 		docker build -t argoplane-$$ext-backend:dev extensions/$$ext/backend/; \
 	done
 
+.PHONY: build-ui-extensions-image
+build-ui-extensions-image: build-extensions ## Build the UI extensions init container image
+	@echo "==> Building UI extensions init container image"
+	docker build -t argoplane-ui-extensions:dev -f deploy/docker/Dockerfile.ui-extensions .
+
 .PHONY: load-extensions
 load-extensions: build-backends ## Load extension images into kind cluster
 	@for ext in $(EXTENSIONS); do \
 		echo "==> Loading $$ext backend into kind"; \
 		kind load docker-image argoplane-$$ext-backend:dev --name $(CLUSTER_NAME); \
 	done
+	@echo "==> Loading UI extensions init container image into kind"
+	@kind load docker-image argoplane-ui-extensions:dev --name $(CLUSTER_NAME) 2>/dev/null || true
 
 .PHONY: deploy-extensions
 deploy-extensions: ## Deploy extension backends, UI bundles, and proxy config to cluster

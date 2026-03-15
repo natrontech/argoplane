@@ -10,7 +10,8 @@ When making changes to extensions, the portal, backend APIs, or the design syste
 - **Extension API change**: update the API reference page at `services/docs/src/routes/api/<name>/+page.svx`.
 - **New portal feature**: update the relevant developing or architecture docs.
 - **Design system change**: update `services/docs/src/routes/developing/design-system/+page.svx`.
-- **Deployment change**: update `services/docs/src/routes/deployment/+page.svx` or the ArgoCD configuration page.
+- **Deployment change**: update `services/docs/src/routes/deployment/+page.svx` (Helm chart, values) or `services/docs/src/routes/deployment/argocd-configuration/+page.svx` (proxy config, RBAC, init containers, styles, Kustomize examples).
+- **Helm chart change**: update the deployment docs with new values, templates, or configuration options.
 - **New service**: add documentation for the service and update the contributing page's repo structure.
 
 ## Navigation

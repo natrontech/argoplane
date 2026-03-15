@@ -1,0 +1,132 @@
+{{- if .Values.services.docs.enabled }}
+{{- $docs := .Values.services.docs }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argoplane-docs
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "argoplane.labels" . | nindent 4 }}
+    app.kubernetes.io/name: argoplane-docs
+    app.kubernetes.io/component: docs
+spec:
+  replicas: {{ $docs.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argoplane-docs
+      app.kubernetes.io/part-of: argoplane
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: argoplane-docs
+        app.kubernetes.io/part-of: argoplane
+      {{- with $docs.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- include "argoplane.imagePullSecrets" $ | nindent 6 }}
+      containers:
+        - name: docs
+          image: "{{ $docs.image.repository }}:{{ $docs.image.tag | default $.Chart.AppVersion }}"
+          imagePullPolicy: {{ $docs.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: http
+              containerPort: {{ $docs.port | default 3000 }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          {{- with $docs.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      {{- with $docs.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $docs.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $docs.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: argoplane-docs
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "argoplane.labels" . | nindent 4 }}
+    app.kubernetes.io/name: argoplane-docs
+    app.kubernetes.io/component: docs
+spec:
+  type: {{ $docs.serviceType | default "ClusterIP" }}
+  ports:
+    - port: {{ $docs.port | default 3000 }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: argoplane-docs
+    app.kubernetes.io/part-of: argoplane
+{{- if $docs.ingress }}
+{{- if $docs.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argoplane-docs
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "argoplane.labels" $ | nindent 4 }}
+    app.kubernetes.io/name: argoplane-docs
+  {{- with $docs.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if $docs.ingress.className }}
+  ingressClassName: {{ $docs.ingress.className }}
+  {{- end }}
+  {{- if $docs.ingress.tls }}
+  tls:
+    {{- toYaml $docs.ingress.tls | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range $docs.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType | default "Prefix" }}
+            backend:
+              service:
+                name: argoplane-docs
+                port:
+                  name: http
+          {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

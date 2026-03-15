@@ -1,0 +1,22 @@
+apiVersion: v2
+name: argoplane
+description: ArgoCD UI extensions for platform discoverability
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://argoplane.io
+sources:
+  - https://github.com/natrontech/argoplane
+maintainers:
+  - name: Natron Tech AG
+    email: info@natron.io
+    url: https://natron.io
+keywords:
+  - argocd
+  - extensions
+  - platform-engineering
+  - kubernetes
+  - metrics
+  - backups
+  - networking
+icon: https://argoplane.io/logo.svg

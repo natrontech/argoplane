@@ -1,0 +1,1267 @@
+/* ================================================================
+   ArgoPlane Custom Styles for ArgoCD v3
+   Applied via ui.cssurl in argocd-cm ConfigMap
+
+   This stylesheet transforms ArgoCD's default UI into the ArgoPlane
+   pixel-art aesthetic: flat, crisp, warm grays, pastel orange accent.
+   Source of truth: design-system/tokens.css
+   ================================================================ */
+
+/* =================================================================
+   1. DESIGN TOKENS
+   ================================================================= */
+
+:root {
+  /* Primary Accent (Pastel Orange) */
+  --ap-orange-50:  #FFF7ED;
+  --ap-orange-100: #FFEDD5;
+  --ap-orange-200: #FDDCB0;
+  --ap-orange-300: #F5C28B;
+  --ap-orange-400: #F0A868;
+  --ap-orange-500: #E8935A;
+  --ap-orange-600: #D47A42;
+
+  /* Warm Grays */
+  --ap-gray-50:  #FAFAF9;
+  --ap-gray-100: #F5F5F4;
+  --ap-gray-200: #E7E5E4;
+  --ap-gray-300: #D6D3D1;
+  --ap-gray-400: #A8A29E;
+  --ap-gray-500: #78716C;
+  --ap-gray-600: #57534E;
+  --ap-gray-700: #44403C;
+  --ap-gray-800: #292524;
+  --ap-gray-900: #1C1917;
+
+  /* Status Colors (pastel) */
+  --ap-green-light: #D1FAE5;
+  --ap-green:       #6EE7B7;
+  --ap-green-solid: #86EFAC;
+  --ap-green-text:  #16A34A;
+
+  --ap-red-light:   #FFE4E6;
+  --ap-red:         #FDA4AF;
+  --ap-red-solid:   #FCA5A5;
+  --ap-red-text:    #B91C1C;
+
+  --ap-yellow-light: #FEF9C3;
+  --ap-yellow:       #FDE68A;
+  --ap-yellow-solid: #FDE047;
+  --ap-yellow-text:  #A16207;
+
+  --ap-blue-light:  #DBEAFE;
+  --ap-blue:        #93C5FD;
+  --ap-blue-solid:  #7DD3FC;
+  --ap-blue-text:   #1D4ED8;
+
+  /* Typography */
+  --ap-font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  --ap-font-body: 'Heebo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Borders & Corners */
+  --ap-radius-sm: 2px;
+  --ap-radius-md: 4px;
+}
+
+
+/* =================================================================
+   2. GLOBAL RESETS
+   Kill shadows, gradients, and round corners everywhere.
+   ================================================================= */
+
+* {
+  box-shadow: none !important;
+}
+
+/* Cap all border-radius at 4px */
+*:not(.fa):not(.fas):not(.far):not(.fab) {
+  border-radius: revert;
+}
+
+/* Set base font */
+body {
+  font-family: var(--ap-font-body) !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+
+/* =================================================================
+   3. SIDEBAR
+   Warm dark background, orange active state, pixel octopus logo.
+   ================================================================= */
+
+.sidebar {
+  background: var(--ap-gray-900) !important;
+  border-right: 1px solid var(--ap-gray-800) !important;
+}
+
+/* Replace ArgoCD mascot with pixel octopus (inverted for dark bg) */
+.sidebar__logo__character {
+  content: url("data:image/svg+xml,%3Csvg%20width%3D%2236%22%20height%3D%2236%22%20viewBox%3D%220%200%2036%2036%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20shape-rendering%3D%22crispEdges%22%3E%3Crect%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2232%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2232%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2232%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2232%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2232%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2232%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%2232%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%2232%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%2232%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2232%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3C%2Fsvg%3E") !important;
+  width: 36px !important;
+  height: 36px !important;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* Hide the "Argo CD" text wordmark, replace with "ArgoCD by ArgoPlane" */
+.sidebar__logo__text-logo {
+  display: none !important;
+}
+
+/* "ArgoCD" as primary text */
+.sidebar__logo-container::before {
+  content: "ArgoCD";
+  display: block;
+  font-family: var(--ap-font-body) !important;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ap-gray-100);
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+}
+
+/* "by ArgoPlane" as subtitle (styled as link to argoplane.io) */
+.sidebar__logo-container::after {
+  content: "by ArgoPlane ↗";
+  display: block;
+  font-family: var(--ap-font-body) !important;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--ap-gray-400);
+  letter-spacing: 0.3px;
+  margin-top: 1px;
+  cursor: pointer;
+  transition: color 0.1s ease, text-decoration 0.1s ease;
+}
+
+.sidebar__logo-container:hover::after {
+  color: var(--ap-orange-400);
+  text-decoration: underline;
+}
+
+.sidebar__logo__character:hover {
+  animation: ap-sidebar-wiggle 0.4s ease-in-out;
+}
+
+@keyframes ap-sidebar-wiggle {
+  0%   { transform: rotate(0deg); }
+  25%  { transform: rotate(-4deg); }
+  50%  { transform: rotate(4deg); }
+  75%  { transform: rotate(-2deg); }
+  100% { transform: rotate(0deg); }
+}
+
+/* Sidebar logo container */
+.sidebar__logo-container {
+  color: var(--ap-gray-100) !important;
+}
+
+/* Sidebar nav items: transparent left border on all items prevents layout shift */
+.sidebar__nav-item {
+  border-radius: 0 !important;
+  border-left: 3px solid transparent !important;
+  padding-left: 8px !important;
+  transition: background 100ms ease !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.sidebar__nav-item--active {
+  background: var(--ap-gray-800) !important;
+  border-left-color: var(--ap-orange-500) !important;
+}
+
+.sidebar__nav-item:hover {
+  background: var(--ap-gray-800) !important;
+}
+
+.sidebar__nav-item i,
+.sidebar__nav-item .fa {
+  color: var(--ap-gray-400) !important;
+}
+
+.sidebar__nav-item--active i,
+.sidebar__nav-item--active .fa {
+  color: var(--ap-orange-400) !important;
+}
+
+/* Version badge */
+.sidebar__version {
+  color: var(--ap-gray-500) !important;
+  font-family: var(--ap-font-mono) !important;
+  font-size: 11px !important;
+}
+
+/* User info at bottom */
+.sidebar__user-info {
+  border-top: 1px solid var(--ap-gray-700) !important;
+}
+
+
+/* =================================================================
+   4. TOP BAR / HEADER
+   ================================================================= */
+
+.top-bar {
+  background: var(--ap-gray-50) !important;
+  border-bottom: 1px solid var(--ap-gray-200) !important;
+}
+
+.theme-dark .top-bar {
+  background: var(--ap-gray-800) !important;
+  border-bottom-color: var(--ap-gray-700) !important;
+}
+
+
+/* =================================================================
+   5. BUTTONS
+   All ArgoCD buttons: flat, orange accent, 2px radius, no shadows.
+   ================================================================= */
+
+.argo-button--base,
+.argo-button {
+  border-radius: var(--ap-radius-sm) !important;
+  transition: background 100ms ease, border-color 100ms ease !important;
+  font-family: var(--ap-font-body) !important;
+}
+
+/* Primary action buttons (filled): use filter for hover so
+   inline-styled colored buttons (green sync, red delete) darken
+   instead of turning orange */
+.argo-button--base-o {
+  color: white !important;
+  border-radius: var(--ap-radius-sm) !important;
+  transition: filter 100ms ease !important;
+}
+
+.argo-button--base-o:hover {
+  filter: brightness(0.88) !important;
+}
+
+/* Outlined / secondary buttons: subtle hover, don't override background */
+.argo-button--base:not(.argo-button--base-o):hover {
+  filter: brightness(0.95) !important;
+}
+
+/* Small buttons */
+.argo-button--base--sm {
+  border-radius: var(--ap-radius-sm) !important;
+}
+
+
+/* =================================================================
+   6. APPLICATION LIST (TILES)
+   Crisp 1px borders, health status as left border accent.
+   ================================================================= */
+
+.applications-list__entry {
+  border: 1px solid var(--ap-gray-200) !important;
+  border-radius: var(--ap-radius-md) !important;
+  background: white !important;
+  transition: border-color 100ms ease !important;
+}
+
+.applications-list__entry:hover {
+  border-color: var(--ap-orange-300) !important;
+}
+
+/* Health status left border */
+.applications-list__entry--health-Healthy {
+  border-left: 3px solid var(--ap-green-solid) !important;
+}
+
+.applications-list__entry--health-Degraded {
+  border-left: 3px solid var(--ap-yellow-solid) !important;
+}
+
+.applications-list__entry--health-Progressing {
+  border-left: 3px solid var(--ap-blue-solid) !important;
+}
+
+.applications-list__entry--health-Missing {
+  border-left: 3px solid var(--ap-red-solid) !important;
+}
+
+.applications-list__entry--health-Suspended,
+.applications-list__entry--health-Unknown {
+  border-left: 3px solid var(--ap-gray-300) !important;
+}
+
+/* Sync status in tiles */
+.applications-list__entry .application-status-panel__item-name {
+  color: var(--ap-gray-500) !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* App tile info section */
+.applications-list__info {
+  border-top: 1px solid var(--ap-gray-100) !important;
+}
+
+
+/* =================================================================
+   7. APPLICATION DETAILS
+   Header, status panel, resource tree, tabs.
+   ================================================================= */
+
+/* App detail header */
+.application-details__header {
+  border-bottom: 1px solid var(--ap-gray-200) !important;
+}
+
+/* Status panel items */
+.application-status-panel__item-value {
+  font-family: var(--ap-font-mono) !important;
+}
+
+.application-status-panel__item-name {
+  color: var(--ap-gray-500) !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* Tabs in app detail */
+.application-details__tab-bar .argo-tabs__tab {
+  border-radius: 0 !important;
+}
+
+.application-details__tab-bar .argo-tabs__tab--selected {
+  border-bottom: 2px solid var(--ap-orange-500) !important;
+  color: var(--ap-orange-600) !important;
+}
+
+
+/* =================================================================
+   8. RESOURCE TREE / NODE VIEW
+   ================================================================= */
+
+/* Resource node cards */
+.application-resource-tree__node {
+  border: 1px solid var(--ap-gray-200) !important;
+  border-radius: var(--ap-radius-md) !important;
+}
+
+.application-resource-tree__node:hover {
+  border-color: var(--ap-orange-300) !important;
+}
+
+.application-resource-tree__node--selected {
+  border-color: var(--ap-orange-500) !important;
+  border-width: 2px !important;
+}
+
+/* Resource node info text */
+.application-resource-tree__node-kind {
+  font-family: var(--ap-font-mono) !important;
+  font-size: 11px !important;
+  color: var(--ap-gray-500) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+}
+
+.application-resource-tree__node-title {
+  font-family: var(--ap-font-mono) !important;
+}
+
+/* Tree connectors */
+.application-resource-tree__line {
+  stroke: var(--ap-gray-200) !important;
+}
+
+
+/* =================================================================
+   9. STATUS INDICATORS
+   Pixel squares (not circles) for health/sync status.
+   ================================================================= */
+
+/* Make status icons square (1px border-radius) */
+.health-status-icon,
+.fa-circle,
+.fa-heart,
+.fa-question-circle,
+i.fa.fa-circle,
+i.fa.fa-heart {
+  border-radius: 1px !important;
+}
+
+/* Health status colors */
+.health-status-icon--Healthy,
+.health-status--Healthy .health-status-icon {
+  color: var(--ap-green-solid) !important;
+}
+
+.health-status-icon--Degraded,
+.health-status--Degraded .health-status-icon {
+  color: var(--ap-yellow-solid) !important;
+}
+
+.health-status-icon--Progressing,
+.health-status--Progressing .health-status-icon {
+  color: var(--ap-blue-solid) !important;
+}
+
+.health-status-icon--Missing,
+.health-status--Missing .health-status-icon {
+  color: var(--ap-red-solid) !important;
+}
+
+/* Sync status colors */
+.sync-status-icon--Synced {
+  color: var(--ap-green-solid) !important;
+}
+
+.sync-status-icon--OutOfSync {
+  color: var(--ap-yellow-solid) !important;
+}
+
+.sync-status-icon--Unknown {
+  color: var(--ap-gray-300) !important;
+}
+
+
+/* =================================================================
+   10. TABLES & LISTS
+   Flat, minimal borders, monospace values.
+   ================================================================= */
+
+.argo-table-list .argo-table-list__head {
+  border-bottom: 2px solid var(--ap-gray-200) !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  color: var(--ap-gray-500) !important;
+}
+
+.argo-table-list .argo-table-list__row {
+  border-bottom: 1px solid var(--ap-gray-100) !important;
+  transition: background 100ms ease !important;
+}
+
+.argo-table-list .argo-table-list__row:hover {
+  background: var(--ap-gray-50) !important;
+}
+
+/* Data cells in monospace */
+.argo-table-list .argo-table-list__row td {
+  font-family: var(--ap-font-mono) !important;
+  font-size: 13px !important;
+}
+
+
+/* =================================================================
+   11. PANELS & CARDS
+   Flat containers with thin borders.
+   ================================================================= */
+
+.white-box {
+  border: 1px solid var(--ap-gray-200) !important;
+  border-radius: var(--ap-radius-md) !important;
+}
+
+.argo-panel {
+  border: 1px solid var(--ap-gray-200) !important;
+  border-radius: var(--ap-radius-md) !important;
+}
+
+
+/* =================================================================
+   12. TABS (ArgoCD argo-tabs)
+   ================================================================= */
+
+.argo-tabs__tab {
+  font-family: var(--ap-font-body) !important;
+  border-radius: 0 !important;
+  transition: color 100ms ease, border-color 100ms ease !important;
+}
+
+.argo-tabs__tab--selected {
+  border-bottom: 2px solid var(--ap-orange-500) !important;
+  color: var(--ap-orange-600) !important;
+}
+
+.argo-tabs__tab:hover:not(.argo-tabs__tab--selected) {
+  color: var(--ap-gray-800) !important;
+}
+
+
+/* =================================================================
+   13. FORMS & INPUTS
+   Matches ap-input / ap-select / ap-textarea from design system.
+   Monospace for data, 6px 12px padding, 2px radius, orange focus.
+   ================================================================= */
+
+/* --- Text inputs, textareas, selects ---
+   Exclude checkbox/radio so ArgoCD's native controls stay intact. */
+.argo-field input:not([type="checkbox"]):not([type="radio"]),
+.argo-field textarea,
+.argo-field select,
+.argo-form-row input:not([type="checkbox"]):not([type="radio"]),
+.argo-form-row textarea,
+.argo-form-row select,
+input.argo-input,
+textarea.argo-textarea,
+select.argo-select,
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="url"],
+input[type="number"],
+input[type="search"] {
+  border: 1px solid var(--ap-gray-200) !important;
+  border-radius: var(--ap-radius-sm) !important;
+  font-family: var(--ap-font-mono) !important;
+  font-size: 13px !important;
+  padding: 6px 12px !important;
+  background: white !important;
+  color: var(--ap-gray-800) !important;
+  outline: none !important;
+  transition: border-color 100ms ease !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+/* Placeholders */
+.argo-field input:not([type="checkbox"]):not([type="radio"])::placeholder,
+.argo-form-row input:not([type="checkbox"]):not([type="radio"])::placeholder,
+input.argo-input::placeholder,
+input[type="text"]::placeholder,
+input[type="password"]::placeholder,
+input[type="search"]::placeholder {
+  color: var(--ap-gray-400) !important;
+  opacity: 1 !important;
+}
+
+/* Focus state: orange border */
+.argo-field input:not([type="checkbox"]):not([type="radio"]):focus,
+.argo-field textarea:focus,
+.argo-field select:focus,
+.argo-form-row input:not([type="checkbox"]):not([type="radio"]):focus,
+.argo-form-row textarea:focus,
+.argo-form-row select:focus,
+input.argo-input:focus,
+textarea.argo-textarea:focus,
+select.argo-select:focus,
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+input[type="url"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus {
+  border-color: var(--ap-orange-500) !important;
+  outline: none !important;
+}
+
+/* Error state */
+.argo-field--error input:not([type="checkbox"]):not([type="radio"]),
+.argo-form-row--error input:not([type="checkbox"]):not([type="radio"]),
+input.argo-input--error {
+  border-color: var(--ap-red) !important;
+}
+
+.argo-field--error input:not([type="checkbox"]):not([type="radio"]):focus,
+.argo-form-row--error input:not([type="checkbox"]):not([type="radio"]):focus {
+  border-color: var(--ap-red-text) !important;
+}
+
+/* Disabled state */
+.argo-field input:not([type="checkbox"]):not([type="radio"]):disabled,
+.argo-form-row input:not([type="checkbox"]):not([type="radio"]):disabled,
+input.argo-input:disabled,
+select:disabled,
+textarea:disabled {
+  background: var(--ap-gray-100) !important;
+  color: var(--ap-gray-400) !important;
+  cursor: not-allowed !important;
+  border-color: var(--ap-gray-200) !important;
+}
+
+/* --- Select dropdowns: custom arrow --- */
+.argo-field select,
+.argo-form-row select,
+select.argo-select {
+  padding-right: 32px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2378716C' d='M3 4.5L6 8l3-3.5H3z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 10px center !important;
+  cursor: pointer !important;
+}
+
+/* --- Textareas --- */
+.argo-field textarea,
+.argo-form-row textarea,
+textarea.argo-textarea {
+  resize: vertical !important;
+  min-height: 80px !important;
+  padding: 8px 12px !important;
+}
+
+/* --- Labels --- */
+.argo-field label,
+.argo-form-row__label,
+.argo-form-row label {
+  display: block !important;
+  font-family: var(--ap-font-body) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  color: var(--ap-gray-500) !important;
+  margin-bottom: 4px !important;
+}
+
+/* --- Error messages --- */
+.argo-form-row__error-msg {
+  font-family: var(--ap-font-mono) !important;
+  font-size: 11px !important;
+  color: var(--ap-red-text) !important;
+  margin-top: 4px !important;
+}
+
+/* --- Checkboxes & radios ---
+   Leave completely untouched. ArgoCD handles its own checkbox UI. */
+
+/* --- Toggle switches --- */
+.argo-field .toggle-button,
+.toggle-button {
+  border-radius: var(--ap-radius-sm) !important;
+}
+
+.argo-field .toggle-button.active,
+.toggle-button.active {
+  background: var(--ap-orange-500) !important;
+}
+
+/* --- Form row spacing --- */
+.argo-form-row {
+  margin-bottom: 16px !important;
+}
+
+/* --- Inline form help text --- */
+.argo-form-row__help-text {
+  font-size: 11px !important;
+  color: var(--ap-gray-400) !important;
+  margin-top: 4px !important;
+}
+
+
+/* =================================================================
+   14. MODALS & DIALOGS
+   Flat, 4px radius, no shadows.
+   ================================================================= */
+
+.modal-dialog,
+.popup-overlay__content {
+  border: 1px solid var(--ap-gray-200) !important;
+  border-radius: var(--ap-radius-md) !important;
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--ap-gray-200) !important;
+}
+
+.modal-footer {
+  border-top: 1px solid var(--ap-gray-200) !important;
+}
+
+
+/* =================================================================
+   15. SLIDING PANEL (FLYOUT)
+   Used by extensions and resource detail views.
+   ================================================================= */
+
+.sliding-panel {
+  border-left: 1px solid var(--ap-gray-200) !important;
+}
+
+.sliding-panel__header {
+  border-bottom: 1px solid var(--ap-gray-200) !important;
+}
+
+.theme-dark .sliding-panel {
+  border-left-color: var(--ap-gray-700) !important;
+  background: var(--ap-gray-900) !important;
+}
+
+.theme-dark .sliding-panel__header {
+  border-bottom-color: var(--ap-gray-700) !important;
+}
+
+
+/* =================================================================
+   16. NOTIFICATIONS / TOASTS
+   ================================================================= */
+
+.argo-notification {
+  border-radius: var(--ap-radius-md) !important;
+  border: 1px solid !important;
+}
+
+.argo-notification--success {
+  background: var(--ap-green-light) !important;
+  border-color: var(--ap-green) !important;
+  color: var(--ap-green-text) !important;
+}
+
+.argo-notification--error {
+  background: var(--ap-red-light) !important;
+  border-color: var(--ap-red) !important;
+  color: var(--ap-red-text) !important;
+}
+
+.argo-notification--warning {
+  background: var(--ap-yellow-light) !important;
+  border-color: var(--ap-yellow) !important;
+  color: var(--ap-yellow-text) !important;
+}
+
+.argo-notification--info {
+  background: var(--ap-blue-light) !important;
+  border-color: var(--ap-blue) !important;
+  color: var(--ap-blue-text) !important;
+}
+
+
+/* =================================================================
+   17. TYPOGRAPHY
+   Monospace for all data values, code, timestamps.
+   ================================================================= */
+
+pre, code,
+.application-details__header code,
+.application-details__header .application-status-panel__item-value,
+.resource-details__value,
+.events-list__event-time,
+.log-viewer__line {
+  font-family: var(--ap-font-mono) !important;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--ap-font-body) !important;
+  color: var(--ap-gray-800) !important;
+}
+
+.theme-dark h1,
+.theme-dark h2,
+.theme-dark h3,
+.theme-dark h4,
+.theme-dark h5,
+.theme-dark h6 {
+  color: var(--ap-gray-100) !important;
+}
+
+
+/* =================================================================
+   18. LOGIN PAGE
+   Full-page login: left decorative panel + right white box.
+   ArgoCD uses gradient+starfield bg, .login__box, .login__logo.
+   ================================================================= */
+
+/* Override the gradient+starfield background with pixel-art wallpaper.
+   URL is relative to the CSS file location (/shared/app/custom/). */
+.login {
+  background: url("login-wallpaper.jpg") center center / cover no-repeat var(--ap-gray-900) !important;
+}
+
+/* Left panel: hide all content, let the wallpaper speak for itself */
+.login__content {
+  background: transparent !important;
+}
+
+.login__text,
+.login .argo__logo,
+.login .argo__logo::after {
+  display: none !important;
+}
+
+/* Footer logo at bottom of login box: hide (redundant with top logo) */
+.login__footer {
+  display: none !important;
+}
+
+/* Right-side login box */
+.login__box {
+  background: white !important;
+  border-left: 1px solid var(--ap-gray-200) !important;
+}
+
+/* Replace Argo "O" logo at top of login box with our octopus */
+.login__logo img.logo-image {
+  content: url("data:image/svg+xml,%3Csvg%20width%3D%2272%22%20height%3D%2272%22%20viewBox%3D%220%200%2036%2036%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20shape-rendering%3D%22crispEdges%22%3E%3Crect%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%2232%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%2232%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%2232%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%2232%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2232%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2232%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%2232%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%2232%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%2232%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%2232%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23D6D3D1%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3C%2Fsvg%3E") !important;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* "ArgoCD" title under logo in login box */
+.login__logo::after {
+  content: "ArgoCD";
+  display: block;
+  font-family: var(--ap-font-body);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ap-gray-800);
+  margin-top: 12px;
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+}
+
+/* "by ArgoPlane" subtitle below ArgoCD title.
+   Use the width-control wrapper. ::before renders before the child img
+   but CSS order can position it. Instead, use the parent's ::before
+   with flexbox ordering to push it to the bottom. */
+.login__logo {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+/* "by ArgoPlane" subtitle (styled as link to argoplane.io) */
+.login__box .login__logo::before {
+  content: "by ArgoPlane ↗";
+  order: 99;
+  font-family: var(--ap-font-body);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ap-gray-400);
+  letter-spacing: 0.3px;
+  margin-top: 2px;
+  cursor: pointer;
+  transition: color 0.1s ease, text-decoration 0.1s ease;
+}
+
+.login__box .login__logo:hover::before {
+  color: var(--ap-orange-500);
+  text-decoration: underline;
+}
+
+/* Login buttons: orange accent, crisp corners */
+.login .argo-button,
+.login__box .argo-button,
+.login__box button,
+.login .argo-button--base,
+.login .argo-button--full-width,
+.login__form-row button {
+  background: var(--ap-orange-500) !important;
+  border: 1px solid var(--ap-orange-600) !important;
+  color: white !important;
+  border-radius: var(--ap-radius-sm) !important;
+  font-family: var(--ap-font-body) !important;
+  padding: 10px 20px !important;
+  cursor: pointer !important;
+}
+
+.login .argo-button:hover,
+.login__box .argo-button:hover,
+.login__box button:hover,
+.login__form-row button:hover {
+  background: var(--ap-orange-600) !important;
+}
+
+/* Login form inputs: aggressive selectors to beat ArgoCD defaults */
+.login .argo-form-row input:not([type="checkbox"]):not([type="radio"]),
+.login__box input[type="text"],
+.login__box input[type="password"],
+.login__box .argo-field input:not([type="checkbox"]):not([type="radio"]),
+.login__box .argo-form-row input[type="text"],
+.login__box .argo-form-row input[type="password"],
+.login input:not([type="checkbox"]):not([type="radio"]) {
+  border: 1px solid var(--ap-gray-200) !important;
+  border-radius: var(--ap-radius-sm) !important;
+  font-family: var(--ap-font-mono) !important;
+  font-size: 13px !important;
+  padding: 10px 12px !important;
+  background: white !important;
+  color: var(--ap-gray-800) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  outline: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  transition: border-color 100ms ease !important;
+}
+
+.login .argo-form-row input:not([type="checkbox"]):not([type="radio"]):focus,
+.login__box input:not([type="checkbox"]):not([type="radio"]):focus,
+.login input:not([type="checkbox"]):not([type="radio"]):focus {
+  border-color: var(--ap-orange-500) !important;
+  outline: none !important;
+}
+
+/* Login form labels */
+.login .argo-form-row label,
+.login__box label {
+  font-family: var(--ap-font-body) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  color: var(--ap-gray-500) !important;
+  margin-bottom: 6px !important;
+  display: block !important;
+}
+
+/* SSO separator */
+.login__saml-separator {
+  border-bottom-color: var(--ap-gray-200) !important;
+  color: var(--ap-gray-400) !important;
+}
+
+/* Footer logo: hidden (redundant, see .login__footer display:none above) */
+
+
+/* =================================================================
+   19. EXTENSIONS
+   Style the extension tab area and system-level extension pages.
+   ================================================================= */
+
+/* Extension tabs follow the standard tab styling */
+.extensions-tab-panel {
+  border-top: 1px solid var(--ap-gray-200) !important;
+}
+
+/* System-level extension pages in sidebar */
+.sidebar__nav-item--extension {
+  border-left: 3px solid transparent !important;
+}
+
+.sidebar__nav-item--extension.sidebar__nav-item--active {
+  border-left-color: var(--ap-orange-500) !important;
+}
+
+
+/* =================================================================
+   20. BADGES & LABELS (inline)
+   ================================================================= */
+
+.argo-label {
+  border-radius: var(--ap-radius-sm) !important;
+  font-family: var(--ap-font-mono) !important;
+  font-size: 11px !important;
+}
+
+.argo-badge {
+  border-radius: var(--ap-radius-sm) !important;
+  font-family: var(--ap-font-mono) !important;
+}
+
+
+/* =================================================================
+   21. FILTER / SEARCH BAR
+   ================================================================= */
+
+.applications-filter input,
+.argo-autocomplete input {
+  border: 1px solid var(--ap-gray-200) !important;
+  border-radius: var(--ap-radius-sm) !important;
+  font-family: var(--ap-font-mono) !important;
+  transition: border-color 100ms ease !important;
+}
+
+.applications-filter input:focus,
+.argo-autocomplete input:focus {
+  border-color: var(--ap-orange-500) !important;
+}
+
+
+/* =================================================================
+   22. DIFF VIEW
+   ================================================================= */
+
+.application-resource-diff .diff-line--added {
+  background: var(--ap-green-light) !important;
+}
+
+.application-resource-diff .diff-line--removed {
+  background: var(--ap-red-light) !important;
+}
+
+
+/* =================================================================
+   23. TOOLTIPS & POPOVERS
+   ================================================================= */
+
+.tippy-box,
+.argo-tooltip {
+  background: var(--ap-gray-800) !important;
+  color: var(--ap-gray-100) !important;
+  font-family: var(--ap-font-mono) !important;
+  font-size: 11px !important;
+  border-radius: var(--ap-radius-sm) !important;
+}
+
+.tippy-arrow {
+  color: var(--ap-gray-800) !important;
+}
+
+
+/* =================================================================
+   24. SCROLLBARS
+   Crisp, flat, narrow.
+   ================================================================= */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ap-gray-300);
+  border-radius: var(--ap-radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ap-gray-400);
+}
+
+
+/* =================================================================
+   25. DARK THEME OVERRIDES
+   ArgoCD toggles .theme-dark on body.
+   ================================================================= */
+
+.theme-dark {
+  color-scheme: dark;
+}
+
+/* Sidebar stays dark in both themes */
+.theme-dark .sidebar {
+  background: var(--ap-gray-900) !important;
+}
+
+/* App tiles */
+.theme-dark .applications-list__entry {
+  border-color: var(--ap-gray-700) !important;
+  background: var(--ap-gray-800) !important;
+}
+
+.theme-dark .applications-list__entry:hover {
+  border-color: var(--ap-orange-400) !important;
+}
+
+.theme-dark .applications-list__info {
+  border-top-color: var(--ap-gray-700) !important;
+}
+
+/* Resource tree nodes */
+.theme-dark .application-resource-tree__node {
+  border-color: var(--ap-gray-700) !important;
+  background: var(--ap-gray-800) !important;
+}
+
+.theme-dark .application-resource-tree__node:hover {
+  border-color: var(--ap-orange-400) !important;
+}
+
+.theme-dark .application-resource-tree__node--selected {
+  border-color: var(--ap-orange-400) !important;
+}
+
+.theme-dark .application-resource-tree__line {
+  stroke: var(--ap-gray-600) !important;
+}
+
+/* Panels & cards */
+.theme-dark .white-box {
+  border-color: var(--ap-gray-700) !important;
+  background: var(--ap-gray-800) !important;
+}
+
+.theme-dark .argo-panel {
+  border-color: var(--ap-gray-700) !important;
+  background: var(--ap-gray-800) !important;
+}
+
+/* Tables */
+.theme-dark .argo-table-list .argo-table-list__head {
+  border-bottom-color: var(--ap-gray-700) !important;
+}
+
+.theme-dark .argo-table-list .argo-table-list__row {
+  border-bottom-color: var(--ap-gray-700) !important;
+}
+
+.theme-dark .argo-table-list .argo-table-list__row:hover {
+  background: var(--ap-gray-700) !important;
+}
+
+/* Modals */
+.theme-dark .modal-dialog,
+.theme-dark .popup-overlay__content {
+  border-color: var(--ap-gray-700) !important;
+  background: var(--ap-gray-800) !important;
+}
+
+.theme-dark .modal-header {
+  border-bottom-color: var(--ap-gray-700) !important;
+}
+
+.theme-dark .modal-footer {
+  border-top-color: var(--ap-gray-700) !important;
+}
+
+/* Forms */
+.theme-dark .argo-field input:not([type="checkbox"]):not([type="radio"]),
+.theme-dark .argo-field textarea,
+.theme-dark .argo-field select,
+.theme-dark .argo-form-row input:not([type="checkbox"]):not([type="radio"]),
+.theme-dark .argo-form-row textarea,
+.theme-dark .argo-form-row select,
+.theme-dark input.argo-input,
+.theme-dark textarea.argo-textarea,
+.theme-dark input[type="text"],
+.theme-dark input[type="password"],
+.theme-dark input[type="email"],
+.theme-dark input[type="url"],
+.theme-dark input[type="number"],
+.theme-dark input[type="search"] {
+  border-color: var(--ap-gray-600) !important;
+  background: var(--ap-gray-900) !important;
+  color: var(--ap-gray-100) !important;
+}
+
+.theme-dark .argo-field input:not([type="checkbox"]):not([type="radio"])::placeholder,
+.theme-dark .argo-form-row input:not([type="checkbox"]):not([type="radio"])::placeholder,
+.theme-dark input.argo-input::placeholder,
+.theme-dark input[type="text"]::placeholder,
+.theme-dark input[type="password"]::placeholder,
+.theme-dark input[type="search"]::placeholder {
+  color: var(--ap-gray-500) !important;
+}
+
+.theme-dark .argo-field input:not([type="checkbox"]):not([type="radio"]):focus,
+.theme-dark .argo-field textarea:focus,
+.theme-dark .argo-field select:focus,
+.theme-dark .argo-form-row input:not([type="checkbox"]):not([type="radio"]):focus,
+.theme-dark .argo-form-row textarea:focus,
+.theme-dark input.argo-input:focus,
+.theme-dark input[type="text"]:focus,
+.theme-dark input[type="password"]:focus,
+.theme-dark input[type="search"]:focus {
+  border-color: var(--ap-orange-400) !important;
+}
+
+/* Dark labels */
+.theme-dark .argo-field label,
+.theme-dark .argo-form-row__label,
+.theme-dark .argo-form-row label {
+  color: var(--ap-gray-400) !important;
+}
+
+/* Dark error messages */
+.theme-dark .argo-form-row__error-msg {
+  color: var(--ap-red-solid) !important;
+}
+
+/* Dark disabled */
+.theme-dark .argo-field input:not([type="checkbox"]):not([type="radio"]):disabled,
+.theme-dark .argo-form-row input:not([type="checkbox"]):not([type="radio"]):disabled,
+.theme-dark input:not([type="checkbox"]):not([type="radio"]):disabled {
+  background: var(--ap-gray-800) !important;
+  color: var(--ap-gray-500) !important;
+  border-color: var(--ap-gray-700) !important;
+}
+
+/* Dark select arrow */
+.theme-dark .argo-field select,
+.theme-dark .argo-form-row select,
+.theme-dark select.argo-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23A8A29E' d='M3 4.5L6 8l3-3.5H3z'/%3E%3C/svg%3E") !important;
+}
+
+/* Dark toggle */
+.theme-dark .toggle-button {
+  background: var(--ap-gray-700) !important;
+}
+
+.theme-dark .toggle-button.active {
+  background: var(--ap-orange-400) !important;
+}
+
+/* Buttons */
+.theme-dark .argo-button--base:not(.argo-button--base-o) {
+  border-color: var(--ap-gray-600) !important;
+  color: var(--ap-gray-200) !important;
+}
+
+.theme-dark .argo-button--base:not(.argo-button--base-o):hover {
+  filter: brightness(1.15) !important;
+}
+
+/* Login */
+.theme-dark .login {
+  background: var(--ap-gray-900) !important;
+}
+
+.theme-dark .login__box {
+  border-left-color: var(--ap-gray-700) !important;
+  background: var(--ap-gray-800) !important;
+}
+
+.theme-dark .login__logo::after {
+  color: var(--ap-gray-100) !important;
+}
+
+.theme-dark .login .argo-form-row input:not([type="checkbox"]):not([type="radio"]),
+.theme-dark .login__box input[type="text"],
+.theme-dark .login__box input[type="password"],
+.theme-dark .login__box .argo-field input:not([type="checkbox"]):not([type="radio"]) {
+  border-color: var(--ap-gray-600) !important;
+  background: var(--ap-gray-900) !important;
+  color: var(--ap-gray-100) !important;
+}
+
+.theme-dark .login .argo-form-row input:not([type="checkbox"]):not([type="radio"]):focus,
+.theme-dark .login__box input[type="text"]:focus,
+.theme-dark .login__box input[type="password"]:focus {
+  border-color: var(--ap-orange-400) !important;
+}
+
+.theme-dark .login__saml-separator {
+  border-bottom-color: var(--ap-gray-600) !important;
+}
+
+/* Filter */
+.theme-dark .applications-filter input,
+.theme-dark .argo-autocomplete input {
+  border-color: var(--ap-gray-600) !important;
+  background: var(--ap-gray-900) !important;
+  color: var(--ap-gray-100) !important;
+}
+
+/* App detail header */
+.theme-dark .application-details__header {
+  border-bottom-color: var(--ap-gray-700) !important;
+}
+
+/* Tabs */
+.theme-dark .argo-tabs__tab--selected {
+  border-bottom-color: var(--ap-orange-400) !important;
+  color: var(--ap-orange-400) !important;
+}
+
+/* Diff */
+.theme-dark .application-resource-diff .diff-line--added {
+  background: rgba(134, 239, 172, 0.15) !important;
+}
+
+.theme-dark .application-resource-diff .diff-line--removed {
+  background: rgba(252, 165, 165, 0.15) !important;
+}
+
+/* Scrollbar dark */
+.theme-dark ::-webkit-scrollbar-thumb {
+  background: var(--ap-gray-600);
+}
+
+.theme-dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--ap-gray-500);
+}

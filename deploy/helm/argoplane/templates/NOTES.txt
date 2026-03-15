@@ -1,0 +1,86 @@
+
+ArgoPlane has been installed.
+
+{{- $ns := include "argoplane.argocdNamespace" . }}
+{{- $enabledExtensions := list }}
+{{- range $name, $ext := .Values.extensions }}
+{{- if $ext.enabled }}
+{{- $enabledExtensions = append $enabledExtensions $name }}
+{{- end }}
+{{- end }}
+
+Enabled extensions: {{ join ", " $enabledExtensions }}
+{{- if .Values.argocd.styles.enabled }}
+Custom styles:     enabled
+{{- end }}
+{{- if .Values.argocd.branding.enabled }}
+Branding:          enabled
+{{- end }}
+
+== Configure ArgoCD ==
+
+Run these commands to wire up ArgoCD with your extensions:
+
+  # 1. Enable proxy extensions
+  kubectl -n {{ $ns }} patch cm argocd-cmd-params-cm --type merge \
+    -p '{"data":{"server.enable.proxy.extension":"true"}}'
+
+  # 2. Add proxy routing for each extension
+  kubectl -n {{ $ns }} patch cm argocd-cm --type merge -p '{
+    "data": {
+{{- $first := true }}
+{{- range $name, $ext := .Values.extensions }}
+{{- if $ext.enabled }}
+{{- if not $first }},{{ end }}
+      "extension.config.{{ $name }}": "services:\n- url: http://argoplane-{{ $name }}-backend.{{ $ns }}.svc:{{ $ext.port }}\n"
+{{- $first = false }}
+{{- end }}
+{{- end }}
+{{- if .Values.argocd.styles.enabled }},
+      "ui.cssurl": "./custom/argoplane.css"
+{{- end }}
+    }
+  }'
+
+{{- if .Values.argocd.rbac.enabled }}
+
+  # 3. Add RBAC policies
+  kubectl -n {{ $ns }} get cm argoplane-rbac-config \
+    -o jsonpath='{.data.argoplane-policy\.csv}'
+  # Merge the output into your argocd-rbac-cm policy.csv field
+{{- end }}
+
+{{- if .Values.argocd.styles.enabled }}
+
+  # 4. Mount styles into argocd-server
+  kubectl -n {{ $ns }} patch deployment argocd-server --type json -p '[
+    {"op":"add","path":"/spec/template/spec/volumes/-",
+     "value":{"name":"argoplane-styles","configMap":{"name":"{{ .Values.argocd.styles.configMapName | default "argoplane-styles" }}"}}},
+    {"op":"add","path":"/spec/template/spec/containers/0/volumeMounts/-",
+     "value":{"name":"argoplane-styles","mountPath":"/shared/app/custom"}}
+  ]'
+{{- end }}
+
+{{- if .Values.argocd.branding.enabled }}
+
+  # {{ if .Values.argocd.styles.enabled }}5{{ else }}4{{ end }}. Mount branding into argocd-server
+  kubectl -n {{ $ns }} patch deployment argocd-server --type json -p '[
+    {"op":"add","path":"/spec/template/spec/volumes/-",
+     "value":{"name":"argoplane-branding","configMap":{"name":"argoplane-links"}}},
+    {"op":"add","path":"/spec/template/spec/containers/0/volumeMounts/-",
+     "value":{"name":"argoplane-branding","mountPath":"/tmp/extensions/branding","readOnly":true}}
+  ]'
+{{- end }}
+
+  # Restart argocd-server
+  kubectl -n {{ $ns }} rollout restart deployment argocd-server
+
+{{- if .Values.services.docs.enabled }}
+
+== Documentation ==
+
+Docs site is deployed. Access it via:
+  kubectl port-forward svc/argoplane-docs {{ .Values.services.docs.port }}:{{ .Values.services.docs.port }}
+{{- end }}
+
+For more information: https://docs.argoplane.io/deployment

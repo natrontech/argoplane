@@ -1,0 +1,24 @@
+# ArgoPlane UI Extensions
+# Lightweight image containing only the built JS bundles.
+# Used as an init container on argocd-server to load extensions.
+#
+# Build:
+#   make build-extensions
+#   docker build -t ghcr.io/natrontech/argoplane-ui-extensions:dev \
+#     -f deploy/docker/Dockerfile.ui-extensions .
+#
+# Usage in argocd-server:
+#   initContainers:
+#     - name: argoplane-extensions
+#       image: ghcr.io/natrontech/argoplane-ui-extensions:v0.1.0
+#       volumeMounts:
+#         - name: extensions
+#           mountPath: /tmp/extensions
+
+FROM busybox:1.36
+RUN mkdir -p /extensions
+COPY extensions/metrics/ui/dist/extension-metrics.js /extensions/
+COPY extensions/backups/ui/dist/extension-backups.js /extensions/
+COPY extensions/networking/ui/dist/extension-networking.js /extensions/
+COPY deploy/argocd/argoplane-links.js /extensions/extension-argoplane-links.js
+ENTRYPOINT ["cp", "-r", "/extensions/.", "/tmp/extensions/"]

@@ -21,11 +21,14 @@ Running `make dev-infra` multiple times is safe. It checks if the cluster exists
 ## Building Extensions
 
 ```sh
-make build-extensions    # Build all UI extension bundles
-make load-extensions     # Load extension images into kind cluster
+make build-extensions           # Build all UI extension bundles
+make build-backends             # Build all backend Docker images
+make build-ui-extensions-image  # Build the UI extensions init container image
+make load-extensions            # Load backend + UI extensions images into kind
+make deploy-extensions          # Deploy backends, UI bundles, and proxy config
 ```
 
-Each extension's UI is built with webpack/vite and produces a single `extension.js` bundle. The backend is a Go binary built into a Docker image.
+Each extension's UI is built with webpack/vite and produces a single `extension.js` bundle. The backend is a Go binary built into a Docker image. The UI extensions init container (`deploy/docker/Dockerfile.ui-extensions`) packages all JS bundles for production use as an argocd-server init container.
 
 ## Integration Tests
 

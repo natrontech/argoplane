@@ -1,0 +1,15 @@
+{{- if .Values.argocd.styles.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.argocd.styles.configMapName | default "argoplane-styles" }}
+  namespace: {{ include "argoplane.argocdNamespace" . }}
+  labels:
+    {{- include "argoplane.labels" . | nindent 4 }}
+    app.kubernetes.io/component: styles
+data:
+  argoplane.css: |
+{{ .Files.Get "files/argoplane-styles.css" | indent 4 }}
+binaryData:
+  login-wallpaper.jpg: {{ .Files.Get "files/login-wallpaper.jpg" | b64enc }}
+{{- end }}
