@@ -29,10 +29,16 @@ cluster-delete: ## Delete kind cluster (idempotent)
 		echo "==> Cluster '$(CLUSTER_NAME)' does not exist"; \
 	fi
 
+# --- CNI (Cilium) ---
+
+.PHONY: cilium
+cilium: cluster ## Install Cilium CNI with Hubble (idempotent)
+	@CLUSTER_NAME=$(CLUSTER_NAME) bash hack/install-cilium.sh
+
 # --- ArgoCD ---
 
 .PHONY: argocd
-argocd: cluster ## Install ArgoCD (idempotent)
+argocd: cilium ## Install ArgoCD (idempotent)
 	@echo "==> Installing ArgoCD $(ARGOCD_VERSION)"
 	@kubectl create namespace $(ARGOCD_NS) --dry-run=client -o yaml | kubectl apply -f -
 	@kubectl apply -n $(ARGOCD_NS) \
