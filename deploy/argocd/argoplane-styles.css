@@ -121,9 +121,9 @@ body {
   line-height: 1.2;
 }
 
-/* "by ArgoPlane" as subtitle */
+/* "by ArgoPlane" as subtitle (styled as link to argoplane.io) */
 .sidebar__logo-container::after {
-  content: "by ArgoPlane";
+  content: "by ArgoPlane ↗";
   display: block;
   font-family: var(--ap-font-body) !important;
   font-size: 10px;
@@ -131,6 +131,13 @@ body {
   color: var(--ap-gray-400);
   letter-spacing: 0.3px;
   margin-top: 1px;
+  cursor: pointer;
+  transition: color 0.1s ease, text-decoration 0.1s ease;
+}
+
+.sidebar__logo-container:hover::after {
+  color: var(--ap-orange-400);
+  text-decoration: underline;
 }
 
 .sidebar__logo__character:hover {
@@ -881,10 +888,9 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center !important;
 }
 
-/* The ::after content already goes after img, which is correct.
-   Add a second subtitle via box-decoration on the logo wrapper. */
+/* "by ArgoPlane" subtitle (styled as link to argoplane.io) */
 .login__box .login__logo::before {
-  content: "by ArgoPlane";
+  content: "by ArgoPlane ↗";
   order: 99;
   font-family: var(--ap-font-body);
   font-size: 11px;
@@ -892,6 +898,13 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--ap-gray-400);
   letter-spacing: 0.3px;
   margin-top: 2px;
+  cursor: pointer;
+  transition: color 0.1s ease, text-decoration 0.1s ease;
+}
+
+.login__box .login__logo:hover::before {
+  color: var(--ap-orange-500);
+  text-decoration: underline;
 }
 
 /* Login buttons: orange accent, crisp corners */
