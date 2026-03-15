@@ -1,10 +1,18 @@
 /* ================================================================
    ArgoPlane Custom Styles for ArgoCD v3
    Applied via ui.cssurl in argocd-cm ConfigMap
+
+   This stylesheet transforms ArgoCD's default UI into the ArgoPlane
+   pixel-art aesthetic: flat, crisp, warm grays, pastel orange accent.
+   Source of truth: design-system/tokens.css
    ================================================================ */
 
-/* --- Design tokens as CSS variables --- */
+/* =================================================================
+   1. DESIGN TOKENS
+   ================================================================= */
+
 :root {
+  /* Primary Accent (Pastel Orange) */
   --ap-orange-50:  #FFF7ED;
   --ap-orange-100: #FFEDD5;
   --ap-orange-200: #FDDCB0;
@@ -13,6 +21,7 @@
   --ap-orange-500: #E8935A;
   --ap-orange-600: #D47A42;
 
+  /* Warm Grays */
   --ap-gray-50:  #FAFAF9;
   --ap-gray-100: #F5F5F4;
   --ap-gray-200: #E7E5E4;
@@ -24,21 +33,69 @@
   --ap-gray-800: #292524;
   --ap-gray-900: #1C1917;
 
+  /* Status Colors (pastel) */
+  --ap-green-light: #D1FAE5;
+  --ap-green:       #6EE7B7;
   --ap-green-solid: #86EFAC;
-  --ap-red-solid:   #FCA5A5;
-  --ap-yellow-solid:#FDE047;
-  --ap-blue-solid:  #7DD3FC;
+  --ap-green-text:  #16A34A;
 
+  --ap-red-light:   #FFE4E6;
+  --ap-red:         #FDA4AF;
+  --ap-red-solid:   #FCA5A5;
+  --ap-red-text:    #B91C1C;
+
+  --ap-yellow-light: #FEF9C3;
+  --ap-yellow:       #FDE68A;
+  --ap-yellow-solid: #FDE047;
+  --ap-yellow-text:  #A16207;
+
+  --ap-blue-light:  #DBEAFE;
+  --ap-blue:        #93C5FD;
+  --ap-blue-solid:  #7DD3FC;
+  --ap-blue-text:   #1D4ED8;
+
+  /* Typography */
   --ap-font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  --ap-font-body: 'Heebo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Borders & Corners */
   --ap-radius-sm: 2px;
   --ap-radius-md: 4px;
 }
 
-/* --- Sidebar: warm dark with orange accent + ArgoPlane logo --- */
-.sidebar {
-  background: var(--ap-gray-900) !important;
+
+/* =================================================================
+   2. GLOBAL RESETS
+   Kill shadows, gradients, and round corners everywhere.
+   ================================================================= */
+
+* {
+  box-shadow: none !important;
 }
 
+/* Cap all border-radius at 4px */
+*:not(.fa):not(.fas):not(.far):not(.fab) {
+  border-radius: revert;
+}
+
+/* Set base font */
+body {
+  font-family: var(--ap-font-body) !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+
+/* =================================================================
+   3. SIDEBAR
+   Warm dark background, orange active state, pixel octopus logo.
+   ================================================================= */
+
+.sidebar {
+  background: var(--ap-gray-900) !important;
+  border-right: 1px solid var(--ap-gray-800) !important;
+}
+
+/* Replace ArgoCD logo with pixel octopus (inverted for dark bg) */
 .sidebar__logo img {
   content: url("data:image/svg+xml,%3Csvg%20width%3D%2236%22%20height%3D%2236%22%20viewBox%3D%220%200%2036%2036%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2232%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2232%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2232%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2232%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2232%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2232%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%2232%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%2232%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%2232%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2232%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23F5F5F4%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%2212%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%2224%22%20width%3D%224%22%20height%3D%224%22%20fill%3D%22%23E8935A%22%2F%3E%3C%2Fsvg%3E");
   width: 36px !important;
@@ -59,6 +116,17 @@
   100% { transform: rotate(0deg); }
 }
 
+/* Sidebar text */
+.sidebar__logo-text {
+  color: var(--ap-gray-100) !important;
+}
+
+/* Sidebar nav items */
+.sidebar__nav-item {
+  border-radius: 0 !important;
+  transition: background 100ms ease !important;
+}
+
 .sidebar__nav-item--active {
   background: var(--ap-gray-800) !important;
   border-left: 3px solid var(--ap-orange-500) !important;
@@ -68,30 +136,101 @@
   background: var(--ap-gray-800) !important;
 }
 
+.sidebar__nav-item i,
+.sidebar__nav-item .fa {
+  color: var(--ap-gray-400) !important;
+}
+
+.sidebar__nav-item--active i,
+.sidebar__nav-item--active .fa {
+  color: var(--ap-orange-400) !important;
+}
+
+/* Version badge */
 .sidebar__version {
   color: var(--ap-gray-500) !important;
   font-family: var(--ap-font-mono) !important;
   font-size: 11px !important;
 }
 
-/* --- Top bar / header accents --- */
-.argo-button--base {
+/* User info at bottom */
+.sidebar__user-info {
+  border-top: 1px solid var(--ap-gray-700) !important;
+}
+
+
+/* =================================================================
+   4. TOP BAR / HEADER
+   ================================================================= */
+
+.top-bar {
+  background: var(--ap-gray-50) !important;
+  border-bottom: 1px solid var(--ap-gray-200) !important;
+}
+
+.theme-dark .top-bar {
+  background: var(--ap-gray-800) !important;
+  border-bottom-color: var(--ap-gray-700) !important;
+}
+
+
+/* =================================================================
+   5. BUTTONS
+   All ArgoCD buttons: flat, orange accent, 2px radius, no shadows.
+   ================================================================= */
+
+.argo-button--base,
+.argo-button {
+  border-radius: var(--ap-radius-sm) !important;
+  transition: background 100ms ease, border-color 100ms ease !important;
+  font-family: var(--ap-font-body) !important;
+}
+
+/* Primary action buttons: orange */
+.argo-button--base-o {
+  background: var(--ap-orange-500) !important;
+  border-color: var(--ap-orange-600) !important;
+  color: white !important;
   border-radius: var(--ap-radius-sm) !important;
 }
 
-/* --- Application tiles: crisp borders, no shadows --- */
+.argo-button--base-o:hover {
+  background: var(--ap-orange-600) !important;
+}
+
+/* Outlined buttons */
+.argo-button--base:not(.argo-button--base-o) {
+  border-color: var(--ap-gray-200) !important;
+}
+
+.argo-button--base:not(.argo-button--base-o):hover {
+  border-color: var(--ap-orange-300) !important;
+  background: var(--ap-orange-50) !important;
+}
+
+/* Small buttons */
+.argo-button--base--sm {
+  border-radius: var(--ap-radius-sm) !important;
+}
+
+
+/* =================================================================
+   6. APPLICATION LIST (TILES)
+   Crisp 1px borders, health status as left border accent.
+   ================================================================= */
+
 .applications-list__entry {
   border: 1px solid var(--ap-gray-200) !important;
   border-radius: var(--ap-radius-md) !important;
-  box-shadow: none !important;
+  background: white !important;
+  transition: border-color 100ms ease !important;
 }
 
 .applications-list__entry:hover {
   border-color: var(--ap-orange-300) !important;
-  box-shadow: none !important;
 }
 
-/* Health status accents on app tiles */
+/* Health status left border */
 .applications-list__entry--health-Healthy {
   border-left: 3px solid var(--ap-green-solid) !important;
 }
@@ -104,13 +243,363 @@
   border-left: 3px solid var(--ap-blue-solid) !important;
 }
 
-.applications-list__entry--health-Suspended,
-.applications-list__entry--health-Unknown,
 .applications-list__entry--health-Missing {
+  border-left: 3px solid var(--ap-red-solid) !important;
+}
+
+.applications-list__entry--health-Suspended,
+.applications-list__entry--health-Unknown {
   border-left: 3px solid var(--ap-gray-300) !important;
 }
 
-/* --- Login page: orange accent --- */
+/* Sync status in tiles */
+.applications-list__entry .application-status-panel__item-name {
+  color: var(--ap-gray-500) !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* App tile info section */
+.applications-list__info {
+  border-top: 1px solid var(--ap-gray-100) !important;
+}
+
+
+/* =================================================================
+   7. APPLICATION DETAILS
+   Header, status panel, resource tree, tabs.
+   ================================================================= */
+
+/* App detail header */
+.application-details__header {
+  border-bottom: 1px solid var(--ap-gray-200) !important;
+}
+
+/* Status panel items */
+.application-status-panel__item-value {
+  font-family: var(--ap-font-mono) !important;
+}
+
+.application-status-panel__item-name {
+  color: var(--ap-gray-500) !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* Tabs in app detail */
+.application-details__tab-bar .argo-tabs__tab {
+  border-radius: 0 !important;
+}
+
+.application-details__tab-bar .argo-tabs__tab--selected {
+  border-bottom: 2px solid var(--ap-orange-500) !important;
+  color: var(--ap-orange-600) !important;
+}
+
+
+/* =================================================================
+   8. RESOURCE TREE / NODE VIEW
+   ================================================================= */
+
+/* Resource node cards */
+.application-resource-tree__node {
+  border: 1px solid var(--ap-gray-200) !important;
+  border-radius: var(--ap-radius-md) !important;
+}
+
+.application-resource-tree__node:hover {
+  border-color: var(--ap-orange-300) !important;
+}
+
+.application-resource-tree__node--selected {
+  border-color: var(--ap-orange-500) !important;
+  border-width: 2px !important;
+}
+
+/* Resource node info text */
+.application-resource-tree__node-kind {
+  font-family: var(--ap-font-mono) !important;
+  font-size: 11px !important;
+  color: var(--ap-gray-500) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+}
+
+.application-resource-tree__node-title {
+  font-family: var(--ap-font-mono) !important;
+}
+
+/* Tree connectors */
+.application-resource-tree__line {
+  stroke: var(--ap-gray-200) !important;
+}
+
+
+/* =================================================================
+   9. STATUS INDICATORS
+   Pixel squares (not circles) for health/sync status.
+   ================================================================= */
+
+/* Make status icons square (1px border-radius) */
+.health-status-icon,
+.fa-circle,
+.fa-heart,
+.fa-question-circle,
+i.fa.fa-circle,
+i.fa.fa-heart {
+  border-radius: 1px !important;
+}
+
+/* Health status colors */
+.health-status-icon--Healthy,
+.health-status--Healthy .health-status-icon {
+  color: var(--ap-green-solid) !important;
+}
+
+.health-status-icon--Degraded,
+.health-status--Degraded .health-status-icon {
+  color: var(--ap-yellow-solid) !important;
+}
+
+.health-status-icon--Progressing,
+.health-status--Progressing .health-status-icon {
+  color: var(--ap-blue-solid) !important;
+}
+
+.health-status-icon--Missing,
+.health-status--Missing .health-status-icon {
+  color: var(--ap-red-solid) !important;
+}
+
+/* Sync status colors */
+.sync-status-icon--Synced {
+  color: var(--ap-green-solid) !important;
+}
+
+.sync-status-icon--OutOfSync {
+  color: var(--ap-yellow-solid) !important;
+}
+
+.sync-status-icon--Unknown {
+  color: var(--ap-gray-300) !important;
+}
+
+
+/* =================================================================
+   10. TABLES & LISTS
+   Flat, minimal borders, monospace values.
+   ================================================================= */
+
+.argo-table-list .argo-table-list__head {
+  border-bottom: 2px solid var(--ap-gray-200) !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  color: var(--ap-gray-500) !important;
+}
+
+.argo-table-list .argo-table-list__row {
+  border-bottom: 1px solid var(--ap-gray-100) !important;
+  transition: background 100ms ease !important;
+}
+
+.argo-table-list .argo-table-list__row:hover {
+  background: var(--ap-gray-50) !important;
+}
+
+/* Data cells in monospace */
+.argo-table-list .argo-table-list__row td {
+  font-family: var(--ap-font-mono) !important;
+  font-size: 13px !important;
+}
+
+
+/* =================================================================
+   11. PANELS & CARDS
+   Flat containers with thin borders.
+   ================================================================= */
+
+.white-box {
+  border: 1px solid var(--ap-gray-200) !important;
+  border-radius: var(--ap-radius-md) !important;
+}
+
+.argo-panel {
+  border: 1px solid var(--ap-gray-200) !important;
+  border-radius: var(--ap-radius-md) !important;
+}
+
+
+/* =================================================================
+   12. TABS (ArgoCD argo-tabs)
+   ================================================================= */
+
+.argo-tabs__tab {
+  font-family: var(--ap-font-body) !important;
+  border-radius: 0 !important;
+  transition: color 100ms ease, border-color 100ms ease !important;
+}
+
+.argo-tabs__tab--selected {
+  border-bottom: 2px solid var(--ap-orange-500) !important;
+  color: var(--ap-orange-600) !important;
+}
+
+.argo-tabs__tab:hover:not(.argo-tabs__tab--selected) {
+  color: var(--ap-gray-800) !important;
+}
+
+
+/* =================================================================
+   13. FORMS & INPUTS
+   Monospace, thin borders, orange focus.
+   ================================================================= */
+
+.argo-field input,
+.argo-field textarea,
+.argo-field select,
+input.argo-input,
+textarea.argo-textarea {
+  border: 1px solid var(--ap-gray-200) !important;
+  border-radius: var(--ap-radius-sm) !important;
+  font-family: var(--ap-font-mono) !important;
+  font-size: 13px !important;
+  transition: border-color 100ms ease !important;
+}
+
+.argo-field input:focus,
+.argo-field textarea:focus,
+.argo-field select:focus,
+input.argo-input:focus,
+textarea.argo-textarea:focus {
+  border-color: var(--ap-orange-500) !important;
+  outline: none !important;
+}
+
+/* Labels */
+.argo-field label,
+.argo-form-row__label {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  color: var(--ap-gray-500) !important;
+}
+
+
+/* =================================================================
+   14. MODALS & DIALOGS
+   Flat, 4px radius, no shadows.
+   ================================================================= */
+
+.modal-dialog,
+.popup-overlay__content {
+  border: 1px solid var(--ap-gray-200) !important;
+  border-radius: var(--ap-radius-md) !important;
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--ap-gray-200) !important;
+}
+
+.modal-footer {
+  border-top: 1px solid var(--ap-gray-200) !important;
+}
+
+
+/* =================================================================
+   15. SLIDING PANEL (FLYOUT)
+   Used by extensions and resource detail views.
+   ================================================================= */
+
+.sliding-panel {
+  border-left: 1px solid var(--ap-gray-200) !important;
+}
+
+.sliding-panel__header {
+  border-bottom: 1px solid var(--ap-gray-200) !important;
+}
+
+.theme-dark .sliding-panel {
+  border-left-color: var(--ap-gray-700) !important;
+  background: var(--ap-gray-900) !important;
+}
+
+.theme-dark .sliding-panel__header {
+  border-bottom-color: var(--ap-gray-700) !important;
+}
+
+
+/* =================================================================
+   16. NOTIFICATIONS / TOASTS
+   ================================================================= */
+
+.argo-notification {
+  border-radius: var(--ap-radius-md) !important;
+  border: 1px solid !important;
+}
+
+.argo-notification--success {
+  background: var(--ap-green-light) !important;
+  border-color: var(--ap-green) !important;
+  color: var(--ap-green-text) !important;
+}
+
+.argo-notification--error {
+  background: var(--ap-red-light) !important;
+  border-color: var(--ap-red) !important;
+  color: var(--ap-red-text) !important;
+}
+
+.argo-notification--warning {
+  background: var(--ap-yellow-light) !important;
+  border-color: var(--ap-yellow) !important;
+  color: var(--ap-yellow-text) !important;
+}
+
+.argo-notification--info {
+  background: var(--ap-blue-light) !important;
+  border-color: var(--ap-blue) !important;
+  color: var(--ap-blue-text) !important;
+}
+
+
+/* =================================================================
+   17. TYPOGRAPHY
+   Monospace for all data values, code, timestamps.
+   ================================================================= */
+
+pre, code,
+.application-details__header code,
+.application-details__header .application-status-panel__item-value,
+.resource-details__value,
+.events-list__event-time,
+.log-viewer__line {
+  font-family: var(--ap-font-mono) !important;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--ap-font-body) !important;
+  color: var(--ap-gray-800) !important;
+}
+
+.theme-dark h1,
+.theme-dark h2,
+.theme-dark h3,
+.theme-dark h4,
+.theme-dark h5,
+.theme-dark h6 {
+  color: var(--ap-gray-100) !important;
+}
+
+
+/* =================================================================
+   18. LOGIN PAGE
+   ================================================================= */
+
 .login {
   background: var(--ap-gray-50) !important;
 }
@@ -118,7 +607,6 @@
 .login__box {
   border: 1px solid var(--ap-gray-200) !important;
   border-radius: var(--ap-radius-md) !important;
-  box-shadow: none !important;
 }
 
 .login .argo-button--base-o {
@@ -132,58 +620,113 @@
   background: var(--ap-orange-600) !important;
 }
 
-/* --- Data presentation: monospace for values --- */
-.application-details__header .application-status-panel__item-value,
-.application-details__header code,
-pre, code {
+/* Login title */
+.login__title {
+  font-family: var(--ap-font-body) !important;
+}
+
+/* Login text input */
+.login__input input {
+  border: 1px solid var(--ap-gray-200) !important;
+  border-radius: var(--ap-radius-sm) !important;
   font-family: var(--ap-font-mono) !important;
 }
 
-/* --- Status indicators: crisp squares instead of circles --- */
-.application-status-panel__item .fa-circle,
-.application-status-panel__item .fa-heart,
-.health-status-icon {
+.login__input input:focus {
+  border-color: var(--ap-orange-500) !important;
+}
+
+
+/* =================================================================
+   19. EXTENSIONS
+   Style the extension tab area and system-level extension pages.
+   ================================================================= */
+
+/* Extension tabs follow the standard tab styling */
+.extensions-tab-panel {
+  border-top: 1px solid var(--ap-gray-200) !important;
+}
+
+/* System-level extension pages in sidebar */
+.sidebar__nav-item--extension {
+  border-left: 3px solid transparent !important;
+}
+
+.sidebar__nav-item--extension.sidebar__nav-item--active {
+  border-left-color: var(--ap-orange-500) !important;
+}
+
+
+/* =================================================================
+   20. BADGES & LABELS (inline)
+   ================================================================= */
+
+.argo-label {
+  border-radius: var(--ap-radius-sm) !important;
+  font-family: var(--ap-font-mono) !important;
+  font-size: 11px !important;
+}
+
+.argo-badge {
+  border-radius: var(--ap-radius-sm) !important;
+  font-family: var(--ap-font-mono) !important;
+}
+
+
+/* =================================================================
+   21. FILTER / SEARCH BAR
+   ================================================================= */
+
+.applications-filter input,
+.argo-autocomplete input {
+  border: 1px solid var(--ap-gray-200) !important;
+  border-radius: var(--ap-radius-sm) !important;
+  font-family: var(--ap-font-mono) !important;
+  transition: border-color 100ms ease !important;
+}
+
+.applications-filter input:focus,
+.argo-autocomplete input:focus {
+  border-color: var(--ap-orange-500) !important;
+}
+
+
+/* =================================================================
+   22. DIFF VIEW
+   ================================================================= */
+
+.application-resource-diff .diff-line--added {
+  background: var(--ap-green-light) !important;
+}
+
+.application-resource-diff .diff-line--removed {
+  background: var(--ap-red-light) !important;
+}
+
+
+/* =================================================================
+   23. TOOLTIPS & POPOVERS
+   ================================================================= */
+
+.tippy-box,
+.argo-tooltip {
+  background: var(--ap-gray-800) !important;
+  color: var(--ap-gray-100) !important;
+  font-family: var(--ap-font-mono) !important;
+  font-size: 11px !important;
   border-radius: var(--ap-radius-sm) !important;
 }
 
-/* --- Buttons: ArgoPlane orange for primary actions --- */
-.argo-button--base {
-  transition: background 100ms ease, border-color 100ms ease !important;
+.tippy-arrow {
+  color: var(--ap-gray-800) !important;
 }
 
-/* --- Dark theme overrides --- */
-.theme-dark .sidebar {
-  background: var(--ap-gray-900) !important;
-}
 
-.theme-dark .applications-list__entry {
-  border-color: var(--ap-gray-700) !important;
-  background: var(--ap-gray-800) !important;
-}
+/* =================================================================
+   24. SCROLLBARS
+   Crisp, flat, narrow.
+   ================================================================= */
 
-.theme-dark .applications-list__entry:hover {
-  border-color: var(--ap-orange-400) !important;
-}
-
-.theme-dark .login {
-  background: var(--ap-gray-900) !important;
-}
-
-.theme-dark .login__box {
-  border-color: var(--ap-gray-700) !important;
-  background: var(--ap-gray-800) !important;
-}
-
-/* --- General polish --- */
-* {
-  box-shadow: none !important;
-}
-
-.argo-table-list .argo-table-list__row {
-  border-bottom: 1px solid var(--ap-gray-100) !important;
-}
-
-/* Crisp, flat scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -200,4 +743,170 @@ pre, code {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--ap-gray-400);
+}
+
+
+/* =================================================================
+   25. DARK THEME OVERRIDES
+   ArgoCD toggles .theme-dark on body.
+   ================================================================= */
+
+.theme-dark {
+  color-scheme: dark;
+}
+
+/* Sidebar stays dark in both themes */
+.theme-dark .sidebar {
+  background: var(--ap-gray-900) !important;
+}
+
+/* App tiles */
+.theme-dark .applications-list__entry {
+  border-color: var(--ap-gray-700) !important;
+  background: var(--ap-gray-800) !important;
+}
+
+.theme-dark .applications-list__entry:hover {
+  border-color: var(--ap-orange-400) !important;
+}
+
+.theme-dark .applications-list__info {
+  border-top-color: var(--ap-gray-700) !important;
+}
+
+/* Resource tree nodes */
+.theme-dark .application-resource-tree__node {
+  border-color: var(--ap-gray-700) !important;
+  background: var(--ap-gray-800) !important;
+}
+
+.theme-dark .application-resource-tree__node:hover {
+  border-color: var(--ap-orange-400) !important;
+}
+
+.theme-dark .application-resource-tree__node--selected {
+  border-color: var(--ap-orange-400) !important;
+}
+
+.theme-dark .application-resource-tree__line {
+  stroke: var(--ap-gray-600) !important;
+}
+
+/* Panels & cards */
+.theme-dark .white-box {
+  border-color: var(--ap-gray-700) !important;
+  background: var(--ap-gray-800) !important;
+}
+
+.theme-dark .argo-panel {
+  border-color: var(--ap-gray-700) !important;
+  background: var(--ap-gray-800) !important;
+}
+
+/* Tables */
+.theme-dark .argo-table-list .argo-table-list__head {
+  border-bottom-color: var(--ap-gray-700) !important;
+}
+
+.theme-dark .argo-table-list .argo-table-list__row {
+  border-bottom-color: var(--ap-gray-700) !important;
+}
+
+.theme-dark .argo-table-list .argo-table-list__row:hover {
+  background: var(--ap-gray-700) !important;
+}
+
+/* Modals */
+.theme-dark .modal-dialog,
+.theme-dark .popup-overlay__content {
+  border-color: var(--ap-gray-700) !important;
+  background: var(--ap-gray-800) !important;
+}
+
+.theme-dark .modal-header {
+  border-bottom-color: var(--ap-gray-700) !important;
+}
+
+.theme-dark .modal-footer {
+  border-top-color: var(--ap-gray-700) !important;
+}
+
+/* Forms */
+.theme-dark .argo-field input,
+.theme-dark .argo-field textarea,
+.theme-dark .argo-field select,
+.theme-dark input.argo-input {
+  border-color: var(--ap-gray-600) !important;
+  background: var(--ap-gray-900) !important;
+  color: var(--ap-gray-100) !important;
+}
+
+.theme-dark .argo-field input:focus,
+.theme-dark .argo-field textarea:focus,
+.theme-dark input.argo-input:focus {
+  border-color: var(--ap-orange-400) !important;
+}
+
+/* Buttons */
+.theme-dark .argo-button--base:not(.argo-button--base-o) {
+  border-color: var(--ap-gray-600) !important;
+  color: var(--ap-gray-200) !important;
+}
+
+.theme-dark .argo-button--base:not(.argo-button--base-o):hover {
+  border-color: var(--ap-orange-400) !important;
+  background: var(--ap-gray-700) !important;
+}
+
+/* Login */
+.theme-dark .login {
+  background: var(--ap-gray-900) !important;
+}
+
+.theme-dark .login__box {
+  border-color: var(--ap-gray-700) !important;
+  background: var(--ap-gray-800) !important;
+}
+
+.theme-dark .login__input input {
+  border-color: var(--ap-gray-600) !important;
+  background: var(--ap-gray-900) !important;
+  color: var(--ap-gray-100) !important;
+}
+
+/* Filter */
+.theme-dark .applications-filter input,
+.theme-dark .argo-autocomplete input {
+  border-color: var(--ap-gray-600) !important;
+  background: var(--ap-gray-900) !important;
+  color: var(--ap-gray-100) !important;
+}
+
+/* App detail header */
+.theme-dark .application-details__header {
+  border-bottom-color: var(--ap-gray-700) !important;
+}
+
+/* Tabs */
+.theme-dark .argo-tabs__tab--selected {
+  border-bottom-color: var(--ap-orange-400) !important;
+  color: var(--ap-orange-400) !important;
+}
+
+/* Diff */
+.theme-dark .application-resource-diff .diff-line--added {
+  background: rgba(134, 239, 172, 0.15) !important;
+}
+
+.theme-dark .application-resource-diff .diff-line--removed {
+  background: rgba(252, 165, 165, 0.15) !important;
+}
+
+/* Scrollbar dark */
+.theme-dark ::-webkit-scrollbar-thumb {
+  background: var(--ap-gray-600);
+}
+
+.theme-dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--ap-gray-500);
 }
