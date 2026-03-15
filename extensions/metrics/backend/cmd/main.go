@@ -33,10 +33,14 @@ func main() {
 	promClient := prometheus.NewClient(config.PrometheusURL)
 	resourceHandler := handler.NewResource(promClient)
 	appHandler := handler.NewApp(promClient)
+	podsHandler := handler.NewPods(promClient)
+	customHandler := handler.NewCustom(promClient)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/resource-metrics", resourceHandler.Handle)
 	mux.HandleFunc("GET /api/v1/app-metrics", appHandler.Handle)
+	mux.HandleFunc("GET /api/v1/pod-breakdown", podsHandler.Handle)
+	mux.HandleFunc("GET /api/v1/query", customHandler.Handle)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
