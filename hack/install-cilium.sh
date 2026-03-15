@@ -8,17 +8,12 @@ echo "==> Installing Cilium ${CILIUM_VERSION}"
 helm repo add cilium https://helm.cilium.io/ 2>/dev/null || true
 helm repo update cilium
 
-# Preload Cilium image into kind for faster startup
-echo "==> Preloading Cilium image into kind"
-docker pull "quay.io/cilium/cilium:v${CILIUM_VERSION}" 2>/dev/null || true
-kind load docker-image "quay.io/cilium/cilium:v${CILIUM_VERSION}" --name "${CLUSTER_NAME:-argoplane-dev}"
-
 helm upgrade --install cilium cilium/cilium \
     --version "${CILIUM_VERSION}" \
     --namespace kube-system \
-    --set image.pullPolicy=IfNotPresent \
     --set ipam.mode=kubernetes \
-    --wait --timeout 180s
+    --set hubble.enabled=true \
+    --wait --timeout 300s
 
 echo "==> Waiting for Cilium to be ready"
 kubectl -n kube-system rollout status daemonset cilium --timeout=180s
