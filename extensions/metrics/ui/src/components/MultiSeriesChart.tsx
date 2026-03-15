@@ -4,6 +4,8 @@ import { NamedSeries } from '../types';
 import { formatTimeLabel } from '../utils/format';
 
 interface MultiSeriesChartProps {
+  title?: string;
+  unit?: string;
   series: NamedSeries[];
   colors: string[];
   height?: number;
@@ -14,12 +16,21 @@ interface MultiSeriesChartProps {
 const PADDING = { top: 8, right: 12, bottom: 24, left: 60 };
 
 export const MultiSeriesChart: React.FC<MultiSeriesChartProps> = ({
+  title,
+  unit,
   series,
   colors: seriesColors,
   height = 200,
   timeRange = '1h',
-  formatValue = (v) => v.toFixed(2),
+  formatValue,
 }) => {
+  const fmt = formatValue || ((v: number) => {
+    if (Math.abs(v) >= 1e6) return (v / 1e6).toFixed(1) + 'M';
+    if (Math.abs(v) >= 1e3) return (v / 1e3).toFixed(1) + 'K';
+    if (v === 0) return '0';
+    if (Math.abs(v) < 0.1) return v.toFixed(3);
+    return v.toFixed(1);
+  });
   const [hover, setHover] = React.useState<{ x: number; index: number } | null>(null);
   const svgRef = React.useRef<SVGSVGElement>(null);
 
@@ -73,6 +84,13 @@ export const MultiSeriesChart: React.FC<MultiSeriesChartProps> = ({
 
   return (
     <div style={chartContainer}>
+      {/* Title */}
+      {title && (
+        <div style={chartHeaderStyle}>
+          <span style={chartTitleStyle}>{title}</span>
+          {unit && <span style={chartUnitStyle}>{unit}</span>}
+        </div>
+      )}
       {/* Legend */}
       <div style={legend}>
         {series.map((s, i) => (
@@ -81,7 +99,7 @@ export const MultiSeriesChart: React.FC<MultiSeriesChartProps> = ({
             <span style={legendLabel}>{s.label}</span>
             {s.series.length > 0 && (
               <span style={legendValue}>
-                {formatValue(hover !== null && hover.index < s.series.length
+                {fmt(hover !== null && hover.index < s.series.length
                   ? s.series[hover.index].value
                   : s.series[s.series.length - 1].value)}
               </span>
@@ -121,7 +139,7 @@ export const MultiSeriesChart: React.FC<MultiSeriesChartProps> = ({
         {/* Y-axis labels */}
         {yTicks.map((val, i) => (
           <text key={i} x={PADDING.left - 6} y={yPositions[i] + 3} textAnchor="end" style={axisLabel}>
-            {formatValue(val)}
+            {fmt(val)}
           </text>
         ))}
 
@@ -195,6 +213,27 @@ const legendValue: React.CSSProperties = {
   fontWeight: 600,
   color: colors.gray800,
   marginLeft: 2,
+};
+
+const chartHeaderStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'baseline',
+  marginBottom: spacing[1],
+};
+
+const chartTitleStyle: React.CSSProperties = {
+  fontSize: fontSize.xs,
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.3px',
+  color: colors.gray500,
+};
+
+const chartUnitStyle: React.CSSProperties = {
+  fontSize: fontSize.xs,
+  color: colors.gray400,
+  fontFamily: fonts.mono,
 };
 
 const axisLabel: React.CSSProperties = {
