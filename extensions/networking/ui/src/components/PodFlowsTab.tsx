@@ -43,13 +43,11 @@ function openPod(appNs: string, appName: string, podNs: string, podName: string)
   navigateSPA(resourceNodeUrl(appNs, appName, '', 'Pod', podNs, podName));
 }
 
-function openPolicy(appNs: string, appName: string, policy: PolicySummary) {
-  const group = 'cilium.io';
-  if (policy.scope === 'clusterwide') {
-    navigateSPA(resourceNodeUrl(appNs, appName, group, 'CiliumClusterwideNetworkPolicy', '', policy.name));
-  } else {
-    navigateSPA(resourceNodeUrl(appNs, appName, group, 'CiliumNetworkPolicy', policy.namespace || '', policy.name));
-  }
+// From a Pod resource tab, navigate to the app-level Networking view.
+// Opening another resource node from within an existing panel doesn't work
+// reliably in ArgoCD's SPA, so we go to the app view instead.
+function openNetworkingTab(appNs: string, appName: string) {
+  navigateSPA(`/applications/${appNs}/${appName}`);
 }
 
 // ============================================================
@@ -129,12 +127,6 @@ export const PodFlowsTab: React.FC<{ resource: any; tree?: any; application: any
     return treeNodeKeys.has(`/Pod/${podNs}/${name}`);
   }, [treeNodeKeys]);
 
-  const isPolicyInTree = React.useCallback((policy: PolicySummary) => {
-    if (policy.scope === 'clusterwide') {
-      return treeNodeKeys.has(`cilium.io/CiliumClusterwideNetworkPolicy//${policy.name}`);
-    }
-    return treeNodeKeys.has(`cilium.io/CiliumNetworkPolicy/${policy.namespace || ''}/${policy.name}`);
-  }, [treeNodeKeys]);
 
   const fetchData = React.useCallback(() => {
     if (!namespace) return;
@@ -288,18 +280,16 @@ export const PodFlowsTab: React.FC<{ resource: any; tree?: any; application: any
                         <td style={tdStyle}>
                           {matchingPolicies.length > 0 ? (
                             <div style={policyChipRow}>
-                              {matchingPolicies.slice(0, 2).map((p) => {
-                                const inTree = isPolicyInTree(p);
-                                return inTree ? (
-                                  <span key={p.name} onClick={() => openPolicy(appNamespace, appName, p)} style={policyChipLink} title={`Open ${p.name}`}>
-                                    {p.name}
-                                  </span>
-                                ) : (
-                                  <span key={p.name} style={policyChipPlain} title={`${p.ownership} policy: ${p.name}`}>
-                                    {p.name}
-                                  </span>
-                                );
-                              })}
+                              {matchingPolicies.slice(0, 2).map((p) => (
+                                <span
+                                  key={p.name}
+                                  onClick={() => openNetworkingTab(appNamespace, appName)}
+                                  style={policyChipLink}
+                                  title={`${p.ownership} policy: ${p.name} (click to view in Networking tab)`}
+                                >
+                                  {p.name}
+                                </span>
+                              ))}
                               {matchingPolicies.length > 2 && (
                                 <span style={policyChipPlain}>+{matchingPolicies.length - 2}</span>
                               )}
