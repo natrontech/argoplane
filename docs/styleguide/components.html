@@ -17,8 +17,8 @@
 <div class="sg-layout">
   <nav class="sg-sidebar">
     <div class="sg-logo">
-      <div class="sg-logo__pixels">
-        <span></span><span></span><span></span><span></span>
+      <div class="ap-logo ap-logo--sm ap-logo--wiggle">
+        <img src="../../assets/argoplane_logo.svg" alt="ArgoPlane" />
       </div>
       <span class="ap-font-semibold">ArgoPlane</span>
       <span class="ap-text-faint ap-text-xs">Design System</span>
@@ -47,6 +47,96 @@
         Every component is a plain CSS class prefixed with <code>ap-</code>. No JavaScript required.
         For React, use the equivalent from <code>@argoplane/shared</code>.
       </p>
+
+      <!-- LOGO -->
+      <div class="ap-section-header ap-mt-8" id="logo"><span>LOGO</span></div>
+      <p class="ap-text-sm ap-text-muted ap-mb-3">
+        The pixel octopus. Sizes, variants, and animations.
+      </p>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex ap-gap-6 ap-items-end">
+          <div class="ap-flex-col ap-items-center ap-gap-2">
+            <div class="ap-logo ap-logo--sm"><img src="../../assets/argoplane_logo.svg" alt="Small" /></div>
+            <span class="ap-text-xs ap-font-mono ap-text-muted">--sm (24px)</span>
+          </div>
+          <div class="ap-flex-col ap-items-center ap-gap-2">
+            <div class="ap-logo"><img src="../../assets/argoplane_logo.svg" alt="Default" /></div>
+            <span class="ap-text-xs ap-font-mono ap-text-muted">default (36px)</span>
+          </div>
+          <div class="ap-flex-col ap-items-center ap-gap-2">
+            <div class="ap-logo ap-logo--lg"><img src="../../assets/argoplane_logo.svg" alt="Large" /></div>
+            <span class="ap-text-xs ap-font-mono ap-text-muted">--lg (48px)</span>
+          </div>
+          <div class="ap-flex-col ap-items-center ap-gap-2">
+            <div class="ap-logo ap-logo--xl"><img src="../../assets/argoplane_logo.svg" alt="XL" /></div>
+            <span class="ap-text-xs ap-font-mono ap-text-muted">--xl (64px)</span>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-logo ap-logo--sm"&gt;&lt;img src="assets/argoplane_logo.svg" /&gt;&lt;/div&gt;
+&lt;div class="ap-logo"&gt;...&lt;/div&gt;
+&lt;div class="ap-logo ap-logo--lg"&gt;...&lt;/div&gt;
+&lt;div class="ap-logo ap-logo--xl"&gt;...&lt;/div&gt;</div>
+      </div>
+
+      <h4 class="ap-mt-4">Variants</h4>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex ap-gap-6 ap-items-center">
+          <div class="ap-flex-col ap-items-center ap-gap-2">
+            <div class="ap-logo ap-logo--lg"><img src="../../assets/argoplane_logo.svg" alt="Default" /></div>
+            <span class="ap-text-xs ap-font-mono ap-text-muted">Default</span>
+          </div>
+          <div class="ap-flex-col ap-items-center ap-gap-2" style="background: var(--ap-gray-900); padding: 12px; border-radius: var(--ap-radius-md);">
+            <div class="ap-logo ap-logo--lg"><img src="../../assets/argoplane_logo_inverted.svg" alt="Inverted" /></div>
+            <span class="ap-text-xs ap-font-mono" style="color: var(--ap-gray-400);">Inverted</span>
+          </div>
+          <div class="ap-flex-col ap-items-center ap-gap-2">
+            <div class="ap-logo ap-logo--lg"><img src="../../assets/argoplane_logo_mono_dark.svg" alt="Mono dark" /></div>
+            <span class="ap-text-xs ap-font-mono ap-text-muted">Mono dark</span>
+          </div>
+          <div class="ap-flex-col ap-items-center ap-gap-2" style="background: var(--ap-gray-900); padding: 12px; border-radius: var(--ap-radius-md);">
+            <div class="ap-logo ap-logo--lg"><img src="../../assets/argoplane_logo_mono_light.svg" alt="Mono light" /></div>
+            <span class="ap-text-xs ap-font-mono" style="color: var(--ap-gray-400);">Mono light</span>
+          </div>
+        </div>
+        <div class="sg-example__code">assets/argoplane_logo.svg            # Default (orange + dark outline)
+assets/argoplane_logo_inverted.svg   # For dark backgrounds (orange + light outline)
+assets/argoplane_logo_mono_dark.svg  # Single color, dark
+assets/argoplane_logo_mono_light.svg # Single color, light (for dark bg)</div>
+      </div>
+
+      <h4 class="ap-mt-4">Animations</h4>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex ap-gap-8 ap-items-center">
+          <div class="ap-flex-col ap-items-center ap-gap-2">
+            <div class="ap-logo ap-logo--lg ap-logo--animated"><img src="../../assets/argoplane_logo.svg" alt="Bob" /></div>
+            <span class="ap-text-xs ap-font-mono ap-text-muted">--animated (bob)</span>
+          </div>
+          <div class="ap-flex-col ap-items-center ap-gap-2">
+            <div class="ap-logo ap-logo--lg ap-logo--wiggle"><img src="../../assets/argoplane_logo.svg" alt="Wiggle" /></div>
+            <span class="ap-text-xs ap-font-mono ap-text-muted">--wiggle (hover me)</span>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-logo ap-logo--animated"&gt;...&lt;/div&gt;  &lt;!-- gentle floating bob --&gt;
+&lt;div class="ap-logo ap-logo--wiggle"&gt;...&lt;/div&gt;   &lt;!-- wiggles on hover --&gt;</div>
+      </div>
+
+      <h4 class="ap-mt-4">Logo lockup</h4>
+      <div class="sg-example">
+        <div class="sg-example__preview ap-flex-col ap-gap-4">
+          <div class="ap-logo-lockup">
+            <div class="ap-logo ap-logo--wiggle"><img src="../../assets/argoplane_logo.svg" alt="ArgoPlane" /></div>
+            <span class="ap-logo-lockup__text">Argo<span>Plane</span></span>
+          </div>
+          <div class="ap-logo-lockup" style="background: var(--ap-gray-900); padding: 12px; border-radius: var(--ap-radius-md); display: inline-flex;">
+            <div class="ap-logo ap-logo--wiggle"><img src="../../assets/argoplane_logo_inverted.svg" alt="ArgoPlane" /></div>
+            <span class="ap-logo-lockup__text" style="color: var(--ap-gray-100);">Argo<span style="color: var(--ap-orange-400);">Plane</span></span>
+          </div>
+        </div>
+        <div class="sg-example__code">&lt;div class="ap-logo-lockup"&gt;
+  &lt;div class="ap-logo ap-logo--wiggle"&gt;&lt;img src="..." /&gt;&lt;/div&gt;
+  &lt;span class="ap-logo-lockup__text"&gt;Argo&lt;span&gt;Plane&lt;/span&gt;&lt;/span&gt;
+&lt;/div&gt;</div>
+      </div>
 
       <!-- STATUS BADGE -->
       <div class="ap-section-header ap-mt-8" id="badge"><span>STATUS BADGE</span></div>

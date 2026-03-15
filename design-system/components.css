@@ -1016,3 +1016,75 @@
 .ap-toggle input:checked + .ap-toggle__track .ap-toggle__thumb {
   transform: translateX(16px);
 }
+
+/* ----------------------------------------------------------------
+   LOGO
+   The ArgoPlane pixel octopus, rendered as inline SVG or image.
+   Usage: <div class="ap-logo">
+            <img src="assets/argoplane_logo.svg" alt="ArgoPlane" />
+          </div>
+   Sizes: default (36px), --sm (24px), --lg (48px), --xl (64px)
+   Animation: .ap-logo--animated adds a subtle tentacle wiggle
+   ---------------------------------------------------------------- */
+
+.ap-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.ap-logo img,
+.ap-logo svg {
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.ap-logo--sm { width: 24px; height: 24px; }
+.ap-logo--lg { width: 48px; height: 48px; }
+.ap-logo--xl { width: 64px; height: 64px; }
+
+/* Animated: gentle floating bob */
+.ap-logo--animated {
+  animation: ap-logo-bob 3s ease-in-out infinite;
+}
+
+@keyframes ap-logo-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+
+/* Animated: tentacle wiggle (rotate slightly) */
+.ap-logo--wiggle:hover {
+  animation: ap-logo-wiggle 0.4s ease-in-out;
+}
+
+@keyframes ap-logo-wiggle {
+  0%   { transform: rotate(0deg); }
+  25%  { transform: rotate(-4deg); }
+  50%  { transform: rotate(4deg); }
+  75%  { transform: rotate(-2deg); }
+  100% { transform: rotate(0deg); }
+}
+
+/* Logo with wordmark */
+.ap-logo-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ap-space-2);
+}
+
+.ap-logo-lockup__text {
+  font-weight: var(--ap-weight-semibold);
+  font-size: var(--ap-text-lg);
+  color: var(--ap-color-text);
+  letter-spacing: -0.3px;
+}
+
+.ap-logo-lockup__text span {
+  color: var(--ap-color-accent);
+}
