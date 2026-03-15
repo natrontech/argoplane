@@ -10,6 +10,7 @@ interface SparklineChartProps {
   color?: string;
   height?: number;
   timeRange?: string;
+  formatValue?: (v: number) => string;
 }
 
 const PADDING = { top: 8, right: 12, bottom: 24, left: 52 };
@@ -21,7 +22,9 @@ export const SparklineChart: React.FC<SparklineChartProps> = ({
   color = colors.orange500,
   height = 120,
   timeRange = '1h',
+  formatValue: customFormat,
 }) => {
+  const fmt = customFormat || ((v: number) => formatCompact(v, unit));
   const [hover, setHover] = React.useState<{ x: number; index: number } | null>(null);
   const svgRef = React.useRef<SVGSVGElement>(null);
 
@@ -83,7 +86,7 @@ export const SparklineChart: React.FC<SparklineChartProps> = ({
       <div style={chartHeader}>
         <span style={chartTitle}>{title}</span>
         <span style={chartCurrentValue}>
-          {formatCompact(currentValue.value, unit)}
+          {fmt(currentValue.value)}
         </span>
       </div>
       <svg
@@ -122,7 +125,7 @@ export const SparklineChart: React.FC<SparklineChartProps> = ({
             textAnchor="end"
             style={axisLabel}
           >
-            {formatCompact(val, unit)}
+            {fmt(val)}
           </text>
         ))}
 
