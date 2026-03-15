@@ -68,3 +68,19 @@ export function fetchDiscoverMetrics(
   if (search) params.set('search', search);
   return jsonFetch(`/extensions/metrics/api/v1/discover?${params}`, argoHeaders(appNamespace, appName, project));
 }
+
+export function fetchLabelNames(
+  metric: string, namespace: string,
+  appNamespace: string, appName: string, project: string
+): Promise<string[]> {
+  const params = new URLSearchParams({ metric, namespace });
+  return jsonFetch(`/extensions/metrics/api/v1/labels?${params}`, argoHeaders(appNamespace, appName, project));
+}
+
+export function fetchLabelValues(
+  metric: string, label: string, namespace: string,
+  appNamespace: string, appName: string, project: string
+): Promise<string[]> {
+  const params = new URLSearchParams({ metric, label, namespace });
+  return jsonFetch(`/extensions/metrics/api/v1/labels?${params}`, argoHeaders(appNamespace, appName, project));
+}
