@@ -169,6 +169,11 @@ func parseBackup(obj unstructured.Unstructured) types.BackupSummary {
 		scheduleName = labels["velero.io/schedule-name"]
 	}
 
+	failureReason, _, _ := unstructured.NestedString(obj.Object, "status", "failureReason")
+	validationErrors := nestedStringSlice(obj.Object, "status", "validationErrors")
+	includedResources := nestedStringSlice(obj.Object, "spec", "includedResources")
+	excludedResources := nestedStringSlice(obj.Object, "spec", "excludedResources")
+
 	return types.BackupSummary{
 		Name:                      obj.GetName(),
 		Namespace:                 obj.GetNamespace(),
@@ -181,7 +186,11 @@ func parseBackup(obj unstructured.Unstructured) types.BackupSummary {
 		TotalItems:                nestedInt(obj.Object, "status", "progress", "totalItems"),
 		Errors:                    nestedInt(obj.Object, "status", "errors"),
 		Warnings:                  nestedInt(obj.Object, "status", "warnings"),
+		FailureReason:             failureReason,
+		ValidationErrors:          validationErrors,
 		IncludedNamespaces:        included,
+		IncludedResources:         includedResources,
+		ExcludedResources:         excludedResources,
 		VolumeSnapshotsAttempted:  nestedInt(obj.Object, "status", "volumeSnapshotsAttempted"),
 		VolumeSnapshotsCompleted:  nestedInt(obj.Object, "status", "volumeSnapshotsCompleted"),
 		Labels:                    labels,
