@@ -8,26 +8,26 @@ interface StatusPanelProps {
   openFlyout?: () => void;
 }
 
-function parseValue(raw: string): number {
-  return parseFloat(raw) || 0;
-}
-
 function formatCompact(value: string, unit: string): string {
-  const num = parseValue(value);
+  const num = parseFloat(value) || 0;
   if (unit === 'MiB') {
     if (num >= 1024) return `${(num / 1024).toFixed(1)} GiB`;
     return `${Math.round(num)} MiB`;
   }
   if (unit === 'm') {
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)} cores`;
     return `${Math.round(num)}m`;
   }
   return `${value}${unit ? ' ' + unit : ''}`;
 }
 
+function navigateToMetrics(appNamespace: string, appName: string) {
+  window.location.href = `/applications/${appNamespace}/${appName}?resource=&extension=metrics&view=Metrics`;
+}
+
 const REFRESH_INTERVAL = 30_000;
 
-export const MetricsStatusPanel: React.FC<StatusPanelProps> = ({ application, openFlyout }) => {
+export const MetricsStatusPanel: React.FC<StatusPanelProps> = ({ application }) => {
   const [metrics, setMetrics] = React.useState<MetricData[]>([]);
   const [loaded, setLoaded] = React.useState(false);
 
@@ -44,9 +44,7 @@ export const MetricsStatusPanel: React.FC<StatusPanelProps> = ({ application, op
       .finally(() => setLoaded(true));
   }, [namespace, appNamespace, appName, project]);
 
-  React.useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  React.useEffect(() => { fetchData(); }, [fetchData]);
 
   React.useEffect(() => {
     const interval = setInterval(fetchData, REFRESH_INTERVAL);
@@ -57,60 +55,78 @@ export const MetricsStatusPanel: React.FC<StatusPanelProps> = ({ application, op
 
   const cpu = metrics.find((m) => m.name.toLowerCase().includes('cpu'));
   const mem = metrics.find((m) => m.name.toLowerCase().includes('mem'));
+  const pods = metrics.find((m) => m.name.toLowerCase().includes('pod'));
 
   if (!cpu && !mem) return null;
 
   return (
     <div
-      onClick={openFlyout}
-      style={{
-        cursor: openFlyout ? 'pointer' : 'default',
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: spacing[3],
-      }}
+      onClick={() => navigateToMetrics(appNamespace, appName)}
+      style={container}
+      title="Total resource usage across all pods. Click to open Metrics view."
     >
-      {cpu && (
-        <span style={metricItem}>
-          <span style={metricIcon}>C</span>
-          <span style={metricVal}>{formatCompact(cpu.value, cpu.unit)}</span>
-        </span>
-      )}
-      {mem && (
-        <span style={metricItem}>
-          <span style={metricIcon}>M</span>
-          <span style={metricVal}>{formatCompact(mem.value, mem.unit)}</span>
-        </span>
-      )}
+      <span style={label}>METRICS</span>
+      <span style={row}>
+        {cpu && <Pill icon="CPU" value={formatCompact(cpu.value, cpu.unit)} />}
+        {mem && <Pill icon="MEM" value={formatCompact(mem.value, mem.unit)} />}
+        {pods && <Pill icon="PODS" value={pods.value} />}
+      </span>
     </div>
   );
 };
 
-const metricItem: React.CSSProperties = {
+const Pill: React.FC<{ icon: string; value: string }> = ({ icon, value }) => (
+  <span style={pill}>
+    <span style={pillLabel}>{icon}</span>
+    <span style={pillValue}>{value}</span>
+  </span>
+);
+
+const container: React.CSSProperties = {
+  cursor: 'pointer',
   display: 'inline-flex',
-  alignItems: 'center',
-  gap: 4,
+  flexDirection: 'column',
+  gap: 2,
 };
 
-const metricIcon: React.CSSProperties = {
+const label: React.CSSProperties = {
+  fontSize: 10,
+  fontWeight: fontWeight.semibold,
+  letterSpacing: '0.5px',
+  color: colors.gray400,
+  fontFamily: fonts.mono,
+};
+
+const row: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
-  justifyContent: 'center',
-  width: 16,
-  height: 16,
-  background: colors.orange100,
-  color: colors.orange600,
-  fontSize: 9,
+  gap: 6,
+};
+
+const pill: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 0,
+  background: colors.gray50,
+  border: `1px solid ${colors.gray200}`,
+  borderRadius: radius.md,
+  overflow: 'hidden',
+};
+
+const pillLabel: React.CSSProperties = {
+  fontSize: 10,
   fontWeight: fontWeight.semibold,
   fontFamily: fonts.mono,
-  borderRadius: radius.sm,
-  lineHeight: 1,
-  flexShrink: 0,
+  color: colors.orange600,
+  background: colors.orange50,
+  padding: '2px 5px',
+  letterSpacing: '0.3px',
 };
 
-const metricVal: React.CSSProperties = {
+const pillValue: React.CSSProperties = {
   fontSize: fontSize.sm,
   fontWeight: fontWeight.medium,
   fontFamily: fonts.mono,
   color: colors.gray700,
+  padding: '2px 6px',
 };

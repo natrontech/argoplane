@@ -34,12 +34,16 @@ const statusColors: Record<Status, string> = {
   'unknown': colors.gray300,
 };
 
+function navigateToBackups(appNamespace: string, appName: string) {
+  window.location.href = `/applications/${appNamespace}/${appName}?resource=&extension=backups&view=Backups`;
+}
+
 interface StatusPanelProps {
   application: any;
   openFlyout?: () => void;
 }
 
-export const BackupStatusPanel: React.FC<StatusPanelProps> = ({ application, openFlyout }) => {
+export const BackupStatusPanel: React.FC<StatusPanelProps> = ({ application }) => {
   const [latestBackup, setLatestBackup] = React.useState<BackupSummary | null>(null);
   const [scheduleCount, setScheduleCount] = React.useState(0);
   const [loaded, setLoaded] = React.useState(false);
@@ -51,7 +55,6 @@ export const BackupStatusPanel: React.FC<StatusPanelProps> = ({ application, ope
 
   React.useEffect(() => {
     if (!destNamespace) return;
-
     const resources: ResourceRef[] = [];
     fetchOverview(destNamespace, resources, appNamespace, appName, project)
       .then((data: OverviewResponse) => {
@@ -68,37 +71,60 @@ export const BackupStatusPanel: React.FC<StatusPanelProps> = ({ application, ope
 
   const status = phaseToStatus(latestBackup?.phase);
   const squareColor = statusColors[status] || colors.gray300;
+  const backupText = latestBackup ? timeAgo(latestBackup.startTimestamp) : 'None';
 
   return (
     <div
-      onClick={openFlyout}
-      style={{
-        cursor: openFlyout ? 'pointer' : 'default',
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: spacing[3],
-      }}
+      onClick={() => navigateToBackups(appNamespace, appName)}
+      style={container}
+      title="Last backup status and schedule count. Click to open Backups view."
     >
-      <span style={itemStyle}>
-        <span style={{ ...square, background: squareColor }} />
-        <span style={valStyle}>
-          {latestBackup ? timeAgo(latestBackup.startTimestamp) : 'None'}
+      <span style={label}>BACKUPS</span>
+      <span style={row}>
+        <span style={pill}>
+          <span style={{ ...square, background: squareColor }} />
+          <span style={pillValue}>{backupText}</span>
         </span>
+        {scheduleCount > 0 && (
+          <span style={pill}>
+            <span style={schedLabel}>SCHED</span>
+            <span style={pillValue}>{scheduleCount}</span>
+          </span>
+        )}
       </span>
-      {scheduleCount > 0 && (
-        <span style={itemStyle}>
-          <span style={scheduleIcon}>S</span>
-          <span style={valStyle}>{scheduleCount}</span>
-        </span>
-      )}
     </div>
   );
 };
 
-const itemStyle: React.CSSProperties = {
+const container: React.CSSProperties = {
+  cursor: 'pointer',
+  display: 'inline-flex',
+  flexDirection: 'column',
+  gap: 2,
+};
+
+const label: React.CSSProperties = {
+  fontSize: 10,
+  fontWeight: fontWeight.semibold,
+  letterSpacing: '0.5px',
+  color: colors.gray400,
+  fontFamily: fonts.mono,
+};
+
+const row: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
-  gap: 4,
+  gap: 6,
+};
+
+const pill: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  background: colors.gray50,
+  border: `1px solid ${colors.gray200}`,
+  borderRadius: radius.md,
+  padding: '2px 8px',
 };
 
 const square: React.CSSProperties = {
@@ -108,23 +134,15 @@ const square: React.CSSProperties = {
   flexShrink: 0,
 };
 
-const scheduleIcon: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: 16,
-  height: 16,
-  background: colors.orange100,
-  color: colors.orange600,
-  fontSize: 9,
+const schedLabel: React.CSSProperties = {
+  fontSize: 10,
   fontWeight: fontWeight.semibold,
   fontFamily: fonts.mono,
-  borderRadius: radius.sm,
-  lineHeight: 1,
-  flexShrink: 0,
+  color: colors.orange600,
+  letterSpacing: '0.3px',
 };
 
-const valStyle: React.CSSProperties = {
+const pillValue: React.CSSProperties = {
   fontSize: fontSize.sm,
   fontWeight: fontWeight.medium,
   fontFamily: fonts.mono,
