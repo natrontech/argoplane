@@ -130,7 +130,7 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
                 title={pps.metric}
                 unit={pps.unit}
                 timestamps={pps.timestamps}
-                series={pps.pods.map((p) => ({ label: p.pod, values: p.values }))}
+                series={pps.pods.map((p) => ({ label: p.pod, values: p.values.map((v) => v === null ? NaN : v) }))}
                 colors={SERIES_COLORS}
                 height={200}
                 timeRange={timeRange}

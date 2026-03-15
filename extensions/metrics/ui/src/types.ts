@@ -47,7 +47,7 @@ export interface PerPodSeries {
   metric: string;
   unit: string;
   timestamps: string[];
-  pods: Array<{ pod: string; values: number[] }>;
+  pods: Array<{ pod: string; values: (number | null)[] }>;
 }
 
 export interface ExtensionProps {
