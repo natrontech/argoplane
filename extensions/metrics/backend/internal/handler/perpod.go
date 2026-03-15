@@ -109,7 +109,7 @@ func (h *PerPod) Handle(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		pps := perPodSeries{Metric: m.name, Unit: displayUnit(m.unit), Timestamps: tsStrings}
+		pps := perPodSeries{Metric: m.name, Unit: displayUnit(m.unit), Timestamps: tsStrings, Pods: []podTimeline{}}
 
 		for _, s := range allSeries {
 			podName := s.Metric["pod"]
