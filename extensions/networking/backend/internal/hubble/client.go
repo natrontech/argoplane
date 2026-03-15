@@ -62,6 +62,7 @@ type FlowsRequest struct {
 	Since     time.Duration
 	Limit     int64
 	Verdict   string // "all", "forwarded", "dropped", "error"
+	Direction string // "all", "ingress", "egress"
 }
 
 // Flows queries Hubble Relay for recent flows matching the request filters.
@@ -95,6 +96,23 @@ func (c *Client) Flows(ctx context.Context, req FlowsRequest) ([]FlowSummary, er
 		if len(verdicts) > 0 {
 			for _, f := range whitelist {
 				f.Verdict = verdicts
+			}
+		}
+	}
+
+	// Apply direction filter to each whitelist entry.
+	if req.Direction != "" && req.Direction != "all" {
+		var directions []flowpb.TrafficDirection
+		switch strings.ToLower(req.Direction) {
+		case "ingress":
+			directions = []flowpb.TrafficDirection{flowpb.TrafficDirection_INGRESS}
+		case "egress":
+			directions = []flowpb.TrafficDirection{flowpb.TrafficDirection_EGRESS}
+		}
+		if len(directions) > 0 {
+			for _, f := range whitelist {
+				f.TcpFlags = nil // clear any conflicting fields
+				f.TrafficDirection = directions
 			}
 		}
 	}

@@ -1,28 +1,10 @@
 import * as React from 'react';
-import { NetworkingPanel } from './components/NetworkingPanel';
+import { AppNetworkingView } from './components/AppNetworkingView';
 
 ((window: any) => {
-  window.extensionsAPI.registerResourceExtension(
-    NetworkingPanel,
-    'apps',
-    'Deployment',
+  window.extensionsAPI.registerAppViewExtension(
+    AppNetworkingView,
     'Networking',
-    { icon: 'fa-network-wired' }
-  );
-
-  window.extensionsAPI.registerResourceExtension(
-    NetworkingPanel,
-    'apps',
-    'StatefulSet',
-    'Networking',
-    { icon: 'fa-network-wired' }
-  );
-
-  window.extensionsAPI.registerResourceExtension(
-    NetworkingPanel,
-    'apps',
-    'DaemonSet',
-    'Networking',
-    { icon: 'fa-network-wired' }
+    'fa-network-wired'
   );
 })(window);

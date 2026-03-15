@@ -1,8 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -26,12 +24,12 @@ func NewFlowsHandler(hubbleClient *hubble.Client) *FlowsHandler {
 func (h *FlowsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
 	if namespace == "" {
-		writeError(w, http.StatusBadRequest, "namespace is required")
+		WriteError(w, http.StatusBadRequest, "namespace is required")
 		return
 	}
 
 	if h.hubbleClient == nil {
-		writeJSON(w, map[string]any{
+		WriteJSON(w, map[string]any{
 			"flows":   []any{},
 			"hubble":  false,
 			"message": "Hubble Relay is not configured",
@@ -62,16 +60,18 @@ func (h *FlowsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	verdict := r.URL.Query().Get("verdict")
+	direction := r.URL.Query().Get("direction")
 
 	flows, err := h.hubbleClient.Flows(r.Context(), hubble.FlowsRequest{
 		Namespace: namespace,
 		Since:     since,
 		Limit:     limit,
 		Verdict:   verdict,
+		Direction: direction,
 	})
 	if err != nil {
 		slog.Error("failed to query hubble flows", "error", err, "namespace", namespace)
-		writeError(w, http.StatusInternalServerError, "failed to query flows")
+		WriteError(w, http.StatusInternalServerError, "failed to query flows")
 		return
 	}
 
@@ -88,7 +88,7 @@ func (h *FlowsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	writeJSON(w, map[string]any{
+	WriteJSON(w, map[string]any{
 		"flows":  flows,
 		"hubble": true,
 		"summary": map[string]int{
@@ -98,17 +98,4 @@ func (h *FlowsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 			"error":     errCount,
 		},
 	})
-}
-
-func writeJSON(w http.ResponseWriter, data any) {
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		slog.Error("failed to encode response", "error", err)
-	}
-}
-
-func writeError(w http.ResponseWriter, status int, msg string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	fmt.Fprintf(w, `{"error":%q}`, msg)
 }
