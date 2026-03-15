@@ -50,6 +50,13 @@ If you're tempted to add a database, reconsider. The right answer is almost alwa
 
 ArgoPlane relies on ArgoCD's built-in RBAC and AppProjects for multi-tenancy and access control. Don't build a custom auth layer. Proxy extensions inherit ArgoCD's authentication: the API server validates the user's token and passes identity headers to the backend.
 
+ArgoCD v3 changes to be aware of:
+- Fine-grained RBAC: `update`/`delete` on applications no longer cascades to sub-resources. Grant explicit `update/*` and `delete/*` permissions if needed.
+- Logs RBAC is always enforced. Users need explicit `logs, get` permission.
+- Extensions require explicit RBAC: `p, role:developer, extensions, invoke, <name>, allow`
+- Annotation-based resource tracking is the default (not label-based).
+- Resource health is stored in Redis by default, not in `.status.resources[].health`.
+
 ## Crossplane for Abstractions
 
 When platform teams want to offer self-service resources (databases, caches, storage), use Crossplane XRDs and compositions. ArgoPlane extensions surface these in the UI. Don't build custom operators when Crossplane can compose existing ones.

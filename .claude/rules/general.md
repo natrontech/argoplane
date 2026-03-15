@@ -25,7 +25,7 @@ Each extension backend is a Go HTTP server that:
 
 1. Queries the underlying system (Prometheus API, Velero CRDs, etc.)
 2. Exposes a JSON HTTP API consumed by the UI extension via ArgoCD's proxy
-3. Receives ArgoCD identity headers (`Argocd-Username`, `Argocd-User-Groups`, `Argocd-Target-Cluster-URL`)
+3. Receives ArgoCD identity headers (`Argocd-Username`, `Argocd-User-Id`, `Argocd-User-Groups`, `Argocd-Target-Cluster-URL`, `Argocd-Target-Cluster-Name`)
 
 No gRPC between extensions. No GraphQL. Plain HTTP/JSON via ArgoCD proxy.
 
