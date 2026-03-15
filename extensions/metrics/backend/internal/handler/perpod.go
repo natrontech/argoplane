@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"math"
 	"net/http"
 	"sort"
 	"strings"
@@ -31,8 +30,8 @@ type perPodSeries struct {
 }
 
 type podTimeline struct {
-	Pod    string    `json:"pod"`
-	Values []float64 `json:"values"`
+	Pod    string      `json:"pod"`
+	Values []*float64  `json:"values"`
 }
 
 // Handle serves GET /api/v1/per-pod-series.
@@ -124,13 +123,12 @@ func (h *PerPod) Handle(w http.ResponseWriter, r *http.Request) {
 				valMap[dp.Time.Unix()] = convertValue(dp.Value, m.unit)
 			}
 
-			// Align to the shared timestamp grid, NaN for gaps
-			values := make([]float64, len(timestamps))
+			// Align to the shared timestamp grid, nil for gaps
+			values := make([]*float64, len(timestamps))
 			for i, t := range timestamps {
 				if v, ok := valMap[t.Unix()]; ok {
-					values[i] = v
-				} else {
-					values[i] = math.NaN()
+					val := v
+					values[i] = &val
 				}
 			}
 
