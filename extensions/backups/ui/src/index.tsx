@@ -1,13 +1,11 @@
 import * as React from 'react';
-import { BackupStatusPanel } from './components/BackupStatusPanel';
 import { BackupFlyout } from './components/BackupFlyout';
 
 ((window: any) => {
-  // Register as an application status panel extension
-  window.extensionsAPI.registerStatusPanelExtension(
-    BackupStatusPanel,
+  // App view: backup management as a view in the application detail
+  window.extensionsAPI.registerAppViewExtension(
+    BackupFlyout,
     'Backups',
-    'argoplane-backups',
-    BackupFlyout
+    'fa-archive'
   );
 })(window);

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { MetricsPanel } from './components/MetricsPanel';
-import { MetricsStatusPanel, MetricsFlyout } from './components/MetricsStatusPanel';
+import { AppMetricsView } from './components/AppMetricsView';
 
 ((window: any) => {
   // Resource tab: Deployments
@@ -30,11 +30,10 @@ import { MetricsStatusPanel, MetricsFlyout } from './components/MetricsStatusPan
     { icon: 'fa-chart-line' }
   );
 
-  // Status panel: compact CPU/Memory on each app's status bar
-  window.extensionsAPI.registerStatusPanelExtension(
-    MetricsStatusPanel,
+  // App view: application-level metrics (shows as a view option in app detail)
+  window.extensionsAPI.registerAppViewExtension(
+    AppMetricsView,
     'Metrics',
-    'metrics',
-    MetricsFlyout
+    'fa-chart-line'
   );
 })(window);
