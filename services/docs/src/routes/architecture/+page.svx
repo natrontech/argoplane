@@ -7,6 +7,8 @@ description: How ArgoPlane extensions work
 
 ArgoPlane is a collection of ArgoCD UI extensions, not a standalone application. Every feature ships as an extension that lives inside ArgoCD's UI.
 
+![ArgoPlane Architecture](/architecture-diagram.svg)
+
 ## Extension pattern
 
 Every ArgoPlane extension has three parts:
