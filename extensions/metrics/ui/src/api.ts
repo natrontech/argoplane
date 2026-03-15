@@ -1,4 +1,9 @@
-import { MetricData, TimeSeriesMetric, ClusterMetricsResponse, TimeRange } from './types';
+import { MetricData, TimeSeriesMetric, TimeRange } from './types';
+
+interface AppMetricsResponse {
+  summary: MetricData[];
+  timeSeries?: TimeSeriesMetric[];
+}
 
 export async function fetchMetrics(
   namespace: string,
@@ -58,15 +63,24 @@ export async function fetchTimeSeriesMetrics(
   return response.json();
 }
 
-export async function fetchClusterMetrics(
-  range?: TimeRange
-): Promise<ClusterMetricsResponse> {
-  const params = new URLSearchParams();
+export async function fetchAppMetrics(
+  namespace: string,
+  range: TimeRange | undefined,
+  appNamespace: string,
+  appName: string,
+  project: string
+): Promise<AppMetricsResponse> {
+  const params = new URLSearchParams({ namespace });
   if (range) {
     params.set('range', range);
   }
 
-  const response = await fetch(`/extensions/metrics/api/v1/cluster-metrics?${params}`);
+  const response = await fetch(`/extensions/metrics/api/v1/app-metrics?${params}`, {
+    headers: {
+      'Argocd-Application-Name': `${appNamespace}:${appName}`,
+      'Argocd-Project-Name': project,
+    },
+  });
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
