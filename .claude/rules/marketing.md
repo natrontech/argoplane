@@ -10,9 +10,13 @@ Toss in a joke or ironic sentence every now and then. Keep it natural. If it fee
 
 ## Positioning
 
-ArgoPlane makes platform capabilities discoverable to developers, inside ArgoCD. The key message: your cluster already knows what it offers (StorageClasses, IngressClasses, CRDs, operators, policies, node pools). ArgoPlane surfaces that information where developers already work.
+ArgoPlane gives developers operational superpowers inside ArgoCD, then builds a lightweight developer portal on top.
 
-The broader pitch: you don't need to adopt an entire new platform (Backstage, Port, Humanitec) when you can extend what you already have.
+**Layer 1 (extensions)**: best-in-class operational visibility: metrics, logs, alerts, backups, network flows, policy violations, traces. All inside ArgoCD, zero context switching. Works for power users who live in ArgoCD.
+
+**Layer 2 (portal, future)**: a developer portal that adds platform discoverability and self-service on top of ArgoCD. What StorageClasses exist? What CRDs can I use? Can I request a database? The portal answers those questions without replacing ArgoCD.
+
+The broader pitch: you don't need to adopt Backstage, Port, or Humanitec when you can extend ArgoCD with world-class extensions and add a lightweight portal layer for everything else.
 
 Competitive landscape:
 - **Backstage** (Spotify): full developer portal, plugin ecosystem, but heavy to operate and requires adopting a new UI
@@ -20,7 +24,7 @@ Competitive landscape:
 - **Humanitec**: platform orchestrator, opinionated, commercial
 - **Kratix**: promise-based platform framework, Crossplane alternative
 
-ArgoPlane's differentiator: it lives inside ArgoCD. No new UI to learn. No new auth system. No separate catalog to maintain. The cluster *is* the catalog. If your team already uses ArgoCD, ArgoPlane is a natural extension.
+ArgoPlane's differentiator: extensions live inside ArgoCD (no new UI for ops tasks). The portal is additive, not a replacement. If your team already uses ArgoCD, ArgoPlane is the natural next step.
 
 ## Open Source
 
