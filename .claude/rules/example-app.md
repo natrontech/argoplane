@@ -25,7 +25,7 @@ The demo app uses the public `argocd-example-apps/guestbook` repo as the ArgoCD 
 | Extension | Registration Type | Triggered By | Demo Resource |
 |-----------|------------------|--------------|---------------|
 | **Metrics** | Resource tab (Deployment, StatefulSet, Pod) + System-level page | `apps/Deployment`, `apps/StatefulSet`, `/Pod` + sidebar | `guestbook-ui` Deployment |
-| **Backups** | Status panel (any app) | Any ArgoCD Application | `argoplane-demo` Application + Velero Schedule |
+| **Backups** | App view (application detail) + Status panel + Schedule resource tab + Backup resource tab | Any ArgoCD Application + `velero.io/Schedule` + `velero.io/Backup` | `argoplane-demo` Application + 1 app Schedule (`argoplane-demo-daily`) + 2 platform Schedules (`platform-nightly-all`, `platform-weekly-compliance`) |
 | **Networking** | App view (application detail) + Pod resource tab | Any ArgoCD Application + `/Pod` | `guestbook-ui` Deployment + 2 app CiliumNetworkPolicies + 2 platform CiliumClusterwideNetworkPolicies + 2 platform CiliumNetworkPolicies + cross-ns traffic + Hubble flows |
 
 ## When Adding a New Extension

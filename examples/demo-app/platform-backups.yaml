@@ -1,0 +1,51 @@
+# Platform-managed backup schedules: deployed by the platform team, NOT part of the ArgoCD app.
+# These show as "platform" ownership in the backups extension because they're
+# not in the app's resource tree.
+#
+# Apply with: kubectl apply -f examples/demo-app/platform-backups.yaml
+#
+# NOTE: Schedules live in the velero namespace. They target app namespaces
+# via spec.template.includedNamespaces.
+
+---
+# Platform-wide nightly backup: covers all app namespaces.
+# Platform teams deploy this to ensure every namespace gets backed up,
+# even if app teams don't configure their own schedules.
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: platform-nightly-all
+  namespace: velero
+  labels:
+    app.kubernetes.io/managed-by: platform-team
+    policy.argoplane.io/category: backup
+  annotations:
+    description: "Platform baseline: nightly backup of all namespaces. Retained for 30 days."
+spec:
+  schedule: "0 1 * * *"
+  template:
+    ttl: 720h0m0s
+    snapshotVolumes: false
+
+---
+# Platform compliance backup: weekly full backup of specific app namespaces.
+# Longer retention for audit/compliance purposes.
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: platform-weekly-compliance
+  namespace: velero
+  labels:
+    app.kubernetes.io/managed-by: platform-team
+    policy.argoplane.io/category: compliance
+  annotations:
+    description: "Platform compliance: weekly backup of app namespaces with 90-day retention for audit."
+spec:
+  schedule: "0 3 * * 0"
+  template:
+    includedNamespaces:
+      - argoplane-demo
+      - production
+      - staging
+    ttl: 2160h0m0s
+    snapshotVolumes: false
