@@ -6,7 +6,7 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--", "--port", "3055", "--host", "0.0.0.0"],
       "port": 3055,
-      "cwd": "docs"
+      "cwd": "services/docs"
     }
   ],
   "autoVerify": false
