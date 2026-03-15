@@ -28,11 +28,12 @@ kubectl -n "${ARGOCD_NS}" patch configmap argocd-cm --type merge \
         --from-literal=statusbadge.enabled=true \
         --from-literal=ui.cssurl=./custom/argoplane.css
 
-# Create ConfigMap from the ArgoPlane custom stylesheet
+# Create ConfigMap from the ArgoPlane custom stylesheet + login wallpaper
 log "Installing ArgoPlane custom styles"
 kubectl -n "${ARGOCD_NS}" create configmap argocd-styles-cm \
     --from-file=argoplane.css="${PROJECT_ROOT}/deploy/argocd/argoplane-styles.css" \
-    --dry-run=client -o yaml | kubectl apply -f -
+    --from-file=login-wallpaper.jpg="${PROJECT_ROOT}/deploy/argocd/login-wallpaper.jpg" \
+    --dry-run=client -o yaml | kubectl apply --server-side -f -
 
 # Patch argocd-server to mount the custom styles volume
 # This is idempotent: if the volume already exists, the patch is a no-op
