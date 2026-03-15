@@ -1,0 +1,46 @@
+# Cross-namespace traffic: simulates another team's service calling into the demo app.
+# Deployed in a separate namespace to generate inter-namespace flows.
+#
+# Apply with: kubectl apply -f examples/demo-app/cross-namespace-traffic.yaml
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: other-team
+---
+# A service in another namespace that calls guestbook-ui cross-namespace.
+# This traffic will be DROPPED because guestbook-policy only allows
+# ingress from role=frontend-client within the same namespace context.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cross-ns-client
+  namespace: other-team
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cross-ns-client
+  template:
+    metadata:
+      labels:
+        app: cross-ns-client
+        team: other-team
+    spec:
+      containers:
+        - name: curl
+          image: curlimages/curl:8.12.1
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              while true; do
+                curl -sf -o /dev/null --connect-timeout 2 -w '%{http_code}' http://guestbook-ui.argoplane-demo.svc:80 || true
+                sleep 10
+              done
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 32Mi

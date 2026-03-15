@@ -1,0 +1,95 @@
+# Platform-managed policies: deployed by the platform team, NOT part of the ArgoCD app.
+# These show as "platform" ownership in the networking extension because they're
+# not in the app's resource tree.
+#
+# Apply with: kubectl apply -f examples/demo-app/platform-policies.yaml
+
+---
+# Clusterwide policy: allow DNS resolution for all pods.
+# A common platform baseline so apps don't need to each allow DNS.
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: platform-allow-dns
+  annotations:
+    description: "Platform baseline: allow DNS resolution (UDP/53, TCP/53) to kube-dns for all pods."
+  labels:
+    app.kubernetes.io/managed-by: platform-team
+    policy.argoplane.io/category: baseline
+spec:
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+---
+# Clusterwide policy: allow health probes from kubelet (host network).
+# Platform teams typically need this so liveness/readiness probes work.
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: platform-allow-health-probes
+  annotations:
+    description: "Platform baseline: allow kubelet health probes from host network."
+  labels:
+    app.kubernetes.io/managed-by: platform-team
+    policy.argoplane.io/category: baseline
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEntities:
+        - host
+---
+# Namespace-scoped platform policy: allow monitoring scraping.
+# Platform team deploys this to every app namespace so Prometheus can scrape.
+# Not part of the app's ArgoCD resources, shows as "platform" owned.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: platform-allow-monitoring
+  namespace: argoplane-demo
+  annotations:
+    description: "Platform policy: allow ingress from monitoring namespace for health checks and metrics scraping on ports 9090 and 8080."
+  labels:
+    app.kubernetes.io/managed-by: platform-team
+    policy.argoplane.io/category: observability
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: monitoring
+      toPorts:
+        - ports:
+            - port: "9090"
+              protocol: TCP
+            - port: "8080"
+              protocol: TCP
+---
+# Namespace-scoped platform policy: restrict inter-namespace ingress.
+# Only allows ingress from namespaces labeled with the partner annotation.
+# This blocks the cross-ns-client (other-team namespace) from reaching guestbook
+# unless explicitly allowed, demonstrating platform-level namespace isolation.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: platform-restrict-cross-ns
+  namespace: argoplane-demo
+  annotations:
+    description: "Platform policy: deny cross-namespace ingress except from namespaces labeled 'argoplane.io/allow-ingress=argoplane-demo'. Enforces namespace isolation."
+  labels:
+    app.kubernetes.io/managed-by: platform-team
+    policy.argoplane.io/category: isolation
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: argoplane-demo
