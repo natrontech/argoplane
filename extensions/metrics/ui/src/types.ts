@@ -32,6 +32,12 @@ export interface CustomQueryResult {
   error?: string;
 }
 
+export interface DiscoveredMetric {
+  name: string;
+  category: string;
+  query: string;
+}
+
 export interface ExtensionProps {
   resource: any;
   tree: any;

@@ -104,6 +104,31 @@ func (c *Client) QueryRange(ctx context.Context, query string, start, end time.T
 	return series, nil
 }
 
+// MetricNames returns metric names matching an optional namespace filter.
+func (c *Client) MetricNames(ctx context.Context, namespace string) ([]string, error) {
+	// Use series endpoint to find metrics present for a namespace
+	params := url.Values{}
+	if namespace != "" {
+		params.Set("match[]", fmt.Sprintf(`{namespace="%s"}`, namespace))
+	} else {
+		params.Set("match[]", `{__name__!=""}`)
+	}
+
+	body, err := c.get(ctx, "/api/v1/label/__name__/values", params)
+	if err != nil {
+		return nil, fmt.Errorf("metric names: %w", err)
+	}
+
+	var resp struct {
+		Status string   `json:"status"`
+		Data   []string `json:"data"`
+	}
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, fmt.Errorf("decode metric names: %w", err)
+	}
+	return resp.Data, nil
+}
+
 func (c *Client) get(ctx context.Context, path string, params url.Values) ([]byte, error) {
 	u := fmt.Sprintf("%s%s?%s", c.baseURL, path, params.Encode())
 

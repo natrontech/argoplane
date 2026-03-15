@@ -89,6 +89,14 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
 
   return (
     <div style={panel}>
+      {/* Custom query at the top */}
+      <CustomQuery
+        namespace={namespace}
+        appNamespace={appNamespace}
+        appName={appName}
+        project={project}
+      />
+
       {/* Header with meta and time range */}
       <div style={headerRow}>
         <MetaRow items={[
@@ -139,14 +147,6 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
           project={project}
         />
       )}
-
-      {/* Custom query */}
-      <CustomQuery
-        namespace={namespace}
-        appNamespace={appNamespace}
-        appName={appName}
-        project={project}
-      />
     </div>
   );
 };
