@@ -1,3 +1,43 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argoplane-backups-backend
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argoplane-backups-backend
+    app.kubernetes.io/part-of: argoplane
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argoplane-backups-manager
+  labels:
+    app.kubernetes.io/name: argoplane-backups-backend
+    app.kubernetes.io/part-of: argoplane
+rules:
+  - apiGroups: ["velero.io"]
+    resources: ["schedules", "backups", "restores", "backupstoragelocations"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["velero.io"]
+    resources: ["backups", "restores"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argoplane-backups-manager-binding
+  labels:
+    app.kubernetes.io/name: argoplane-backups-backend
+    app.kubernetes.io/part-of: argoplane
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argoplane-backups-manager
+subjects:
+  - kind: ServiceAccount
+    name: argoplane-backups-backend
+    namespace: argocd
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,6 +57,7 @@ spec:
         app.kubernetes.io/name: argoplane-backups-backend
         app.kubernetes.io/part-of: argoplane
     spec:
+      serviceAccountName: argoplane-backups-backend
       containers:
         - name: backend
           image: argoplane-backups-backend:dev
@@ -29,6 +70,8 @@ spec:
               value: "8081"
             - name: LOG_LEVEL
               value: "info"
+            - name: VELERO_NAMESPACE
+              value: "velero"
           livenessProbe:
             httpGet:
               path: /healthz
