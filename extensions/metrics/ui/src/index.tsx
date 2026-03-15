@@ -21,16 +21,7 @@ import { AppMetricsView } from './components/AppMetricsView';
     { icon: 'fa-chart-line' }
   );
 
-  // Resource tab: Pods (core API group = empty string)
-  window.extensionsAPI.registerResourceExtension(
-    MetricsPanel,
-    '',
-    'Pod',
-    'Metrics',
-    { icon: 'fa-chart-line' }
-  );
-
-  // App view: application-level metrics (shows as a view option in app detail)
+  // App view: application-level metrics with query builder
   window.extensionsAPI.registerAppViewExtension(
     AppMetricsView,
     'Metrics',

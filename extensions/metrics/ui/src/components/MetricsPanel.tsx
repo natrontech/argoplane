@@ -2,13 +2,10 @@ import * as React from 'react';
 import {
   Loading,
   EmptyState,
-  SectionHeader,
   MetricCard,
   MetaRow,
   Button,
   colors,
-  fonts,
-  fontSize,
   panel,
   spacing,
 } from '@argoplane/shared';
@@ -17,7 +14,6 @@ import { ExtensionProps, MetricData, TimeSeriesMetric, TimeRange } from '../type
 import { SparklineChart } from './SparklineChart';
 import { TimeRangeSelector } from './TimeRangeSelector';
 import { PodBreakdown } from './PodBreakdown';
-import { QueryBuilder } from './QueryBuilder';
 
 const CHART_COLORS: Record<string, string> = {
   'CPU Usage': colors.orange500,
@@ -47,10 +43,10 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
   const fetchAll = React.useCallback(() => {
     if (!namespace || !name) return;
 
-    const instantPromise = fetchMetrics(namespace, name, kind, appNamespace, appName, project);
-    const rangePromise = fetchTimeSeriesMetrics(namespace, name, kind, timeRange, appNamespace, appName, project);
+    const instantP = fetchMetrics(namespace, name, kind, appNamespace, appName, project);
+    const rangeP = fetchTimeSeriesMetrics(namespace, name, kind, timeRange, appNamespace, appName, project);
 
-    Promise.all([instantPromise, rangePromise])
+    Promise.all([instantP, rangeP])
       .then(([instant, series]) => {
         setMetrics(instant);
         setTimeSeries(series);
@@ -70,9 +66,7 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
     return () => clearInterval(interval);
   }, [fetchAll]);
 
-  if (loading) {
-    return <Loading />;
-  }
+  if (loading) return <Loading />;
 
   if (error) {
     return (
@@ -89,15 +83,7 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
 
   return (
     <div style={panel}>
-      {/* Query builder at the top */}
-      <QueryBuilder
-        namespace={namespace}
-        appNamespace={appNamespace}
-        appName={appName}
-        project={project}
-      />
-
-      {/* Header with meta and time range */}
+      {/* Header */}
       <div style={headerRow}>
         <MetaRow items={[
           { label: 'Kind', value: kind },
@@ -107,21 +93,16 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
         <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
       </div>
 
-      {/* Summary cards row */}
+      {/* Summary cards */}
       <div style={cardGrid}>
         {metrics.map((m) => (
-          <MetricCard
-            key={m.name}
-            label={m.name}
-            value={m.value}
-            unit={m.unit}
-          />
+          <MetricCard key={m.name} label={m.name} value={m.value} unit={m.unit} />
         ))}
       </div>
 
-      {/* Time series charts: 2 columns, taller */}
+      {/* Charts */}
       {timeSeries.length > 0 && (
-        <div style={chartSection}>
+        <div style={chartGrid}>
           {timeSeries.map((ts) => (
             <SparklineChart
               key={ts.name}
@@ -136,7 +117,7 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
         </div>
       )}
 
-      {/* Per-pod breakdown (only for Deployments/StatefulSets) */}
+      {/* Pod breakdown */}
       {showPodBreakdown && (
         <PodBreakdown
           namespace={namespace}
@@ -166,7 +147,7 @@ const cardGrid: React.CSSProperties = {
   gap: spacing[3],
 };
 
-const chartSection: React.CSSProperties = {
+const chartGrid: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(2, 1fr)',
   gap: spacing[3],
