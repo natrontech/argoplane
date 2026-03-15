@@ -2,6 +2,9 @@ apiVersion: velero.io/v1
 kind: Schedule
 metadata:
   name: argoplane-demo-daily
+  namespace: velero
+  labels:
+    app.kubernetes.io/managed-by: argoplane-demo
 spec:
   schedule: "0 2 * * *"
   template:

@@ -321,7 +321,11 @@ const RestoreConfirmPanel: React.FC<{
 // Schedule Detail (expandable row)
 // ============================================================
 
-const ScheduleDetail: React.FC<{ schedule: ScheduleSummary }> = ({ schedule: s }) => (
+const ScheduleDetail: React.FC<{
+  schedule: ScheduleSummary;
+  namespace: string;
+  onTrigger: (scheduleName: string, ttl?: string) => void;
+}> = ({ schedule: s, namespace, onTrigger }) => (
   <tr>
     <td colSpan={7} style={{ padding: 0, borderBottom: `1px solid ${colors.gray200}` }}>
       <div style={{ padding: `${spacing[3]}px ${spacing[4]}px`, background: colors.gray50 }}>
@@ -341,6 +345,12 @@ const ScheduleDetail: React.FC<{ schedule: ScheduleSummary }> = ({ schedule: s }
           {s.excludedNamespaces && s.excludedNamespaces.length > 0 && (
             <KV label="Excludes" value={s.excludedNamespaces.join(', ')} />
           )}
+        </div>
+        <div style={{ marginTop: spacing[3] }}>
+          <Button primary onClick={() => onTrigger(s.name, s.ttl)} disabled={s.paused}>
+            Trigger Backup
+          </Button>
+          {s.paused && <span style={{ marginLeft: spacing[2], fontSize: fontSize.sm, color: colors.gray400 }}>Schedule is paused</span>}
         </div>
       </div>
     </td>
@@ -516,10 +526,11 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
 
   const resourceRefs = React.useMemo<ResourceRef[]>(() => {
     if (!tree?.nodes) return [];
+    // Include all resources in the tree (not just destination namespace).
+    // Schedules may live in the velero namespace but still be app-owned.
     return tree.nodes
-      .filter((n: any) => n.namespace === namespace || !n.namespace)
       .map((n: any) => ({ group: n.group || '', kind: n.kind, namespace: n.namespace || '', name: n.name }));
-  }, [tree, namespace]);
+  }, [tree]);
 
   const fetchAll = React.useCallback(() => {
     if (!namespace) return;
@@ -580,6 +591,17 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
     }
   }, [restoreTarget, namespace, appNamespace, appName, project, fetchAll]);
 
+  const handleTriggerFromSchedule = React.useCallback(async (scheduleName: string, ttl?: string) => {
+    try {
+      const result = await createBackup(namespace, appNamespace, appName, project, ttl || undefined, scheduleName);
+      setBanner({ variant: 'success', message: `Backup "${result.name}" triggered from schedule "${scheduleName}".` });
+      setActiveTab('backups');
+      setTimeout(fetchAll, 2000);
+    } catch (err: any) {
+      setBanner({ variant: 'error', message: `Failed to trigger backup: ${err.message || 'unknown error'}` });
+    }
+  }, [namespace, appNamespace, appName, project, fetchAll]);
+
   if (loading) return <div style={panel}><Loading /></div>;
   if (error && !overview) return (
     <div style={panel}>
@@ -610,6 +632,21 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
           )}
         </div>
       </div>
+
+      {/* BSL details */}
+      {storageLocations.length > 0 && (
+        <div style={{ display: 'flex', gap: spacing[4], flexWrap: 'wrap', paddingTop: spacing[2], paddingBottom: spacing[2], borderBottom: `1px solid ${colors.gray100}` }}>
+          {storageLocations.map((loc) => (
+            <div key={loc.name} style={{ display: 'flex', alignItems: 'center', gap: spacing[2], fontSize: fontSize.sm, fontFamily: fonts.mono }}>
+              <StatusDot ok={loc.phase === 'Available'} />
+              <span style={{ color: colors.gray800 }}>{loc.name}</span>
+              <span style={{ color: colors.gray400 }}>{loc.provider}{loc.bucket ? ` / ${loc.bucket}` : ''}</span>
+              <Tag variant={loc.phase === 'Available' ? 'green' : 'red'}>{loc.phase}</Tag>
+              {loc.lastValidationTime && <span style={{ color: colors.gray400, fontSize: fontSize.xs }}>validated {timeAgo(loc.lastValidationTime)}</span>}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Create Backup Panel */}
       {showCreatePanel && (
@@ -697,7 +734,7 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
                         </td>
                         <td style={tdStyle}>{s.backupCount}</td>
                       </tr>
-                      {expandedSchedule === s.name && <ScheduleDetail schedule={s} />}
+                      {expandedSchedule === s.name && <ScheduleDetail schedule={s} namespace={namespace} onTrigger={handleTriggerFromSchedule} />}
                     </React.Fragment>
                   ))}
                 </tbody>

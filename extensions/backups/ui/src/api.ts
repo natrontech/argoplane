@@ -77,10 +77,12 @@ export async function createBackup(
   appNamespace: string,
   appName: string,
   project: string,
-  ttl?: string
+  ttl?: string,
+  scheduleName?: string
 ): Promise<{ name: string }> {
   const body: Record<string, string> = { namespace };
   if (ttl) body.ttl = ttl;
+  if (scheduleName) body.scheduleName = scheduleName;
   const response = await fetch('/extensions/backups/api/v1/backups', {
     method: 'POST',
     headers: {

@@ -16,20 +16,6 @@ import { fetchBackups, createBackup } from '../api';
 import { BackupSummary } from '../types';
 
 // ============================================================
-// ArgoCD SPA-safe navigation
-// ============================================================
-
-function resourceNodeUrl(appNs: string, appName: string, group: string, kind: string, ns: string, name: string): string {
-  const nodeKey = `${group}/${kind}/${ns}/${name}/0`;
-  return `/applications/${appNs}/${appName}?${new URLSearchParams({ node: nodeKey }).toString()}`;
-}
-
-function navigateSPA(url: string) {
-  window.history.pushState(null, '', url);
-  window.dispatchEvent(new PopStateEvent('popstate'));
-}
-
-// ============================================================
 // Helpers
 // ============================================================
 
@@ -76,10 +62,6 @@ function phaseToVariant(phase: string): PhaseVariant {
 // Sub-components
 // ============================================================
 
-const ResourceLink: React.FC<{ onClick: () => void; children: React.ReactNode; title?: string }> = ({ onClick, children, title }) => (
-  <span onClick={(e) => { e.stopPropagation(); onClick(); }} title={title} style={linkStyle}>{children}</span>
-);
-
 const KV: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
   <div style={kvRow}>
     <span style={kvLabel}>{label}</span>
@@ -99,7 +81,6 @@ export const ScheduleBackupsTab: React.FC<{ resource: any; tree?: any; applicati
   const [triggering, setTriggering] = React.useState(false);
 
   const scheduleName = resource?.metadata?.name || '';
-  const scheduleNs = resource?.metadata?.namespace || '';
   const cron = resource?.spec?.schedule || '-';
   const ttl = resource?.spec?.template?.ttl || resource?.spec?.ttl || '-';
   const paused = resource?.spec?.paused || false;
@@ -109,15 +90,17 @@ export const ScheduleBackupsTab: React.FC<{ resource: any; tree?: any; applicati
   const appName = application?.metadata?.name || '';
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
-  const targetNamespace = includedNs.length > 0 ? includedNs[0] : application?.spec?.destination?.namespace || scheduleNs;
+  // Use the first included namespace or the app's destination namespace as the target.
+  const targetNamespace = includedNs.length > 0 ? includedNs[0] : application?.spec?.destination?.namespace || '';
 
   const loadBackups = React.useCallback(() => {
-    if (!scheduleNs) return;
-    fetchBackups(scheduleNs, appNamespace, appName, project, scheduleName)
+    if (!targetNamespace) return;
+    // Fetch backups filtered by target namespace AND this schedule name.
+    fetchBackups(targetNamespace, appNamespace, appName, project, scheduleName)
       .then(setBackups)
       .catch(() => setBackups([]))
       .finally(() => setLoading(false));
-  }, [scheduleNs, appNamespace, appName, project, scheduleName]);
+  }, [targetNamespace, appNamespace, appName, project, scheduleName]);
 
   React.useEffect(() => { setLoading(true); loadBackups(); }, [loadBackups]);
   React.useEffect(() => { const i = setInterval(loadBackups, REFRESH_INTERVAL); return () => clearInterval(i); }, [loadBackups]);
@@ -125,14 +108,14 @@ export const ScheduleBackupsTab: React.FC<{ resource: any; tree?: any; applicati
   const handleTriggerBackup = React.useCallback(async () => {
     setTriggering(true);
     try {
-      await createBackup(targetNamespace, appNamespace, appName, project);
+      await createBackup(targetNamespace, appNamespace, appName, project, ttl !== '-' ? ttl : undefined);
       setTimeout(loadBackups, 2000);
     } catch {
       // silently fail
     } finally {
       setTriggering(false);
     }
-  }, [targetNamespace, appNamespace, appName, project, loadBackups]);
+  }, [targetNamespace, appNamespace, appName, project, ttl, loadBackups]);
 
   return (
     <div style={rootStyle}>
@@ -144,12 +127,14 @@ export const ScheduleBackupsTab: React.FC<{ resource: any; tree?: any; applicati
           <KV label="TTL" value={ttl} />
           <KV label="Paused" value={paused ? <Tag variant="orange">Yes</Tag> : <span style={{ color: colors.gray400 }}>No</span>} />
           {includedNs.length > 0 && <KV label="Included Namespaces" value={includedNs.join(', ')} />}
+          {includedNs.length === 0 && <KV label="Included Namespaces" value={<span style={{ color: colors.gray400 }}>all namespaces</span>} />}
           {excludedNs.length > 0 && <KV label="Excluded Namespaces" value={excludedNs.join(', ')} />}
         </div>
         <div style={{ marginTop: spacing[3] }}>
-          <Button primary onClick={handleTriggerBackup} disabled={triggering}>
+          <Button primary onClick={handleTriggerBackup} disabled={triggering || paused}>
             {triggering ? 'Triggering...' : 'Trigger Backup'}
           </Button>
+          {paused && <span style={{ marginLeft: spacing[2], fontSize: fontSize.sm, color: colors.gray400 }}>Schedule is paused</span>}
         </div>
       </div>
 
@@ -178,14 +163,7 @@ export const ScheduleBackupsTab: React.FC<{ resource: any; tree?: any; applicati
                 const itemPercent = b.totalItems > 0 ? Math.round((b.itemsBackedUp / b.totalItems) * 100) : 0;
                 return (
                   <tr key={b.name}>
-                    <td style={{ ...tdStyle, fontWeight: fontWeight.semibold }}>
-                      <ResourceLink
-                        onClick={() => navigateSPA(resourceNodeUrl(appNamespace, appName, 'velero.io', 'Backup', b.namespace, b.name))}
-                        title={`Open ${b.name}`}
-                      >
-                        {b.name}
-                      </ResourceLink>
-                    </td>
+                    <td style={{ ...tdStyle, fontWeight: fontWeight.semibold }}>{b.name}</td>
                     <td style={tdStyle}><Tag variant={phaseToVariant(b.phase)}>{b.phase}</Tag></td>
                     <td style={tdStyle}>{timeAgo(b.startTimestamp)}</td>
                     <td style={tdStyle}>{duration(b.startTimestamp, b.completionTimestamp)}</td>
@@ -227,4 +205,3 @@ const tableWrap: React.CSSProperties = { overflowX: 'auto' };
 const tableStyle: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', borderSpacing: 0 };
 const thStyle: React.CSSProperties = { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: '0.5px', color: colors.gray500, padding: `${spacing[2]}px ${spacing[2]}px`, borderBottom: `2px solid ${colors.gray200}`, textAlign: 'left', whiteSpace: 'nowrap' };
 const tdStyle: React.CSSProperties = { fontSize: fontSize.sm, padding: `${spacing[1]}px ${spacing[2]}px`, borderBottom: `1px solid ${colors.gray100}`, fontFamily: fonts.mono, whiteSpace: 'nowrap' };
-const linkStyle: React.CSSProperties = { fontFamily: fonts.mono, fontSize: fontSize.sm, color: colors.blueText, cursor: 'pointer', borderBottom: `1px dotted ${colors.blueText}` };
