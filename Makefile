@@ -133,7 +133,7 @@ load-extensions: build-backends ## Load extension images into kind cluster
 	done
 
 .PHONY: deploy-extensions
-deploy-extensions: ## Deploy extension backends and proxy config to cluster
+deploy-extensions: ## Deploy extension backends, UI bundles, and proxy config to cluster
 	@echo "==> Deploying extension backends"
 	@for ext in $(EXTENSIONS); do \
 		echo "==> Deploying $$ext backend"; \
@@ -144,6 +144,27 @@ deploy-extensions: ## Deploy extension backends and proxy config to cluster
 	@echo "==> Restarting argocd-server to pick up proxy config"
 	@kubectl -n $(ARGOCD_NS) rollout restart deployment argocd-server
 	@kubectl -n $(ARGOCD_NS) rollout status deployment argocd-server --timeout=120s
+	@echo "==> Loading UI extension bundles into argocd-server"
+	@ARGOCD_POD=$$(kubectl get pods -n $(ARGOCD_NS) -l app.kubernetes.io/name=argocd-server \
+		-o jsonpath='{.items[0].metadata.name}'); \
+	kubectl exec -n $(ARGOCD_NS) $$ARGOCD_POD -- mkdir -p /tmp/extensions; \
+	for ext in $(EXTENSIONS); do \
+		echo "==> Loading $$ext UI bundle"; \
+		kubectl cp extensions/$$ext/ui/dist/extension-$$ext.js $(ARGOCD_NS)/$$ARGOCD_POD:/tmp/extensions/extension-$$ext.js; \
+	done
+	@echo "==> Extensions deployed"
+
+# --- Example app ---
+
+.PHONY: deploy-example
+deploy-example: ## Deploy demo app for visual testing of all extensions
+	@bash hack/deploy-example.sh
+
+.PHONY: clean-example
+clean-example: ## Remove demo app and namespace
+	-@kubectl delete application -n $(ARGOCD_NS) argoplane-demo 2>/dev/null || true
+	-@kubectl delete ns argoplane-demo --wait=false 2>/dev/null || true
+	-@kubectl delete schedule -n velero argoplane-demo-daily 2>/dev/null || true
 
 # --- Testing ---
 

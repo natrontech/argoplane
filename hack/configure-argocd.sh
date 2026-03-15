@@ -58,6 +58,44 @@ kubectl -n "${ARGOCD_NS}" patch deployment argocd-server --type json -p '[
   }
 ]' 2>/dev/null || log "Custom styles volume already mounted"
 
+# Configure private repo access for the demo app
+# Uses GITHUB_TOKEN env var, or falls back to gh CLI auth
+log "Configuring repository credentials"
+GITHUB_TOKEN="${GITHUB_TOKEN:-}"
+if [ -z "$GITHUB_TOKEN" ] && command -v gh &>/dev/null; then
+    GITHUB_TOKEN="$(gh auth token 2>/dev/null || true)"
+fi
+
+if [ -n "$GITHUB_TOKEN" ]; then
+    kubectl -n "${ARGOCD_NS}" apply -f - <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argoplane-repo-creds
+  namespace: ${ARGOCD_NS}
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  type: git
+  url: https://github.com/natrontech/argoplane.git
+  username: argocd
+  password: ${GITHUB_TOKEN}
+EOF
+    log "Repository credentials configured (GitHub token)"
+else
+    log "WARNING: No GitHub token found. Set GITHUB_TOKEN or authenticate with 'gh auth login'."
+    log "         The demo app will fail to sync without repo access."
+fi
+
+# Grant extension invoke permissions (required in ArgoCD v3)
+log "Configuring extension RBAC"
+kubectl -n "${ARGOCD_NS}" patch configmap argocd-rbac-cm --type merge \
+    -p '{"data":{"policy.csv":"p, role:admin, extensions, invoke, metrics, allow\np, role:admin, extensions, invoke, backups, allow\np, role:admin, extensions, invoke, networking, allow\n","policy.default":"role:admin"}}' \
+    2>/dev/null || \
+    kubectl -n "${ARGOCD_NS}" create configmap argocd-rbac-cm \
+        --from-literal=policy.csv="$(printf 'p, role:admin, extensions, invoke, metrics, allow\np, role:admin, extensions, invoke, backups, allow\np, role:admin, extensions, invoke, networking, allow\n')" \
+        --from-literal=policy.default=role:admin
+
 # Restart argocd-server to pick up all changes
 kubectl -n "${ARGOCD_NS}" rollout restart deployment argocd-server
 kubectl -n "${ARGOCD_NS}" rollout status deployment argocd-server --timeout=180s
