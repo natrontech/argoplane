@@ -97,6 +97,16 @@ func (h *PerPod) Handle(w http.ResponseWriter, r *http.Request) {
 			query: fmt.Sprintf(`sum by (pod) (container_memory_working_set_bytes{%s,container!=""})`, podSelector),
 			unit:  "bytes",
 		},
+		{
+			name:  "Network RX",
+			query: fmt.Sprintf(`sum by (pod) (rate(container_network_receive_bytes_total{%s}[5m]))`, podSelector),
+			unit:  "bytes/s",
+		},
+		{
+			name:  "Network TX",
+			query: fmt.Sprintf(`sum by (pod) (rate(container_network_transmit_bytes_total{%s}[5m]))`, podSelector),
+			unit:  "bytes/s",
+		},
 	}
 
 	var results []perPodSeries
