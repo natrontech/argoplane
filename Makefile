@@ -3,7 +3,7 @@
 
 # --- Configuration ---
 CLUSTER_NAME    ?= argoplane-dev
-ARGOCD_VERSION  ?= v2.13.3
+ARGOCD_VERSION  ?= v3.3.3
 ARGOCD_NS       := argocd
 KIND_CONFIG     := hack/kind-config.yaml
 EXTENSIONS      := metrics backups
@@ -60,7 +60,7 @@ argocd-password: ## Print ArgoCD admin password
 .PHONY: argocd-portforward
 argocd-portforward: ## Port-forward ArgoCD UI to localhost:8080
 	@echo "==> ArgoCD UI at http://localhost:8080"
-	@kubectl port-forward svc/argocd-server -n $(ARGOCD_NS) 8080:443
+	@kubectl port-forward svc/argocd-server -n $(ARGOCD_NS) 8080:80
 
 # --- Operators ---
 

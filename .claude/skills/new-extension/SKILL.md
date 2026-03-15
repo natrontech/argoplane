@@ -47,7 +47,7 @@ extensions/$ARGUMENTS/
 
 - Add `$ARGUMENTS` to the `EXTENSIONS` variable in the root `Makefile`
 - Add deployment manifests in `deploy/extensions/$ARGUMENTS/deployment.yaml`
-- Add proxy extension config in `deploy/argocd/proxy-extensions.yaml`
+- Add proxy extension config in `deploy/argocd/proxy-extensions.json`
 - Run `go mod tidy` in the backend directory
 - Run `npm install` in the ui directory
 - Test build: `npm run build` in ui, `go build -o /tmp/test ./cmd/` in backend

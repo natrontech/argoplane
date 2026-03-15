@@ -88,11 +88,12 @@ Use Go 1.22+ routing patterns with method and path parameters.
 
 ## ArgoCD Headers
 
-Backend services receive identity headers from ArgoCD's proxy. Use them for authorization and scoping:
+Backend services receive identity headers from ArgoCD's proxy (v3.x). Use them for authorization and scoping:
 
 ```go
-func userFromRequest(r *http.Request) (username string, groups []string) {
+func userFromRequest(r *http.Request) (username, userID string, groups []string) {
     username = r.Header.Get("Argocd-Username")
+    userID = r.Header.Get("Argocd-User-Id")
     groups = strings.Split(r.Header.Get("Argocd-User-Groups"), ",")
     return
 }

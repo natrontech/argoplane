@@ -17,13 +17,13 @@ kubectl -n "${ARGOCD_NS}" patch configmap argocd-cmd-params-cm --type merge \
         --from-literal=server.enable.proxy.extension=true
 
 # Dev-friendly settings (merge into existing argocd-cm)
+# Note: ArgoCD v3 uses annotation-based tracking by default (no instanceLabelKey needed)
 kubectl -n "${ARGOCD_NS}" patch configmap argocd-cm --type merge \
-    -p '{"data":{"exec.enabled":"true","statusbadge.enabled":"true","application.instanceLabelKey":"argocd.argoproj.io/instance"}}' \
+    -p '{"data":{"exec.enabled":"true","statusbadge.enabled":"true"}}' \
     2>/dev/null || \
     kubectl -n "${ARGOCD_NS}" create configmap argocd-cm \
         --from-literal=exec.enabled=true \
-        --from-literal=statusbadge.enabled=true \
-        --from-literal=application.instanceLabelKey=argocd.argoproj.io/instance
+        --from-literal=statusbadge.enabled=true
 
 # Restart argocd-server to pick up ConfigMap changes
 kubectl -n "${ARGOCD_NS}" rollout restart deployment argocd-server

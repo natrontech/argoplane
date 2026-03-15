@@ -28,7 +28,7 @@ Every ArgoPlane feature follows the same pattern:
 
 ### Key Components
 
-- **ArgoCD**: GitOps engine, UI host, RBAC, proxy extension routing
+- **ArgoCD v3.3.3**: GitOps engine, UI host, RBAC, proxy extension routing
 - **Kubernetes API**: Primary source for platform discoverability (StorageClasses, IngressClasses, CRDs, nodes, policies)
 - **Crossplane**: Abstraction layer for self-service platform resources (XRDs/compositions)
 - **Prometheus**: Metrics source for the metrics extension

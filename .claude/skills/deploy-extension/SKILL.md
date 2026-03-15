@@ -32,9 +32,9 @@ Build and deploy the **$ARGUMENTS** extension to the local kind cluster.
    kubectl apply -f deploy/extensions/$ARGUMENTS/deployment.yaml
    ```
 
-5. Configure the ArgoCD proxy extension:
+5. Configure the ArgoCD proxy extension (patch, not apply, to preserve argocd-cm):
    ```bash
-   kubectl -n argocd apply -f deploy/argocd/proxy-extensions.yaml
+   kubectl -n argocd patch cm argocd-cm --type merge --patch-file deploy/argocd/proxy-extensions.json
    ```
 
 6. Mount the UI extension into argocd-server (if not already done):

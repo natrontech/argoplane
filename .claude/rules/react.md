@@ -24,13 +24,13 @@ Every extension entry point registers via `window.extensionsAPI`:
 })(window);
 ```
 
-### Available Registration Methods
+### Available Registration Methods (ArgoCD v3.x)
 
 - `registerResourceExtension(component, group, kind, title, opts?)` - resource detail tabs
-- `registerSystemLevelExtension(component, title, options?)` - sidebar pages
+- `registerSystemLevelExtension(component, title, path, icon)` - sidebar pages (path sets the URL route)
 - `registerStatusPanelExtension(component, title, id, flyout?)` - app status bar items
 - `registerTopBarActionMenuExt(component, title, id, flyout?, shouldDisplay?, icon?, isMiddle?)` - action buttons
-- `registerAppViewExtension(component, title, icon, shouldDisplay?)` - app detail views
+- `registerAppViewExtension(component, title, icon, shouldDisplay?)` - app detail views (supports `shouldDisplay` callback since v3.2)
 
 ## Component Props
 
