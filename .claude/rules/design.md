@@ -80,3 +80,68 @@ Add `data-theme="dark"` or class `theme-dark` to any parent element. Semantic to
 - Text: gray-100 primary, gray-400 secondary
 - Orange accent: orange-400 instead of orange-500
 - Status squares remain the same (pop naturally against dark)
+
+## Self-Service Portal (SvelteKit)
+
+The self-service portal is built with **SvelteKit + Tailwind CSS + shadcn-svelte**. All portal UI must use shadcn-svelte components styled to match the ArgoPlane design system.
+
+### Stack
+
+- **SvelteKit**: app framework (SSR, routing, API routes)
+- **Tailwind CSS v4**: utility-first styling
+- **shadcn-svelte**: headless component primitives (Button, Dialog, Table, Select, etc.)
+
+### Tailwind Configuration
+
+Extend the Tailwind theme to match ArgoPlane tokens:
+
+```javascript
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        orange: {
+          50: '#FFF7ED', 100: '#FFEDD5', 200: '#FDDCB0',
+          300: '#F5C28B', 400: '#F0A868', 500: '#E8935A', 600: '#D47A42',
+        },
+        gray: {
+          50: '#FAFAF9', 100: '#F5F5F4', 200: '#E7E5E4', 300: '#D6D3D1',
+          400: '#A8A29E', 500: '#78716C', 600: '#57534E', 700: '#44403C',
+          800: '#292524', 900: '#1C1917',
+        },
+      },
+      fontFamily: {
+        body: ['Heebo', 'sans-serif'],
+        mono: ['JetBrains Mono', 'SF Mono', 'Fira Code', 'monospace'],
+      },
+      borderRadius: {
+        sm: '2px',
+        md: '4px',
+      },
+      spacing: {
+        // 4px grid: 1=4px, 2=8px, 3=12px, etc.
+      },
+    },
+  },
+};
+```
+
+### shadcn-svelte Customization
+
+Override shadcn-svelte's default styles to match ArgoPlane:
+
+- **Buttons**: `bg-orange-500 hover:bg-orange-600`, no rounded-full, max `rounded-[4px]`
+- **Cards**: `border border-gray-200 rounded-[4px]`, no shadow
+- **Inputs**: `border-gray-200 focus:border-orange-500 rounded-[4px]`
+- **Tables**: `border-collapse`, 1px borders, monospace for data cells
+- **Dialogs/Modals**: `rounded-[4px]`, no shadow, 1px border
+- **Status indicators**: 8x8px colored squares, not circles or dots
+
+### Rules for Portal Code
+
+- Always use shadcn-svelte components as the base. Never build custom components when shadcn-svelte has one.
+- Style exclusively with Tailwind utility classes. No inline styles, no CSS modules, no `<style>` blocks.
+- Follow the same design rules: 4px grid, 1px borders, max 4px radius, no shadows, no gradients, monospace for data.
+- Use semantic color names from the extended Tailwind config, not raw hex values.
+- Dark mode: use Tailwind's `dark:` variant. Map to the same semantic colors as the CSS design system.
