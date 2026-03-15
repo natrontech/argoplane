@@ -3,6 +3,7 @@ package handler
 import (
 	"log/slog"
 	"net/http"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -93,8 +94,17 @@ func parseEndpointSummary(obj unstructured.Unstructured) types.EndpointSummary {
 		}
 	}
 
-	if identityLabels, ok, _ := unstructured.NestedStringMap(status, "identity", "labels"); ok {
-		es.Labels = identityLabels
+	// Cilium stores identity labels as a []string (e.g., "k8s:app=guestbook-ui"),
+	// not as a map. Parse the array into a map for frontend consumption.
+	if labelSlice, ok, _ := unstructured.NestedStringSlice(status, "identity", "labels"); ok {
+		es.Labels = make(map[string]string, len(labelSlice))
+		for _, l := range labelSlice {
+			if k, v, found := strings.Cut(l, "="); found {
+				es.Labels[k] = v
+			} else {
+				es.Labels[l] = ""
+			}
+		}
 	}
 
 	if namedPorts, ok, _ := unstructured.NestedSlice(status, "named-ports"); ok {
