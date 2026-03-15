@@ -3,12 +3,8 @@ import {
   Loading,
   EmptyState,
   SectionHeader,
-  MetaRow,
-  DataTable,
-  Cell,
   StatusBadge,
   Tag,
-  MetricCard,
   Button,
   Input,
   colors,
@@ -26,9 +22,118 @@ import {
   FlowsResponse,
   ResourceRef,
   VerdictFilter,
-  DirectionFilter,
   TimeRange,
 } from '../types';
+
+// --- Aggregation types ---
+
+interface AggregatedConnection {
+  direction: 'outbound' | 'inbound';
+  remoteLabel: string; // display name
+  protocol: string;
+  port: number;
+  forwarded: number;
+  dropped: number;
+  errors: number;
+  dropReasons: string[];
+}
+
+interface PodTraffic {
+  pod: string;
+  connections: AggregatedConnection[];
+  totalForwarded: number;
+  totalDropped: number;
+  totalErrors: number;
+}
+
+// --- Flow aggregation ---
+
+function aggregateFlows(flows: FlowSummary[], namespace: string): PodTraffic[] {
+  // Group by local pod, then by remote+protocol+port+direction.
+  const podMap = new Map<string, Map<string, AggregatedConnection>>();
+
+  for (const f of flows) {
+    const isSourceLocal = f.sourceNamespace === namespace && f.sourcePod;
+    const isDestLocal = f.destNamespace === namespace && f.destPod;
+
+    // Determine the local pod and direction.
+    let localPod: string;
+    let direction: 'outbound' | 'inbound';
+    let remoteLabel: string;
+
+    if (isSourceLocal && !isDestLocal) {
+      localPod = f.sourcePod;
+      direction = 'outbound';
+      remoteLabel = f.destPod
+        ? (f.destNamespace === namespace ? f.destPod : `${f.destNamespace}/${f.destPod}`)
+        : f.destDNS || f.destIP || 'unknown';
+    } else if (isDestLocal && !isSourceLocal) {
+      localPod = f.destPod;
+      direction = 'inbound';
+      remoteLabel = f.sourcePod
+        ? (f.sourceNamespace === namespace ? f.sourcePod : `${f.sourceNamespace}/${f.sourcePod}`)
+        : f.sourceIP || 'unknown';
+    } else if (isSourceLocal && isDestLocal) {
+      // Internal traffic: show from source perspective.
+      localPod = f.sourcePod;
+      direction = 'outbound';
+      remoteLabel = f.destPod;
+    } else {
+      continue; // Neither side is local.
+    }
+
+    const proto = f.destPort > 0 ? `${f.protocol}:${f.destPort}` : f.protocol || '';
+    const connKey = `${direction}|${remoteLabel}|${proto}`;
+
+    if (!podMap.has(localPod)) {
+      podMap.set(localPod, new Map());
+    }
+    const connMap = podMap.get(localPod)!;
+
+    if (!connMap.has(connKey)) {
+      connMap.set(connKey, {
+        direction,
+        remoteLabel,
+        protocol: f.protocol,
+        port: f.destPort,
+        forwarded: 0,
+        dropped: 0,
+        errors: 0,
+        dropReasons: [],
+      });
+    }
+    const conn = connMap.get(connKey)!;
+
+    if (f.verdict === 'FORWARDED') conn.forwarded++;
+    else if (f.verdict === 'DROPPED') {
+      conn.dropped++;
+      if (f.dropReason && !conn.dropReasons.includes(f.dropReason)) {
+        conn.dropReasons.push(f.dropReason);
+      }
+    } else if (f.verdict === 'ERROR') conn.errors++;
+  }
+
+  const result: PodTraffic[] = [];
+  for (const [pod, connMap] of podMap) {
+    const connections = Array.from(connMap.values());
+    // Sort: dropped first, then by total volume.
+    connections.sort((a, b) => (b.dropped - a.dropped) || ((b.forwarded + b.dropped) - (a.forwarded + a.dropped)));
+
+    result.push({
+      pod,
+      connections,
+      totalForwarded: connections.reduce((s, c) => s + c.forwarded, 0),
+      totalDropped: connections.reduce((s, c) => s + c.dropped, 0),
+      totalErrors: connections.reduce((s, c) => s + c.errors, 0),
+    });
+  }
+
+  // Sort pods: those with drops first.
+  result.sort((a, b) => (b.totalDropped - a.totalDropped) || ((b.totalForwarded + b.totalDropped) - (a.totalForwarded + a.totalDropped)));
+  return result;
+}
+
+// --- Main component ---
 
 interface AppViewProps {
   application: any;
@@ -37,31 +142,22 @@ interface AppViewProps {
 
 const REFRESH_INTERVAL = 30_000;
 
-const TIME_RANGES: { value: TimeRange; label: string }[] = [
-  { value: '5m', label: '5m' },
-  { value: '15m', label: '15m' },
-  { value: '1h', label: '1h' },
-];
-
 export const AppNetworkingView: React.FC<AppViewProps> = ({ application, tree }) => {
   const [policies, setPolicies] = React.useState<PolicySummary[]>([]);
   const [endpoints, setEndpoints] = React.useState<EndpointSummary[]>([]);
   const [flowsResponse, setFlowsResponse] = React.useState<FlowsResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [selectedPod, setSelectedPod] = React.useState<string | null>(null);
 
   const [verdictFilter, setVerdictFilter] = React.useState<VerdictFilter>('all');
-  const [directionFilter, setDirectionFilter] = React.useState<DirectionFilter>('all');
-  const [podFilter, setPodFilter] = React.useState('');
   const [timeRange, setTimeRange] = React.useState<TimeRange>('5m');
-  const [endpointsExpanded, setEndpointsExpanded] = React.useState(false);
 
   const namespace = application?.spec?.destination?.namespace || '';
   const appName = application?.metadata?.name || '';
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
 
-  // Extract resource refs from ArgoCD resource tree for ownership detection.
   const resourceRefs = React.useMemo<ResourceRef[]>(() => {
     if (!tree?.nodes) return [];
     return tree.nodes
@@ -81,7 +177,7 @@ export const AppNetworkingView: React.FC<AppViewProps> = ({ application, tree })
       .catch(() => [] as PolicySummary[]);
     const endpointsP = fetchEndpoints(namespace, appNamespace, appName, project)
       .catch(() => [] as EndpointSummary[]);
-    const flowsP = fetchFlows(namespace, appNamespace, appName, project, timeRange, 200, verdictFilter, directionFilter)
+    const flowsP = fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter)
       .catch(() => ({ flows: [], hubble: false } as FlowsResponse));
 
     Promise.all([policiesP, endpointsP, flowsP])
@@ -93,7 +189,7 @@ export const AppNetworkingView: React.FC<AppViewProps> = ({ application, tree })
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [namespace, appNamespace, appName, project, resourceRefs, timeRange, verdictFilter, directionFilter]);
+  }, [namespace, appNamespace, appName, project, resourceRefs, timeRange, verdictFilter]);
 
   React.useEffect(() => {
     setLoading(true);
@@ -121,201 +217,112 @@ export const AppNetworkingView: React.FC<AppViewProps> = ({ application, tree })
   const flows = flowsResponse?.flows || [];
   const flowSummary = flowsResponse?.summary;
   const hubbleAvailable = flowsResponse?.hubble ?? false;
+  const podTraffic = React.useMemo(() => aggregateFlows(flows, namespace), [flows, namespace]);
 
-  // Client-side pod name filter.
-  const filteredFlows = podFilter
-    ? flows.filter((f) => {
-        const q = podFilter.toLowerCase();
-        return (
-          f.sourcePod?.toLowerCase().includes(q) ||
-          f.destPod?.toLowerCase().includes(q) ||
-          f.sourceNamespace?.toLowerCase().includes(q) ||
-          f.destNamespace?.toLowerCase().includes(q)
-        );
-      })
-    : flows;
+  // Find endpoint info for selected pod.
+  const selectedEndpoint = selectedPod
+    ? endpoints.find((ep) => ep.name === selectedPod)
+    : null;
 
-  const droppedCount = flowSummary?.dropped || 0;
-  const errorCount = flowSummary?.error || 0;
-
-  const appPolicies = policies.filter((p) => p.ownership === 'app');
-  const platformPolicies = policies.filter((p) => p.ownership === 'platform');
+  // Find policies relevant to selected pod (by matching endpoint selector labels).
+  const selectedPodPolicies = React.useMemo(() => {
+    if (!selectedPod) return policies;
+    const ep = endpoints.find((e) => e.name === selectedPod);
+    if (!ep?.labels) return policies;
+    return policies.filter((p) => {
+      if (!p.endpointSelector) return true; // selects all
+      return Object.entries(p.endpointSelector).every(
+        ([k, v]) => ep.labels && ep.labels[`k8s:${k}`] === v
+      );
+    });
+  }, [selectedPod, endpoints, policies]);
 
   return (
     <div style={rootPanel}>
-      <SectionHeader title="NETWORKING" />
+      {/* === Top strip: summary + controls === */}
+      <div style={topStrip}>
+        <div style={summaryRow}>
+          <span style={appLabel}>{appName}</span>
+          <span style={nsMeta}>{namespace}</span>
 
-      <MetaRow items={[
-        { label: 'Namespace', value: namespace },
-        { label: 'Application', value: appName },
-        { label: 'Policies', value: String(policies.length) },
-      ]} />
-
-      {/* Flow Summary Bar */}
-      {hubbleAvailable && flowSummary && (
-        <div style={{ marginTop: spacing[4] }}>
-          <div style={cardGrid}>
-            <MetricCard label="Total Flows" value={String(flowSummary.total)} />
-            <MetricCard label="Forwarded" value={String(flowSummary.forwarded)} />
-            <MetricCard label="Dropped" value={String(droppedCount)} />
-            <MetricCard label="Errors" value={String(errorCount)} />
-          </div>
-        </div>
-      )}
-
-      {/* Traffic Flows Section */}
-      {hubbleAvailable && (
-        <div style={{ marginTop: spacing[6] }}>
-          <div style={headerRow}>
-            <SectionHeader title="TRAFFIC FLOWS" />
-          </div>
-
-          {/* Filters */}
-          <div style={filtersRow}>
-            {/* Time range */}
-            <div style={filterGroup}>
-              {TIME_RANGES.map((t) => (
-                <button
-                  key={t.value}
-                  onClick={() => setTimeRange(t.value)}
-                  style={filterBtn(timeRange === t.value)}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-
-            <span style={filterDivider} />
-
-            {/* Verdict */}
-            <div style={filterGroup}>
-              {(['all', 'forwarded', 'dropped', 'error'] as VerdictFilter[]).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setVerdictFilter(v)}
-                  style={filterBtn(verdictFilter === v)}
-                >
-                  {v}
-                </button>
-              ))}
-            </div>
-
-            <span style={filterDivider} />
-
-            {/* Direction */}
-            <div style={filterGroup}>
-              {(['all', 'ingress', 'egress'] as DirectionFilter[]).map((d) => (
-                <button
-                  key={d}
-                  onClick={() => setDirectionFilter(d)}
-                  style={filterBtn(directionFilter === d)}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
-
-            <span style={filterDivider} />
-
-            {/* Pod search */}
-            <Input
-              value={podFilter}
-              onChange={setPodFilter}
-              placeholder="Filter by pod or namespace..."
-              style={{ minWidth: 200, fontSize: fontSize.sm }}
-            />
-          </div>
-
-          {filteredFlows.length > 0 ? (
-            <div style={tableWrap}>
-              <DataTable columns={['Time', 'Direction', 'Source', 'Destination', 'Protocol', 'Verdict']}>
-                {filteredFlows.map((f, i) => (
-                  <FlowRow key={i} flow={f} />
-                ))}
-              </DataTable>
-            </div>
-          ) : (
-            <EmptyState message={`No flows recorded in the last ${timeRange}`} />
+          {hubbleAvailable && flowSummary && (
+            <>
+              <span style={metricDivider} />
+              <MiniMetric label="flows" value={flowSummary.total} />
+              <MiniMetric label="fwd" value={flowSummary.forwarded} color={colors.greenText} />
+              <MiniMetric label="drop" value={flowSummary.dropped} color={flowSummary.dropped > 0 ? colors.redText : undefined} />
+              <MiniMetric label="err" value={flowSummary.error} color={flowSummary.error > 0 ? colors.yellowText : undefined} />
+            </>
           )}
         </div>
-      )}
 
-      {!hubbleAvailable && flowsResponse && (
-        <div style={hubbleNotice}>
-          Hubble Relay is not configured. Enable it in your Cilium installation to see live traffic flows.
+        <div style={controlsRow}>
+          {/* Time range */}
+          {(['5m', '15m', '1h'] as TimeRange[]).map((t) => (
+            <button key={t} onClick={() => setTimeRange(t)} style={pillBtn(timeRange === t)}>{t}</button>
+          ))}
+          <span style={metricDivider} />
+          {/* Verdict filter */}
+          {(['all', 'forwarded', 'dropped', 'error'] as VerdictFilter[]).map((v) => (
+            <button key={v} onClick={() => setVerdictFilter(v)} style={pillBtn(verdictFilter === v)}>{v}</button>
+          ))}
         </div>
-      )}
-
-      {/* Network Policies Section */}
-      <div style={{ marginTop: spacing[6] }}>
-        <SectionHeader title="NETWORK POLICIES" />
-
-        {policies.length > 0 ? (
-          <div style={tableWrap}>
-            <DataTable columns={['Name', 'Scope', 'Owner', 'Selector', 'Ingress', 'Egress', 'Created']}>
-              {appPolicies.map((p) => (
-                <PolicyRow key={`app-${p.scope}-${p.name}`} policy={p} />
-              ))}
-              {platformPolicies.map((p) => (
-                <PolicyRow key={`plat-${p.scope}-${p.name}`} policy={p} />
-              ))}
-            </DataTable>
-          </div>
-        ) : (
-          <EmptyState message={`No network policies found in ${namespace}`} />
-        )}
-
-        {platformPolicies.length > 0 && (
-          <div style={platformHint}>
-            Platform policies are managed outside this application. Contact your platform team to modify them.
-          </div>
-        )}
       </div>
 
-      {/* Endpoints Section (collapsible) */}
-      <div style={{ marginTop: spacing[6] }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing[2], cursor: 'pointer' }} onClick={() => setEndpointsExpanded(!endpointsExpanded)}>
-          <SectionHeader title={`CILIUM ENDPOINTS (${endpoints.length})`} />
-          <span style={{ color: colors.gray400, fontSize: fontSize.sm, userSelect: 'none' }}>
-            {endpointsExpanded ? '\u25BC' : '\u25B6'}
-          </span>
+      {/* === Two-column layout === */}
+      <div style={mainLayout}>
+        {/* Left: Traffic Map */}
+        <div style={trafficCol}>
+          <div style={colHeader}>TRAFFIC MAP</div>
+
+          {!hubbleAvailable && (
+            <div style={notice}>
+              Hubble Relay is not configured. Enable it in your Cilium installation to see live traffic flows.
+            </div>
+          )}
+
+          {hubbleAvailable && podTraffic.length === 0 && (
+            <EmptyState message={`No flows in the last ${timeRange}`} />
+          )}
+
+          {podTraffic.map((pt) => (
+            <PodCard
+              key={pt.pod}
+              traffic={pt}
+              selected={selectedPod === pt.pod}
+              onSelect={() => setSelectedPod(selectedPod === pt.pod ? null : pt.pod)}
+            />
+          ))}
         </div>
 
-        {endpointsExpanded && endpoints.length > 0 && (
-          <div style={tableWrap}>
-            <DataTable columns={['Pod', 'IP', 'Identity', 'Ingress Policy', 'Egress Policy', 'State']}>
-              {endpoints.map((ep) => (
-              <tr key={ep.name}>
-                <Cell>{ep.name}</Cell>
-                <Cell>{ep.ipv4 || ep.ipv6 || '-'}</Cell>
-                <Cell>{ep.identityId || '-'}</Cell>
-                <Cell mono={false}>
-                  <StatusBadge
-                    status={ep.ingressEnforcement === 'true' ? 'healthy' : 'degraded'}
-                    label={ep.ingressEnforcement === 'true' ? 'enforced' : 'none'}
-                  />
-                </Cell>
-                <Cell mono={false}>
-                  <StatusBadge
-                    status={ep.egressEnforcement === 'true' ? 'healthy' : 'degraded'}
-                    label={ep.egressEnforcement === 'true' ? 'enforced' : 'none'}
-                  />
-                </Cell>
-                <Cell mono={false}>
-                  <StatusBadge
-                    status={ep.state === 'ready' ? 'healthy' : ep.state === 'disconnected' ? 'failed' : 'in-progress'}
-                    label={ep.state || 'unknown'}
-                  />
-                </Cell>
-                </tr>
-              ))}
-            </DataTable>
+        {/* Right: Policies + Detail */}
+        <div style={detailCol}>
+          <div style={colHeader}>
+            {selectedPod ? `POLICIES FOR ${selectedPod}` : `NETWORK POLICIES (${policies.length})`}
           </div>
-        )}
 
-        {endpointsExpanded && endpoints.length === 0 && (
-          <EmptyState message={`No Cilium endpoints found in ${namespace}`} />
-        )}
+          {(selectedPod ? selectedPodPolicies : policies).map((p) => (
+            <PolicyCard key={`${p.scope}-${p.name}`} policy={p} />
+          ))}
+
+          {policies.length === 0 && (
+            <EmptyState message="No network policies found" />
+          )}
+
+          {/* Selected pod endpoint detail */}
+          {selectedEndpoint && (
+            <div style={{ marginTop: spacing[4] }}>
+              <div style={colHeader}>ENDPOINT</div>
+              <div style={detailCard}>
+                <DetailRow label="IP" value={selectedEndpoint.ipv4 || selectedEndpoint.ipv6 || '-'} />
+                <DetailRow label="Identity" value={String(selectedEndpoint.identityId || '-')} />
+                <DetailRow label="State" value={selectedEndpoint.state || 'unknown'} />
+                <DetailRow label="Ingress" value={selectedEndpoint.ingressEnforcement === 'true' ? 'enforced' : 'none'} />
+                <DetailRow label="Egress" value={selectedEndpoint.egressEnforcement === 'true' ? 'enforced' : 'none'} />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -323,90 +330,128 @@ export const AppNetworkingView: React.FC<AppViewProps> = ({ application, tree })
 
 // --- Sub-components ---
 
-const FlowRow: React.FC<{ flow: FlowSummary }> = ({ flow }) => {
-  const verdictStatus = flow.verdict === 'FORWARDED'
-    ? 'healthy'
-    : flow.verdict === 'DROPPED'
-      ? 'failed'
-      : 'degraded';
+const MiniMetric: React.FC<{ label: string; value: number; color?: string }> = ({ label, value, color }) => (
+  <span style={miniMetricStyle}>
+    <span style={{ color: color || colors.gray800, fontWeight: fontWeight.semibold, fontFamily: fonts.mono }}>{value}</span>
+    <span style={{ color: colors.gray400 }}>{label}</span>
+  </span>
+);
 
-  const verdictLabel = flow.verdict === 'DROPPED' && flow.dropReason
-    ? `${flow.verdict} (${flow.dropReason})`
-    : flow.verdict;
-
-  const source = flow.sourcePod
-    ? `${flow.sourceNamespace}/${flow.sourcePod}`
-    : flow.sourceIP || '-';
-
-  const dest = flow.destPod
-    ? `${flow.destNamespace}/${flow.destPod}`
-    : flow.destDNS || flow.destIP || '-';
-
-  const protocol = flow.destPort > 0
-    ? `${flow.protocol}:${flow.destPort}`
-    : flow.protocol || '-';
-
-  const directionTag = flow.direction === 'INGRESS'
-    ? 'green'
-    : flow.direction === 'EGRESS'
-      ? 'orange'
-      : 'gray';
-
-  const timeStr = flow.time
-    ? new Date(flow.time).toLocaleTimeString()
-    : '-';
+const PodCard: React.FC<{
+  traffic: PodTraffic;
+  selected: boolean;
+  onSelect: () => void;
+}> = ({ traffic, selected, onSelect }) => {
+  const hasDrops = traffic.totalDropped > 0;
 
   return (
-    <tr style={flow.verdict === 'DROPPED' ? droppedRowStyle : undefined}>
-      <Cell>{timeStr}</Cell>
-      <Cell mono={false}>
-        <Tag variant={directionTag as any}>{flow.direction || 'UNKNOWN'}</Tag>
-      </Cell>
-      <Cell>{source}</Cell>
-      <Cell>{dest}</Cell>
-      <Cell>{protocol}</Cell>
-      <Cell mono={false}>
-        <StatusBadge status={verdictStatus as any} label={verdictLabel} />
-      </Cell>
-    </tr>
+    <div
+      style={{
+        ...podCard,
+        borderColor: selected ? colors.orange500 : hasDrops ? colors.red : colors.gray200,
+        background: selected ? '#FFF7ED' : hasDrops ? colors.redLight : colors.white,
+      }}
+      onClick={onSelect}
+    >
+      {/* Pod header */}
+      <div style={podHeader}>
+        <span style={podName}>{traffic.pod}</span>
+        <div style={{ display: 'flex', gap: spacing[2] }}>
+          <span style={{ ...flowCount, color: colors.greenText }}>{traffic.totalForwarded} fwd</span>
+          {traffic.totalDropped > 0 && (
+            <span style={{ ...flowCount, color: colors.redText }}>{traffic.totalDropped} drop</span>
+          )}
+        </div>
+      </div>
+
+      {/* Connections */}
+      {traffic.connections.map((conn, i) => (
+        <ConnectionRow key={i} conn={conn} />
+      ))}
+    </div>
   );
 };
 
-const PolicyRow: React.FC<{ policy: PolicySummary }> = ({ policy }) => {
-  const selectorLabels = policy.endpointSelector
+const ConnectionRow: React.FC<{ conn: AggregatedConnection }> = ({ conn }) => {
+  const total = conn.forwarded + conn.dropped + conn.errors;
+  const fwdPct = total > 0 ? (conn.forwarded / total) * 100 : 0;
+  const dropPct = total > 0 ? (conn.dropped / total) * 100 : 0;
+  const proto = conn.port > 0 ? `${conn.protocol}:${conn.port}` : conn.protocol;
+  const arrow = conn.direction === 'outbound' ? '\u2192' : '\u2190';
+  const arrowColor = conn.direction === 'outbound' ? colors.orange500 : colors.greenText;
+
+  return (
+    <div style={connRow}>
+      <span style={{ ...connArrow, color: arrowColor }}>{arrow}</span>
+      <span style={connRemote}>{conn.remoteLabel}</span>
+      <span style={connProto}>{proto}</span>
+
+      {/* Visual flow bar */}
+      <div style={flowBar}>
+        {fwdPct > 0 && <div style={{ ...flowBarSegment, width: `${fwdPct}%`, background: colors.greenSolid }} />}
+        {dropPct > 0 && <div style={{ ...flowBarSegment, width: `${dropPct}%`, background: colors.redSolid }} />}
+      </div>
+
+      <span style={connCount}>{total}</span>
+
+      {/* Drop reason badge */}
+      {conn.dropped > 0 && conn.dropReasons.length > 0 && (
+        <span style={dropBadge}>{conn.dropReasons[0]}</span>
+      )}
+    </div>
+  );
+};
+
+const PolicyCard: React.FC<{ policy: PolicySummary }> = ({ policy }) => {
+  const selectorText = policy.endpointSelector
     ? Object.entries(policy.endpointSelector).map(([k, v]) => `${k}=${v}`).join(', ')
-    : 'all endpoints';
+    : 'all pods';
 
   return (
-    <tr>
-      <Cell>{policy.name}</Cell>
-      <Cell mono={false}>
-        <Tag variant={policy.scope === 'clusterwide' ? 'orange' : 'gray'}>{policy.scope}</Tag>
-      </Cell>
-      <Cell mono={false}>
-        <Tag variant={policy.ownership === 'app' ? 'green' : 'gray'}>
-          {policy.ownership === 'app' ? 'This App' : 'Platform'}
-        </Tag>
-      </Cell>
-      <Cell>{selectorLabels}</Cell>
-      <Cell mono={false}>
-        {policy.hasIngress ? (
-          <Tag variant="green">{policy.ingressRuleCount} rule{policy.ingressRuleCount !== 1 ? 's' : ''}</Tag>
-        ) : (
-          <span style={{ color: colors.gray400 }}>-</span>
+    <div style={{
+      ...policyCardStyle,
+      borderLeftColor: policy.ownership === 'app' ? colors.greenSolid : colors.gray300,
+    }}>
+      <div style={policyHeader}>
+        <span style={policyName}>{policy.name}</span>
+        <div style={{ display: 'flex', gap: spacing[1] }}>
+          <Tag variant={policy.scope === 'clusterwide' ? 'orange' : 'gray'}>{policy.scope}</Tag>
+          <Tag variant={policy.ownership === 'app' ? 'green' : 'gray'}>
+            {policy.ownership === 'app' ? 'This App' : 'Platform'}
+          </Tag>
+        </div>
+      </div>
+      <div style={policySelectorRow}>
+        <span style={policySelectorLabel}>selects:</span>
+        <span style={policySelectorValue}>{selectorText}</span>
+      </div>
+      <div style={policyRulesRow}>
+        {policy.hasIngress && (
+          <span style={policyRule}>
+            <span style={{ ...ruleSquare, background: colors.greenSolid }} />
+            {policy.ingressRuleCount} ingress
+          </span>
         )}
-      </Cell>
-      <Cell mono={false}>
-        {policy.hasEgress ? (
-          <Tag variant="green">{policy.egressRuleCount} rule{policy.egressRuleCount !== 1 ? 's' : ''}</Tag>
-        ) : (
-          <span style={{ color: colors.gray400 }}>-</span>
+        {policy.hasEgress && (
+          <span style={policyRule}>
+            <span style={{ ...ruleSquare, background: colors.orange400 }} />
+            {policy.egressRuleCount} egress
+          </span>
         )}
-      </Cell>
-      <Cell>{new Date(policy.creationTimestamp).toLocaleDateString()}</Cell>
-    </tr>
+        {!policy.hasIngress && !policy.hasEgress && (
+          <span style={{ color: colors.gray400, fontSize: fontSize.xs }}>no rules</span>
+        )}
+      </div>
+    </div>
   );
 };
+
+const DetailRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <div style={detailRow}>
+    <span style={detailLabel}>{label}</span>
+    <span style={detailValue}>{value}</span>
+  </div>
+);
 
 // --- Styles ---
 
@@ -414,64 +459,316 @@ const rootPanel: React.CSSProperties = {
   ...panel,
   overflow: 'hidden',
   maxWidth: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+  height: '100%',
 };
 
-const tableWrap: React.CSSProperties = {
-  overflowX: 'auto',
+const topStrip: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  gap: spacing[2],
+  paddingBottom: spacing[3],
+  borderBottom: `1px solid ${colors.gray200}`,
+  marginBottom: spacing[3],
 };
 
-const headerRow: React.CSSProperties = {
+const summaryRow: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: spacing[3],
+  flexWrap: 'wrap',
+};
+
+const controlsRow: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: spacing[1],
+};
+
+const appLabel: React.CSSProperties = {
+  fontFamily: fonts.mono,
+  fontWeight: fontWeight.semibold,
+  fontSize: fontSize.md,
+  color: colors.gray800,
+};
+
+const nsMeta: React.CSSProperties = {
+  fontFamily: fonts.mono,
+  fontSize: fontSize.sm,
+  color: colors.gray400,
+};
+
+const miniMetricStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'baseline',
+  gap: 3,
+  fontSize: fontSize.sm,
+  fontFamily: fonts.mono,
+};
+
+const metricDivider: React.CSSProperties = {
+  width: 1,
+  height: 16,
+  background: colors.gray200,
+  flexShrink: 0,
+};
+
+const pillBtn = (active: boolean): React.CSSProperties => ({
+  padding: `2px ${spacing[2]}px`,
+  border: `1px solid ${active ? colors.orange500 : colors.gray200}`,
+  borderRadius: 4,
+  background: active ? colors.orange500 : 'transparent',
+  color: active ? '#fff' : colors.gray600,
+  cursor: 'pointer',
+  fontSize: fontSize.xs,
+  fontWeight: fontWeight.medium,
+  fontFamily: fonts.mono,
+  textTransform: 'uppercase' as const,
+  lineHeight: '20px',
+});
+
+// --- Two-column layout ---
+
+const mainLayout: React.CSSProperties = {
+  display: 'flex',
+  gap: spacing[4],
+  flex: 1,
+  minHeight: 0,
+  overflow: 'hidden',
+};
+
+const trafficCol: React.CSSProperties = {
+  flex: '1 1 60%',
+  overflowY: 'auto',
+  minWidth: 0,
+};
+
+const detailCol: React.CSSProperties = {
+  flex: '1 1 40%',
+  overflowY: 'auto',
+  minWidth: 0,
+  borderLeft: `1px solid ${colors.gray200}`,
+  paddingLeft: spacing[4],
+};
+
+const colHeader: React.CSSProperties = {
+  fontSize: fontSize.xs,
+  fontWeight: fontWeight.semibold,
+  fontFamily: fonts.mono,
+  textTransform: 'uppercase' as const,
+  letterSpacing: '0.5px',
+  color: colors.gray400,
+  marginBottom: spacing[3],
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+
+// --- Pod card ---
+
+const podCard: React.CSSProperties = {
+  border: `1px solid ${colors.gray200}`,
+  borderRadius: 4,
+  padding: spacing[3],
+  marginBottom: spacing[2],
+  cursor: 'pointer',
+  transition: 'border-color 100ms',
+};
+
+const podHeader: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
   marginBottom: spacing[2],
 };
 
-const cardGrid: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-  gap: spacing[3],
+const podName: React.CSSProperties = {
+  fontFamily: fonts.mono,
+  fontSize: fontSize.sm,
+  fontWeight: fontWeight.semibold,
+  color: colors.gray800,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  maxWidth: '60%',
 };
 
-const filtersRow: React.CSSProperties = {
+const flowCount: React.CSSProperties = {
+  fontFamily: fonts.mono,
+  fontSize: fontSize.xs,
+  fontWeight: fontWeight.medium,
+};
+
+// --- Connection row ---
+
+const connRow: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: spacing[2],
-  marginBottom: spacing[3],
-  flexWrap: 'wrap',
+  padding: `2px 0`,
+  fontSize: fontSize.xs,
+  fontFamily: fonts.mono,
 };
 
-const filterGroup: React.CSSProperties = {
+const connArrow: React.CSSProperties = {
+  fontSize: fontSize.sm,
+  fontWeight: fontWeight.semibold,
+  width: 14,
+  textAlign: 'center',
+  flexShrink: 0,
+};
+
+const connRemote: React.CSSProperties = {
+  color: colors.gray700,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  minWidth: 0,
+  flex: '1 1 auto',
+};
+
+const connProto: React.CSSProperties = {
+  color: colors.gray400,
+  flexShrink: 0,
+  width: 64,
+  textAlign: 'right',
+};
+
+const flowBar: React.CSSProperties = {
+  display: 'flex',
+  height: 6,
+  width: 60,
+  background: colors.gray100,
+  borderRadius: 1,
+  overflow: 'hidden',
+  flexShrink: 0,
+};
+
+const flowBarSegment: React.CSSProperties = {
+  height: '100%',
+};
+
+const connCount: React.CSSProperties = {
+  color: colors.gray500,
+  width: 28,
+  textAlign: 'right',
+  flexShrink: 0,
+};
+
+const dropBadge: React.CSSProperties = {
+  fontSize: 10,
+  fontFamily: fonts.mono,
+  color: colors.redText,
+  background: colors.redLight,
+  padding: `0 ${spacing[1]}px`,
+  borderRadius: 2,
+  flexShrink: 0,
+  maxWidth: 120,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+
+// --- Policy card ---
+
+const policyCardStyle: React.CSSProperties = {
+  borderLeft: `3px solid ${colors.gray300}`,
+  padding: `${spacing[2]}px ${spacing[3]}px`,
+  marginBottom: spacing[2],
+  background: colors.gray50,
+  borderRadius: `0 4px 4px 0`,
+};
+
+const policyHeader: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: spacing[2],
+  marginBottom: spacing[1],
+};
+
+const policyName: React.CSSProperties = {
+  fontFamily: fonts.mono,
+  fontSize: fontSize.sm,
+  fontWeight: fontWeight.semibold,
+  color: colors.gray800,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+
+const policySelectorRow: React.CSSProperties = {
   display: 'flex',
   gap: spacing[1],
-};
-
-const filterBtn = (active: boolean): React.CSSProperties => ({
-  padding: `${spacing[1]}px ${spacing[3]}px`,
-  border: `1px solid ${active ? colors.orange500 : colors.gray200}`,
-  borderRadius: 4,
-  background: active ? colors.orange500 : 'transparent',
-  color: active ? '#fff' : colors.gray800,
-  cursor: 'pointer',
   fontSize: fontSize.xs,
-  fontWeight: fontWeight.medium,
+  marginBottom: spacing[1],
+};
+
+const policySelectorLabel: React.CSSProperties = {
+  color: colors.gray400,
+  flexShrink: 0,
+};
+
+const policySelectorValue: React.CSSProperties = {
+  color: colors.gray600,
   fontFamily: fonts.mono,
-  textTransform: 'uppercase' as const,
-});
-
-const filterDivider: React.CSSProperties = {
-  width: 1,
-  height: 20,
-  background: colors.gray200,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 };
 
-const droppedRowStyle: React.CSSProperties = {
-  background: colors.redLight,
+const policyRulesRow: React.CSSProperties = {
+  display: 'flex',
+  gap: spacing[3],
+  fontSize: fontSize.xs,
+  color: colors.gray600,
 };
 
-const hubbleNotice: React.CSSProperties = {
-  marginTop: spacing[6],
-  padding: spacing[4],
+const policyRule: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 4,
+  fontFamily: fonts.mono,
+};
+
+const ruleSquare: React.CSSProperties = {
+  width: 6,
+  height: 6,
+  borderRadius: 1,
+  flexShrink: 0,
+};
+
+// --- Detail panel ---
+
+const detailCard: React.CSSProperties = {
+  background: colors.gray50,
+  border: `1px solid ${colors.gray200}`,
+  borderRadius: 4,
+  padding: spacing[3],
+};
+
+const detailRow: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  padding: `2px 0`,
+  fontSize: fontSize.xs,
+  fontFamily: fonts.mono,
+};
+
+const detailLabel: React.CSSProperties = {
+  color: colors.gray400,
+};
+
+const detailValue: React.CSSProperties = {
+  color: colors.gray800,
+  fontWeight: fontWeight.medium,
+};
+
+const notice: React.CSSProperties = {
+  padding: spacing[3],
   background: colors.gray50,
   border: `1px solid ${colors.gray200}`,
   borderRadius: 4,
@@ -479,13 +776,3 @@ const hubbleNotice: React.CSSProperties = {
   fontSize: fontSize.sm,
 };
 
-const platformHint: React.CSSProperties = {
-  marginTop: spacing[3],
-  padding: `${spacing[2]}px ${spacing[3]}px`,
-  background: colors.blueLight,
-  border: `1px solid ${colors.blue}`,
-  borderRadius: 4,
-  color: colors.blueText,
-  fontSize: fontSize.sm,
-  fontFamily: fonts.body,
-};
