@@ -75,6 +75,3 @@ See the [developing guide](/developing) for the full checklist. Key steps:
 - **TypeScript/React**: strict mode, no `any` (except ArgoCD API types), PascalCase components
 - **CSS**: use design system tokens, no hardcoded colors, 4px grid
 
-## License
-
-AGPL-3.0. See [LICENSE](https://github.com/natrontech/argoplane/blob/main/LICENSE).

@@ -122,7 +122,7 @@
 			<div class="mb-2 flex items-center gap-3">
 				<ReadingTime />
 			</div>
-			<article class="prose min-w-0">
+			<article class="prose min-w-0" data-pagefind-body>
 				{@render children()}
 			</article>
 			<PageMeta />

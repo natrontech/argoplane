@@ -7,7 +7,8 @@
 		"dev": "vite dev",
 		"build": "vite build",
 		"postbuild": "npx pagefind --site build/prerendered --output-path build/client/pagefind",
-		"preview": "vite preview",
+		"search:index": "vite build && npx pagefind --site build/prerendered --output-path static/pagefind",
+		"preview": "node build/index.js",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"

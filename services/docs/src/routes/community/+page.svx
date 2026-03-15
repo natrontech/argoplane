@@ -44,17 +44,6 @@ Good bug reports include:
 - Expected vs. actual behavior
 - Logs if available (backend service logs, browser console)
 
-## Contributing
-
-ArgoPlane is AGPL-3.0 licensed. Contributions of all kinds are welcome:
-
-- **Code**: new extensions, bug fixes, performance improvements
-- **Documentation**: typo fixes, new guides, better explanations
-- **Design**: UI improvements, design system contributions
-- **Testing**: integration tests, edge case coverage
-
-See the [contributing guide](/contributing) for the full workflow.
-
 ## Built with
 
 ArgoPlane stands on the shoulders of excellent open-source projects:
@@ -66,14 +55,10 @@ ArgoPlane stands on the shoulders of excellent open-source projects:
 | [Velero](https://velero.io/) | Backup/restore for the backups extension |
 | [Cilium](https://cilium.io/) | Network policies and Hubble flows |
 | [Crossplane](https://crossplane.io/) | Platform abstractions (planned) |
-| [SvelteKit](https://svelte.dev/docs/kit) | Documentation site |
 | [Go](https://go.dev/) | Extension backend services |
 | [React](https://react.dev/) | ArgoCD UI extension framework |
-
-## Code of conduct
-
-Be kind. Be constructive. Assume good intent. We don't have a formal code of conduct document yet, but the short version: treat others the way you'd want to be treated. If someone's new, help them. If someone makes a mistake, be patient. We're all here to build good tools.
+| [SvelteKit](https://svelte.dev/docs/kit) | Documentation site |
 
 <Callout type="info">
-  ArgoPlane is maintained by <a href="https://natron.io">Natron Tech AG</a>, a platform engineering company based in Switzerland. See the <a href="/about">about page</a> for more.
+  ArgoPlane is maintained by <a href="https://natron.io">Natron Tech AG</a> from Switzerland. See the <a href="/about">about page</a> for more.
 </Callout>

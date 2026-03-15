@@ -21,24 +21,8 @@ Platform engineering tooling should be open. The tools we build on (ArgoCD, Prom
 
 We chose **AGPL-3.0** because we believe in reciprocity. If you improve ArgoPlane and distribute it, those improvements should flow back to the community.
 
-## Philosophy
-
-A few things we believe in:
-
-- **Meet developers where they are.** If your team uses ArgoCD, don't make them learn another portal. Extend what they already know.
-- **The cluster is the catalog.** Platform capabilities already exist as Kubernetes resources. Surface them, don't duplicate them in a database.
-- **Small tools, loosely joined.** Each extension is independent. Deploy what you need, ignore what you don't.
-- **Simplicity over abstraction.** Three lines of clear code beat one line of clever code.
-- **Minimal ops.** Features should be operable by a small team. If it needs a dedicated operator, it's too complex.
-
 ## Contact
 
 - **Website**: [natron.io](https://natron.io)
 - **GitHub**: [github.com/natrontech](https://github.com/natrontech)
-- **Email**: [hello@natron.io](mailto:hello@natron.io)
-
-## License
-
-ArgoPlane is licensed under [AGPL-3.0](https://github.com/natrontech/argoplane/blob/main/LICENSE).
-
-You are free to use, modify, and distribute ArgoPlane. If you distribute a modified version, you must make your modifications available under the same license.
+- **Email**: [info@natron.io](mailto:info@natron.io)
