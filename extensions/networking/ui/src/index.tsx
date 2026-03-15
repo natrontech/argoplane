@@ -7,7 +7,7 @@ import { PodFlowsTab } from './components/PodFlowsTab';
   window.extensionsAPI.registerAppViewExtension(
     AppNetworkingView,
     'Networking',
-    'fa-network-wired'
+    'fa-shield-alt'
   );
 
   // Pod-level flows tab (flows affecting a specific pod)
