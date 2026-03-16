@@ -5,7 +5,7 @@
 <h1 align="center">ArgoPlane</h1>
 
 <p align="center">
-  <strong>Make your platform discoverable. Inside ArgoCD.</strong>
+  <strong>From "I have a container" to GitOps power user. All through ArgoCD.</strong>
 </p>
 
 <p align="center">
@@ -18,47 +18,97 @@
 
 ---
 
-Developers deploying through ArgoCD can see if their app is synced. What they can't see: which StorageClasses are available, what IngressClasses exist, which CRDs and operators they can use, what scheduling constraints apply, what policies are in place, or what observability is configured.
+Your platform team built a great Kubernetes platform. ArgoCD deploys everything. Prometheus, Velero, Cilium, Crossplane, Kyverno are all running. But three problems remain:
 
-That information exists in the cluster. It's just invisible to anyone without kubectl access and tribal knowledge.
+**Developers can't see what's happening.** Their app is synced, but what about CPU usage? Backup status? Network flows? Policy violations? That data exists in a dozen tools. Nobody opens them.
 
-ArgoPlane is a suite of ArgoCD UI extensions that surfaces platform capabilities directly inside the ArgoCD interface. No separate portal. No new auth system. No new UI to learn. If your team already uses ArgoCD, ArgoPlane turns it into a developer portal.
+**Developers can't see what's available.** What StorageClasses exist? Which databases can they request? What CRDs does the platform offer? That information lives in tribal knowledge and Confluence pages nobody reads.
 
-## What It Does
+**Platform engineers can't easily manage the platform.** Onboarding a new team means six manual steps across three ConfigMaps. RBAC is a YAML file everyone is afraid to edit. There's no self-service. Every request is a Slack message.
 
-ArgoPlane extends ArgoCD with tabs, status panels, and pages for things ArgoCD doesn't show natively:
+ArgoPlane fixes all three.
 
-**Discover your platform**
-- Storage: available StorageClasses, capacity, snapshots, CSI drivers
-- Networking: IngressClasses, GatewayClasses, network policies, service mesh visibility
-- Compute: node pools, taints, topology constraints, scheduling options
-- Services: installed CRDs, operators, self-service resources (Crossplane XRDs)
-- Policies: admission control rules, security policies, compliance status
+## Two Layers, One Platform
 
-**Observe your workloads**
-- Metrics: CPU, memory, request rates, latency (Prometheus)
-- Logs: application and container logs, structured search (Loki)
-- Traces: distributed traces, latency breakdown (Jaeger, Tempo)
-- Backups: backup status, schedules, restore triggers (Velero)
+### Layer 1: Extensions (inside ArgoCD)
 
-**Secure your apps**
-- Security: image vulnerabilities, runtime threats, compliance scans
-- Secrets: sync status, rotation schedules, store health
-- Certificates: TLS cert status, expiry alerts, auto-renewal
+ArgoCD extensions that surface operational data where developers already work. Resource tabs, app views, status panels, and sidebar dashboards. No new UI to learn.
+
+| Category | Extension | What it shows |
+|----------|-----------|---------------|
+| **Observe** | Metrics | CPU, memory, request rates, latency (Prometheus) |
+| **Observe** | Backups | Backup status, schedules, restore triggers (Velero) |
+| **Observe** | Networking | Traffic flows, network policies (Cilium/Hubble) |
+| **Observe** | Logs | Log search, live tail, severity detection (Loki) |
+| **Observe** | Alerts | Firing alerts, PrometheusRules, silences (Alertmanager) |
+| **Secure** | Policies | Policy violations, admission results (Kyverno) |
+
+Extensions answer: **"What's happening with my app right now?"**
+
+Power users who live in ArgoCD get everything they need without leaving.
+
+### Layer 2: Portal (standalone)
+
+A self-service portal for everything ArgoCD's extension system can't handle: browsing catalogs, filling forms, managing teams, editing RBAC.
+
+| Feature | Who it's for | What it does |
+|---------|-------------|--------------|
+| **Service catalog** | Developers | Browse available databases, storage, ingress options. Request resources through forms. |
+| **Simple app deploy** | Developers | "I have a container image, run it." Portal generates the YAML, commits to Git, ArgoCD syncs. |
+| **Team onboarding** | Team leads | Self-service: one click creates namespace, AppProject, RBAC, quotas. |
+| **RBAC editor** | Platform eng | Visual editor for ArgoCD policies. Stop hand-editing ConfigMaps. |
+| **AppProject management** | Platform eng | CRUD with templates. Sensible defaults per team. |
+
+The portal answers: **"What does my platform offer, and how do I use it?"**
+
+## Progressive GitOps
+
+This is the core idea. Not everyone starts as a GitOps expert. ArgoPlane meets developers where they are:
+
+**Start simple.** A developer fills a form: container image, port, environment variables. The portal generates Kubernetes manifests, commits them to Git, and ArgoCD syncs. The developer sees their app running. They never touched YAML.
+
+**Grow gradually.** The team connects their own Git repo. The portal scaffolds the directory structure. They start editing manifests, learning the patterns. ArgoCD syncs from their repo.
+
+**Own it completely.** The team manages everything in Git. The portal is read-only for them: dashboards, service discovery, status. ArgoCD is their interface. They're GitOps natives.
+
+The Git repo always exists. At every level, GitOps is the source of truth. The portal is just the on-ramp.
 
 ## Architecture
 
-Every extension follows the same pattern:
+```
+ArgoCD UI                          ArgoPlane Portal
+├── ArgoPlane extensions           ├── SvelteKit frontend
+│   ├── Resource tabs              │   ├── Service catalog
+│   ├── App views                  │   ├── App deploy wizard
+│   ├── Status panels              │   ├── Team management
+│   └── Sidebar dashboards         │   └── RBAC editor
+│                                  │
+│   React/TS ──proxy──▶ Go        │   SvelteKit ──▶ Go backend
+│                      backends    │                  ├── OIDC (Dex)
+│                      ├── Prom    │                  ├── K8s API
+│                      ├── Velero  │                  ├── ArgoCD API
+│                      └── Hubble  │                  └── Git
+│                                  │
+└── ArgoCD RBAC + Dex auth         └── Same Dex, same groups
+```
 
-1. **React/TypeScript UI** registered via ArgoCD's `window.extensionsAPI`
-2. **Go backend service** that queries the underlying system
-3. **ArgoCD proxy extension** that routes requests from the UI to the backend
+No database. All state comes from Kubernetes, ArgoCD, Prometheus, and Git. Same Dex instance, same OIDC groups, same RBAC model. One Helm chart deploys everything.
 
-No database. All state comes from Kubernetes, Prometheus, and Git. Multi-tenancy through ArgoCD's native RBAC and AppProjects.
+## Why not Backstage?
+
+Backstage is a developer portal framework for organizations with 50+ tools to unify. You "build your Backstage," then spend months writing plugins and managing PostgreSQL, Node.js backends, and monthly breaking upgrades.
+
+ArgoPlane is purpose-built for ArgoCD platforms. Extensions live inside ArgoCD (Backstage can't do that). The portal is a single Go binary with no database. Same auth as ArgoCD. Same design. If your platform is ArgoCD-centric, ArgoPlane is the natural fit, not a generic framework you configure for months.
 
 ## Current Status
 
-Building first: **Metrics** (Prometheus), **Backups** (Velero), and **Networking** (Cilium/Hubble) extensions. See [`docs/extension-roadmap.md`](docs/extension-roadmap.md) for what's next.
+**Done:** Metrics, Backups, Networking extensions
+
+**Building:** Logs, Policies, Alerts extensions + system-level dashboards
+
+**Next:** Portal (auth, service catalog, team onboarding, RBAC editor, simple app deploy)
+
+See [`docs/extension-roadmap.md`](docs/extension-roadmap.md) for the full roadmap.
 
 ## Development
 
@@ -81,8 +131,8 @@ The entire Claude Code configuration is checked into this repo:
 | Path | What it does |
 |------|-------------|
 | [`CLAUDE.md`](CLAUDE.md) | Project context, architecture overview, and development instructions for Claude |
-| [`.claude/rules/`](.claude/rules/) | 13 rule files covering Go, React, architecture, design system, CI/CD, git conventions, and more |
-| [`.claude/skills/`](.claude/skills/) | 6 custom skills: dev environment setup, extension scaffolding, deployment, testing, portal backend, and SvelteKit scaffolding |
+| [`.claude/rules/`](.claude/rules/) | Rule files covering Go, React, architecture, design system, portal, git conventions, and more |
+| [`.claude/skills/`](.claude/skills/) | Custom skills: dev setup, extension scaffolding, deployment, testing, portal backend, SvelteKit scaffolding |
 
 We share this openly so others can learn from our approach to AI-assisted development, and to contribute back to the community's understanding of how to work effectively with AI coding tools.
 
