@@ -2,6 +2,7 @@
 	import { page } from '$app/stores';
 	import { navigation } from '$lib/config/navigation';
 	import type { NavItem } from '$lib/types';
+	import { ArrowLeft, ArrowRight } from 'lucide-svelte';
 
 	function flattenNav(items: NavItem[]): NavItem[] {
 		const flat: NavItem[] = [];
@@ -31,7 +32,7 @@
 				href={prev.href}
 				class="group flex items-center gap-2 text-sm text-gray-500 no-underline hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-400"
 			>
-				<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+				<ArrowLeft size={14} />
 				{prev.title}
 			</a>
 		{:else}
@@ -43,7 +44,7 @@
 				class="group flex items-center gap-2 text-sm text-gray-500 no-underline hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-400"
 			>
 				{next.title}
-				<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+				<ArrowRight size={14} />
 			</a>
 		{:else}
 			<div></div>

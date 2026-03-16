@@ -3,6 +3,7 @@
 	import { navigation } from '$lib/config/navigation';
 	import type { NavItem } from '$lib/types';
 	import { browser } from '$app/environment';
+	import { ChevronDown, ChevronRight } from 'lucide-svelte';
 
 	let { isOpen, sidebarHidden = false }: { isOpen: boolean; sidebarHidden?: boolean } = $props();
 
@@ -54,16 +55,11 @@
 						<span class="font-mono text-xs font-500 uppercase tracking-wider text-gray-400 dark:text-gray-500">
 							{item.title}
 						</span>
-						<svg
-							class="h-3 w-3 text-gray-400 transition-transform duration-100 dark:text-gray-500 {isCollapsed(item.title) ? '-rotate-90' : ''}"
-							viewBox="0 0 12 12"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-						>
-							<path d="M3 4.5L6 7.5L9 4.5"/>
-						</svg>
+						{#if isCollapsed(item.title)}
+							<ChevronRight class="h-3 w-3 text-gray-400 dark:text-gray-500" />
+						{:else}
+							<ChevronDown class="h-3 w-3 text-gray-400 dark:text-gray-500" />
+						{/if}
 					</button>
 					{#if !isCollapsed(item.title)}
 						<div class="flex flex-col gap-0.5">
