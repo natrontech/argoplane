@@ -1,6 +1,6 @@
 ---
 title: About
-description: The team behind ArgoPlane
+description: The team behind ArgoPlane and how we build it
 ---
 
 # About
@@ -15,11 +15,33 @@ Every cluster has StorageClasses, IngressClasses, CRDs, operators, scheduling po
 
 So we built ArgoPlane: a collection of ArgoCD extensions that surfaces platform capabilities where developers already work.
 
+## Built with AI
+
+ArgoPlane is developed with the help of [Claude Code](https://claude.ai/code), Anthropic's AI coding assistant. We use it throughout our development process: writing code, designing architecture, creating documentation, and reviewing changes.
+
+We're transparent about this because we believe AI-assisted development is the future, and hiding it helps nobody. Every commit includes a `Co-Authored-By` line when Claude contributed, and the entire AI configuration is checked into the repo.
+
+### What we share
+
+Our Claude Code setup is fully open source, checked into the repository for anyone to learn from:
+
+- **`CLAUDE.md`**: the main project context file that gives Claude an understanding of ArgoPlane's architecture, conventions, and goals
+- **`.claude/rules/`**: 13 rule files covering Go conventions, React/TypeScript patterns, architecture principles, design system rules, CI/CD workflows, git conventions, documentation maintenance, and more
+- **`.claude/skills/`**: 6 custom skills that automate common workflows like scaffolding new extensions, setting up the dev environment, deploying to the local cluster, running tests, and building portal components
+
+We share this openly so others can learn from our approach to AI-assisted development. If you're building a similar project and want to see how we structure AI collaboration, browse the `.claude/` directory.
+
+### Why we mention this
+
+AI-assisted development is a tool, not a shortcut. We still review every change, run tests, and make architectural decisions. Claude helps us move faster and maintain consistency across a large codebase, but the engineering judgment is ours.
+
+We think the industry benefits from honesty about AI usage. It sets realistic expectations, helps others adopt similar workflows, and contributes to a healthier conversation about how software gets built.
+
 ## Why open source
 
 Platform engineering tooling should be open. The tools we build on (ArgoCD, Prometheus, Velero, Cilium, Crossplane) are all open source. ArgoPlane should be too.
 
-We chose **AGPL-3.0** because we believe in reciprocity. If you improve ArgoPlane and distribute it, those improvements should flow back to the community.
+We chose **AGPL-3.0** because we believe in reciprocity. If you improve ArgoPlane and distribute it, those improvements should flow back to the community. This includes our AI tooling configuration: if you fork ArgoPlane, the Claude Code setup comes with it, and any improvements you make to it should be shared back.
 
 ## Contact
 
