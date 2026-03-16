@@ -191,20 +191,21 @@ services/portal/frontend/
       (app)/                      # Authenticated route group
         +layout.svelte            # App shell (sidebar, header, breadcrumbs)
         +layout.ts                # Auth guard
-        dashboard/+page.svelte    # Team dashboard
+        dashboard/+page.svelte    # Tenant dashboard (apps, sync status, resources)
         catalog/
-          +page.svelte            # Service catalog browser
-          [xrd]/+page.svelte      # XRD detail + claim form
+          +page.svelte            # Service catalog browser (what the tenant chart offers)
+          [feature]/+page.svelte  # Feature detail + enable/configure form
         apps/
-          +page.svelte            # Team's applications
+          +page.svelte            # Tenant's applications
           new/+page.svelte        # Deploy new app wizard
-        teams/
-          +page.svelte            # Team management
-          [team]/+page.svelte     # Team detail
-        admin/                    # Platform engineer views
-          rbac/+page.svelte       # RBAC editor
-          projects/+page.svelte   # AppProject management
-          clusters/+page.svelte   # Cluster inventory
+        tenants/
+          +page.svelte            # Tenant list (platform eng view)
+          new/+page.svelte        # Onboard new tenant wizard
+          [tenant]/
+            +page.svelte          # Tenant detail (status, config, membership)
+            membership/+page.svelte  # OIDC group → role assignment
+        clusters/
+          +page.svelte            # Cluster list (which clusters, which tenants)
     lib/
       components/
         ui/                       # shadcn-svelte components (auto-generated)

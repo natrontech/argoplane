@@ -35,28 +35,23 @@ services/portal/backend/
       oidc.go                  # Dex OIDC provider, auth code flow
       session.go               # Session management (secure cookies)
       middleware.go            # Auth middleware (validate session, extract user)
+    tenants/
+      handler.go               # Tenant CRUD (via tenant GitOps repo commits)
+      values.go                # Generate/parse tenant values.yaml
+      membership.go            # OIDC group → role assignment in values
+      onboarding.go            # Tenant onboarding workflow
     catalog/
+      features.go              # Tenant chart feature discovery (what can be enabled)
       xrd.go                   # Crossplane XRD listing and details
       storage.go               # StorageClass discovery
-      ingress.go               # IngressClass discovery
     apps/
       handler.go               # Application CRUD (via Git commits + ArgoCD API)
       manifest.go              # Manifest generation (Deployment, Service, Ingress)
-    claims/
-      handler.go               # Crossplane claim CRUD (via Git commits)
-      form.go                  # XRD schema to form field mapping
-    teams/
-      handler.go               # Team management (namespace + AppProject + RBAC)
-      onboarding.go            # Team onboarding workflow
-    admin/
-      rbac.go                  # RBAC editor (read/write argocd-rbac-cm)
-      projects.go              # AppProject CRUD
-      clusters.go              # Cluster inventory
     argocd/
       client.go                # ArgoCD REST API client
     gitops/
       repo.go                  # Git operations (clone, commit, push)
-      manifest.go              # YAML generation helpers
+      values.go                # YAML generation helpers for values.yaml
     k8s/
       client.go                # Kubernetes client-go setup
   go.mod
@@ -86,8 +81,9 @@ type Config struct {
     ArgocdURL        string `envconfig:"ARGOCD_URL" required:"true"`
     ArgocdAuthToken  string `envconfig:"ARGOCD_AUTH_TOKEN"`
     SessionSecret    string `envconfig:"SESSION_SECRET" required:"true"`
-    GitRepoURL       string `envconfig:"GIT_REPO_URL"`
-    GitBranch        string `envconfig:"GIT_BRANCH" default:"main"`
+    TenantRepoURL    string `envconfig:"TENANT_REPO_URL" required:"true"`
+    TenantRepoBranch string `envconfig:"TENANT_REPO_BRANCH" default:"main"`
+    TenantChartRef   string `envconfig:"TENANT_CHART_REF"`
     LogLevel         string `envconfig:"LOG_LEVEL" default:"info"`
     StaticDir        string `envconfig:"STATIC_DIR" default:"./static"`
     KubeConfig       string `envconfig:"KUBECONFIG"`
@@ -103,36 +99,28 @@ mux.HandleFunc("GET /api/v1/auth/callback", s.auth.HandleCallback)
 mux.HandleFunc("POST /api/v1/auth/logout", s.auth.HandleLogout)
 mux.HandleFunc("GET /api/v1/auth/me", s.auth.HandleMe)
 
-// Service catalog (authenticated)
-mux.HandleFunc("GET /api/v1/catalog/xrds", s.catalog.HandleXRDs)
-mux.HandleFunc("GET /api/v1/catalog/xrds/{name}", s.catalog.HandleXRD)
-mux.HandleFunc("GET /api/v1/catalog/storageclasses", s.catalog.HandleStorageClasses)
-mux.HandleFunc("GET /api/v1/catalog/ingressclasses", s.catalog.HandleIngressClasses)
+// Tenants (authenticated)
+mux.HandleFunc("GET /api/v1/tenants", s.tenants.HandleList)
+mux.HandleFunc("POST /api/v1/tenants", s.tenants.HandleCreate)
+mux.HandleFunc("GET /api/v1/tenants/{cluster}/{name}", s.tenants.HandleGet)
+mux.HandleFunc("PUT /api/v1/tenants/{cluster}/{name}", s.tenants.HandleUpdate)
 
-// Applications (authenticated, team-scoped)
+// Tenant membership (OIDC group → role assignment)
+mux.HandleFunc("GET /api/v1/tenants/{cluster}/{name}/membership", s.tenants.HandleMembership)
+mux.HandleFunc("PUT /api/v1/tenants/{cluster}/{name}/membership", s.tenants.HandleUpdateMembership)
+
+// Service catalog (authenticated)
+mux.HandleFunc("GET /api/v1/catalog/features", s.catalog.HandleFeatures)
+mux.HandleFunc("GET /api/v1/catalog/xrds", s.catalog.HandleXRDs)
+mux.HandleFunc("GET /api/v1/catalog/storageclasses", s.catalog.HandleStorageClasses)
+
+// Applications (authenticated, tenant-scoped)
 mux.HandleFunc("GET /api/v1/apps", s.apps.HandleList)
 mux.HandleFunc("POST /api/v1/apps", s.apps.HandleCreate)
 mux.HandleFunc("GET /api/v1/apps/{namespace}/{name}", s.apps.HandleGet)
 
-// Claims (authenticated, team-scoped)
-mux.HandleFunc("GET /api/v1/claims", s.claims.HandleList)
-mux.HandleFunc("POST /api/v1/claims", s.claims.HandleCreate)
-mux.HandleFunc("DELETE /api/v1/claims/{namespace}/{name}", s.claims.HandleDelete)
-
-// Teams (authenticated)
-mux.HandleFunc("GET /api/v1/teams", s.teams.HandleList)
-mux.HandleFunc("POST /api/v1/teams", s.teams.HandleCreate)
-mux.HandleFunc("GET /api/v1/teams/{name}", s.teams.HandleGet)
-
-// Admin: RBAC (authenticated, admin-only)
-mux.HandleFunc("GET /api/v1/admin/rbac", s.admin.HandleRBAC)
-mux.HandleFunc("PUT /api/v1/admin/rbac", s.admin.HandleUpdateRBAC)
-
-// Admin: Projects (authenticated, admin-only)
-mux.HandleFunc("GET /api/v1/admin/projects", s.admin.HandleProjects)
-mux.HandleFunc("POST /api/v1/admin/projects", s.admin.HandleCreateProject)
-mux.HandleFunc("PUT /api/v1/admin/projects/{name}", s.admin.HandleUpdateProject)
-mux.HandleFunc("DELETE /api/v1/admin/projects/{name}", s.admin.HandleDeleteProject)
+// Clusters (authenticated)
+mux.HandleFunc("GET /api/v1/clusters", s.clusters.HandleList)
 
 // Health (unauthenticated)
 mux.HandleFunc("GET /api/v1/health", s.HandleHealth)
@@ -174,34 +162,44 @@ func NewAuthHandler(dexURL, clientID, clientSecret, redirectURL, sessionSecret s
 
 ## Multi-Tenancy
 
-OIDC groups from Dex map to allowed namespaces:
+OIDC groups from Dex map to tenants via the tenant values.yaml `adminGroupIds` field and ArgoCD AppProject role bindings:
 
 ```go
-func (s *Server) authorizedNamespaces(ctx context.Context, groups []string) ([]string, error) {
-    // Map OIDC groups to Kubernetes namespaces
-    // Check ArgoCD AppProjects for group-to-namespace mappings
-    // Return only namespaces the user's groups have access to
+func (s *Server) authorizedTenants(ctx context.Context, groups []string) ([]Tenant, error) {
+    // Read tenant configs from tenant GitOps repo
+    // Match OIDC groups against adminGroupIds / contributorGroupIds
+    // Return only tenants the user's groups have access to
 }
 ```
 
-All queries are scoped by the user's authorized namespaces. Never return resources from namespaces the user doesn't have access to.
+All queries are scoped by the user's authorized tenants. Never return data from tenants the user doesn't belong to.
 
-## Git Operations (Progressive GitOps)
+## Tenant GitOps Repo Operations
 
-For app deploys and claim creation, the portal commits to Git:
+The portal's primary write path is committing to the tenant GitOps repo:
 
 ```go
-type GitOpsRepo struct {
+type TenantRepo struct {
     repoURL  string
     branch   string
     // auth: deploy key or GitHub App token
 }
 
-func (g *GitOpsRepo) CommitManifest(ctx context.Context, teamDir, filename string, manifest []byte, message string) error {
+// Onboard a new tenant: create directory + values.yaml
+func (r *TenantRepo) CreateTenant(ctx context.Context, cluster, name string, values TenantValues) error {
     // Clone repo (or pull latest)
-    // Write manifest to teams/<team>/<filename>
+    // Create tenants/<cluster>/<name>/values.yaml
     // Git add, commit, push
-    // ArgoCD picks up the change and syncs
+    // ApplicationSet discovers the new directory, creates Application
+    // ArgoCD renders tenant Helm chart with values, syncs
+}
+
+// Update tenant config (membership, features, network policies)
+func (r *TenantRepo) UpdateTenant(ctx context.Context, cluster, name string, values TenantValues) error {
+    // Pull latest
+    // Update tenants/<cluster>/<name>/values.yaml
+    // Git add, commit, push
+    // ArgoCD detects drift, syncs
 }
 ```
 

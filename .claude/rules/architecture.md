@@ -38,13 +38,34 @@ Not good for: service catalogs, multi-step forms, team management, RBAC editing.
 
 ## Portal: Self-Service and Platform Management
 
-The portal serves three personas:
+The portal builds on the **tenant chart pattern**: a Helm chart that defines everything a tenant gets, discovered by an ApplicationSet. The portal is a UI over this pattern.
 
-**Platform engineers**: team onboarding, RBAC management, AppProject templates, cluster inventory, service catalog publishing.
+### The Tenant Chart Pattern
 
-**Team leads / DevOps**: self-service team setup, GitOps repo connection, team dashboards, environment promotion.
+The platform team maintains a tenant Helm chart. When rendered with a tenant's `values.yaml`, it creates: namespaces (with Pod Security Standards), AppProjects (with resource whitelists and RBAC roles), network policies (Cilium), secrets integration (ESO + ClusterSecretStore), monitoring (AlertmanagerConfig + PrometheusRules), and platform resources (Crossplane claims). An ApplicationSet with a git file generator discovers tenants by scanning for `values.yaml` files.
 
-**Developers**: service catalog browsing, simple app deployment (form to Git to ArgoCD), Crossplane resource claims, progressive GitOps.
+**Onboarding a tenant = creating a directory with a values.yaml and committing to the tenant GitOps repo.**
+
+The portal generates that values.yaml through a form and commits it. It never creates K8s resources directly.
+
+### Ownership Model
+
+**Platform team** (owns the structure):
+- Defines the tenant Helm chart (what resources a tenant gets)
+- Defines role templates and their permissions in the chart
+- Sets resource whitelists, network policy templates, Crossplane compositions
+- Manages base-values.yaml per cluster
+- Maintains the ApplicationSet configuration
+
+**Team leads** (self-service within guardrails):
+- Manage team membership: assign OIDC groups to roles within their tenant
+- View tenant status: apps, sync status, resources
+- Scoped to their own tenant only
+
+**Developers** (consume platform services):
+- Browse the service catalog (what the tenant chart can provision)
+- Deploy apps via forms (portal commits to their tenant's GitOps repo)
+- Request platform resources through the catalog
 
 ### Portal Architecture
 
@@ -52,42 +73,43 @@ Single Go binary serves both the REST API and SvelteKit static files:
 
 ```
 Browser → Go backend (:8080)
-            ├── /api/v1/*    → REST handlers (K8s, ArgoCD, OIDC)
+            ├── /api/v1/*    → REST handlers (K8s, ArgoCD, OIDC, Git)
             └── /*           → SvelteKit static files (adapter-static)
 ```
 
 - **Auth**: OIDC via ArgoCD's Dex instance. Same users, same groups. Go backend handles auth code flow, sets session cookie.
-- **K8s access**: `client-go` for Crossplane XRDs, StorageClasses, CRDs, namespaces. In-cluster or kubeconfig.
-- **ArgoCD access**: ArgoCD REST API for Applications, Projects, RBAC. Service account or user token forwarding.
-- **Git access**: portal commits generated manifests to Git repos (portal-managed or team-owned). ArgoCD syncs from Git.
+- **K8s access**: `client-go` for reading tenant chart schema, platform capabilities (StorageClasses, CRDs, XRDs), and tenant status.
+- **ArgoCD access**: ArgoCD REST API for Applications, Projects, sync status.
+- **Git access**: portal commits values.yaml and app manifests to the tenant GitOps repo. ArgoCD syncs from Git.
 
 ### Progressive GitOps
 
 The portal's core model. Developers start simple and grow into GitOps:
 
-**Level 0 (Portal-managed)**: developer fills a form. Portal generates manifests, commits to a portal-managed Git repo. ArgoCD syncs. Developer doesn't touch YAML or Git.
+**Level 0 (Portal-managed)**: developer fills a form. Portal generates manifests, commits to the tenant's GitOps repo. ArgoCD syncs. Developer doesn't touch YAML or Git.
 
-**Level 1 (Repo-aware)**: team connects their own repo. Portal scaffolds the structure. ArgoCD Application points at their repo. They start editing YAML.
+**Level 1 (Repo-aware)**: team connects their own app repo (configured in tenant values.yaml). Portal scaffolds the structure. ArgoCD Application points at their repo. They start editing YAML.
 
-**Level 2 (GitOps native)**: team owns everything in Git. Portal is read-only. ArgoCD is their interface.
+**Level 2 (GitOps native)**: team owns everything in Git. Portal is read-only: dashboards, service discovery, status. ArgoCD is their interface.
 
 ### Git as the Control Plane
 
-The portal never directly creates application-level K8s resources. The flow is always:
+The portal never directly creates K8s resources. The flow is always:
 
 ```
-User action → Portal generates YAML → Git commit → ArgoCD sync → Kubernetes
+User action → Portal generates values.yaml/manifests → Git commit → ArgoCD sync → Kubernetes
 ```
 
-Exceptions (direct K8s writes): team onboarding resources (namespace, AppProject, RBAC) that ArgoCD doesn't manage. Even these can optionally go through a platform team's GitOps repo.
+No exceptions. Even tenant onboarding goes through Git: the portal commits to the tenant GitOps repo, and the ApplicationSet + tenant Helm chart handle the rest via ArgoCD.
 
 ### Platform Team Coexistence
 
 The portal does not disturb platform team workflows:
+- Platform teams own the tenant Helm chart and evolve it at their own pace
+- The portal reads the chart's values schema to render forms, but never modifies the chart
 - Platform teams keep managing operators, XRDs, and cluster-level resources their way
-- The portal reads what's available (StorageClasses, CRDs, XRDs) but doesn't write to the platform layer
-- RBAC and AppProject management is opt-in: use the portal UI or keep using Git
-- The service catalog is a read layer over Crossplane XRDs: platform teams publish XRDs, the portal renders them as forms
+- The service catalog is derived from what the tenant chart can provision (Crossplane XRDs, feature flags in values)
+- Role definitions live in the chart templates. The portal only manages group-to-role assignments.
 
 ## Extension Architecture
 
@@ -126,7 +148,7 @@ If you're tempted to add a database, reconsider. The right answer is almost alwa
 
 ## ArgoCD Native RBAC
 
-ArgoPlane relies on ArgoCD's built-in RBAC and AppProjects for multi-tenancy. The portal adds a visual RBAC editor on top but doesn't replace the underlying model.
+ArgoPlane relies on ArgoCD's built-in RBAC and AppProjects for multi-tenancy. The tenant Helm chart defines role templates and resource whitelists. The portal manages group-to-role assignments within tenants but never modifies the role definitions themselves.
 
 ArgoCD v3 changes to be aware of:
 - Fine-grained RBAC: `update`/`delete` on applications no longer cascades to sub-resources. Grant explicit `update/*` and `delete/*` permissions if needed.

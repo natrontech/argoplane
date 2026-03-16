@@ -49,17 +49,32 @@ Power users who live in ArgoCD get everything they need without leaving.
 
 ### Layer 2: Portal (standalone)
 
-A self-service portal for everything ArgoCD's extension system can't handle: browsing catalogs, filling forms, managing teams, editing RBAC.
+A self-service portal for everything ArgoCD's extension system can't handle: browsing catalogs, filling forms, managing teams, onboarding tenants.
 
 | Feature | Who it's for | What it does |
 |---------|-------------|--------------|
-| **Service catalog** | Developers | Browse available databases, storage, ingress options. Request resources through forms. |
+| **Tenant onboarding** | Platform eng, Team leads | Fill a form, portal generates a tenant values.yaml, commits to the tenant GitOps repo. ApplicationSet picks it up. Namespace, AppProject, RBAC, network policies, secrets integration: all from one commit. |
+| **Service catalog** | Developers | Browse what the platform offers: databases, storage, registries, secrets. The tenant Helm chart defines what's possible; the portal makes it discoverable. |
+| **Team membership** | Team leads | Assign OIDC groups to roles within your tenant's AppProject. Self-service, scoped to your own project. |
 | **Simple app deploy** | Developers | "I have a container image, run it." Portal generates the YAML, commits to Git, ArgoCD syncs. |
-| **Team onboarding** | Team leads | Self-service: one click creates namespace, AppProject, RBAC, quotas. |
-| **RBAC editor** | Platform eng | Visual editor for ArgoCD policies. Stop hand-editing ConfigMaps. |
-| **AppProject management** | Platform eng | CRUD with templates. Sensible defaults per team. |
+| **Tenant dashboard** | Team leads | Overview of your tenant: apps, sync status, resources, group assignments. |
 
 The portal answers: **"What does my platform offer, and how do I use it?"**
+
+### The Tenant Chart Pattern
+
+The platform team defines a **tenant Helm chart** that describes everything a tenant gets: namespaces, AppProjects, RBAC roles, network policies, secrets integration, monitoring, Crossplane resources. An **ApplicationSet** with a git file generator discovers tenants automatically.
+
+The portal is a UI over the tenant chart's values schema. It doesn't manage RBAC or namespaces directly. It generates the right `values.yaml` and commits it. ArgoCD does the rest.
+
+```
+Platform team owns:                Portal provides:
+  Tenant Helm chart                  UI form for values.yaml
+  ApplicationSet config              Tenant onboarding wizard
+  Base values per cluster            Team membership management
+  Role definitions                   Service catalog browser
+  Resource whitelists                App deployment wizard
+```
 
 ## Progressive GitOps
 
@@ -80,8 +95,8 @@ ArgoCD UI                          ArgoPlane Portal
 ├── ArgoPlane extensions           ├── SvelteKit frontend
 │   ├── Resource tabs              │   ├── Service catalog
 │   ├── App views                  │   ├── App deploy wizard
-│   ├── Status panels              │   ├── Team management
-│   └── Sidebar dashboards         │   └── RBAC editor
+│   ├── Status panels              │   ├── Tenant onboarding
+│   └── Sidebar dashboards         │   └── Team membership
 │                                  │
 │   React/TS ──proxy──▶ Go        │   SvelteKit ──▶ Go backend
 │                      backends    │                  ├── OIDC (Dex)
@@ -106,7 +121,7 @@ ArgoPlane is purpose-built for ArgoCD platforms. Extensions live inside ArgoCD (
 
 **Building:** Logs, Policies, Alerts extensions + system-level dashboards
 
-**Next:** Portal (auth, service catalog, team onboarding, RBAC editor, simple app deploy)
+**Next:** Portal (auth, tenant onboarding, service catalog, team membership, simple app deploy)
 
 See [`docs/extension-roadmap.md`](docs/extension-roadmap.md) for the full roadmap.
 
