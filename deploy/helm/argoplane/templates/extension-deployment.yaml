@@ -28,10 +28,10 @@ spec:
       {{- with $ext.priorityClassName }}
       priorityClassName: {{ . }}
       {{- end }}
+      {{- with $ext.podSecurityContext }}
       securityContext:
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- include "argoplane.imagePullSecrets" $ | nindent 6 }}
       {{- if $ext.serviceAccount }}
       {{- if $ext.serviceAccount.create }}
@@ -72,13 +72,10 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- with $ext.securityContext }}
           securityContext:
-            runAsNonRoot: true
-            runAsUser: 65534
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: ["ALL"]
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
       {{- with $ext.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

@@ -77,6 +77,19 @@ extensions:
     podAnnotations: {}
     # -- Priority class name
     priorityClassName: ""
+    # -- Pod-level security context
+    podSecurityContext:
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+    # -- Container-level security context
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 65534
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop: ["ALL"]
     # -- Node selector
     nodeSelector: {}
     # -- Tolerations
@@ -114,6 +127,17 @@ extensions:
     podLabels: {}
     podAnnotations: {}
     priorityClassName: ""
+    podSecurityContext:
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 65534
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop: ["ALL"]
     nodeSelector: {}
     tolerations: []
     affinity: {}
@@ -153,6 +177,17 @@ extensions:
     podLabels: {}
     podAnnotations: {}
     priorityClassName: ""
+    podSecurityContext:
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 65534
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop: ["ALL"]
     nodeSelector: {}
     tolerations: []
     affinity: {}
