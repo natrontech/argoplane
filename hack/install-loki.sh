@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
-set -euo pipefail
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
 MONITORING_NS="monitoring"
 
-log() { echo "==> $*"; }
-
-log "Installing Loki + Promtail for log aggregation"
+log "Installing Loki + Alloy for log aggregation"
 
 # Add Grafana Helm repo
 helm repo add grafana https://grafana.github.io/helm-charts 2>/dev/null || true
@@ -38,12 +36,71 @@ helm upgrade --install loki grafana/loki \
     --set write.replicas=0 \
     --wait --timeout 180s
 
-# Install Promtail to ship pod logs to Loki
-log "Installing Promtail (log shipper)"
-helm upgrade --install promtail grafana/promtail \
+# Install Alloy (replaces deprecated Promtail) to ship pod logs to Loki
+log "Installing Alloy (log shipper)"
+helm upgrade --install alloy grafana/alloy \
     --namespace "${MONITORING_NS}" \
-    --set "config.clients[0].url=http://loki.${MONITORING_NS}.svc:3100/loki/api/v1/push" \
+    --set alloy.configMap.create=false \
     --wait --timeout 120s
 
-log "Loki + Promtail installed in namespace '${MONITORING_NS}'"
+# Create Alloy config to discover and ship pod logs to Loki
+log "Configuring Alloy to ship logs to Loki"
+kubectl -n "${MONITORING_NS}" apply -f - <<'EOF'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alloy
+  namespace: monitoring
+data:
+  config.alloy: |
+    // Discover Kubernetes pods
+    discovery.kubernetes "pods" {
+      role = "pod"
+    }
+
+    // Relabel to extract useful metadata
+    discovery.relabel "pods" {
+      targets = discovery.kubernetes.pods.targets
+
+      rule {
+        source_labels = ["__meta_kubernetes_pod_node_name"]
+        target_label  = "__host__"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        target_label  = "namespace"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label  = "pod"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_container_name"]
+        target_label  = "container"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+        target_label  = "app"
+      }
+    }
+
+    // Collect logs from pod log files
+    loki.source.kubernetes "pods" {
+      targets    = discovery.relabel.pods.output
+      forward_to = [loki.write.default.receiver]
+    }
+
+    // Write to Loki
+    loki.write "default" {
+      endpoint {
+        url = "http://loki.monitoring.svc:3100/loki/api/v1/push"
+      }
+    }
+EOF
+
+# Restart Alloy to pick up the config
+kubectl -n "${MONITORING_NS}" rollout restart daemonset alloy 2>/dev/null || true
+kubectl -n "${MONITORING_NS}" rollout status daemonset alloy --timeout=120s 2>/dev/null || true
+
+log "Loki + Alloy installed in namespace '${MONITORING_NS}'"
 log "Loki API: http://loki.${MONITORING_NS}.svc:3100"

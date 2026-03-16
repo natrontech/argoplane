@@ -82,7 +82,7 @@ velero: cluster ## Install Velero with MinIO (idempotent)
 	@bash hack/install-velero.sh
 
 .PHONY: loki
-loki: cluster ## Install Loki + Promtail for log aggregation (idempotent)
+loki: cluster ## Install Loki + Alloy for log aggregation (idempotent)
 	@bash hack/install-loki.sh
 
 .PHONY: crossplane
