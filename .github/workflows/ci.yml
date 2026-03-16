@@ -76,6 +76,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            extensions/shared/package-lock.json
+            extensions/${{ matrix.extension }}/ui/package-lock.json
 
       - name: Install shared dependencies
         working-directory: extensions/shared
@@ -83,7 +87,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: extensions/${{ matrix.extension }}/ui
-        run: npm install
+        run: npm ci
 
       - name: Build
         working-directory: extensions/${{ matrix.extension }}/ui
@@ -102,6 +106,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: services/docs/package-lock.json
 
       - name: Install dependencies
         working-directory: services/docs
