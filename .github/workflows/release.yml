@@ -10,9 +10,10 @@ permissions:
   packages: write
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   REGISTRY: ghcr.io
   GO_VERSION: "1.26"
-  NODE_VERSION: "20"
+  NODE_VERSION: "22"
 
 jobs:
   # --- Parse version from tag ---
