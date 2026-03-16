@@ -1,0 +1,190 @@
+---
+title: CI/CD Pipeline
+description: GitHub Actions workflows for building, testing, and publishing ArgoPlane
+---
+
+<script>
+  import Callout from '$lib/components/docs/Callout.svelte';
+</script>
+
+# CI/CD Pipeline
+
+ArgoPlane uses GitHub Actions for continuous integration and releases. All container images are published to GitHub Container Registry (`ghcr.io`). The Helm chart is published as an OCI artifact.
+
+## Workflows
+
+### CI (`ci.yml`)
+
+Runs on every push to `main` and on pull requests. Validates that everything builds and lints cleanly.
+
+| Job | What it does |
+|-----|-------------|
+| **Go Lint** | `go vet` and `go build` for each extension backend (metrics, backups, networking) |
+| **Go Test Lint** | `go vet` for the integration test module |
+| **UI Build** | `npm install` + `npm run build` for each extension UI, verifies bundle output |
+| **Docs Build** | Builds the documentation site |
+| **Helm Lint** | `helm lint` and `helm template` on the chart |
+| **Docker Build** | Test-builds all backend Docker images (no push) with layer caching |
+
+### Release (`release.yml`)
+
+Runs when a version tag (`v*`) is pushed. Builds and publishes all artifacts.
+
+| Job | What it publishes |
+|-----|------------------|
+| **Backend Images** | Multi-arch (amd64 + arm64) images for each extension backend |
+| **UI Extensions Image** | Init container with all JS bundles |
+| **Docs Image** | Documentation site container |
+| **Helm Chart** | OCI Helm chart to `ghcr.io/natrontech/charts/argoplane` |
+
+## Container Images
+
+All images are published to `ghcr.io/natrontech/`:
+
+| Image | Purpose |
+|-------|---------|
+| `argoplane-metrics-backend` | Prometheus metrics backend |
+| `argoplane-backups-backend` | Velero backups backend |
+| `argoplane-networking-backend` | Cilium/Hubble networking backend |
+| `argoplane-ui-extensions` | Init container with all UI extension JS bundles |
+| `argoplane-docs` | Documentation site |
+
+### Image Tags
+
+Each release produces three tags per image:
+
+- **Full version**: `0.2.0` (from tag `v0.2.0`)
+- **Major.minor**: `0.2`
+- **Git SHA**: `sha-abc1234`
+
+## Helm Chart
+
+Published as an OCI artifact:
+
+```bash
+# Install a specific version
+helm install argoplane oci://ghcr.io/natrontech/charts/argoplane \
+  --version 0.2.0 \
+  --namespace argocd
+
+# Pull and inspect
+helm pull oci://ghcr.io/natrontech/charts/argoplane --version 0.2.0
+helm show values oci://ghcr.io/natrontech/charts/argoplane --version 0.2.0
+```
+
+The chart version and `appVersion` always match the release tag. The `appVersion` is the default image tag for all extension backends.
+
+## Creating a Release
+
+1. Ensure all changes are merged to `main`
+2. Update `deploy/helm/argoplane/Chart.yaml` with the new version:
+
+```yaml
+version: 0.2.0
+appVersion: "0.2.0"
+```
+
+3. Commit and tag:
+
+```bash
+git add deploy/helm/argoplane/Chart.yaml
+git commit -m "Release v0.2.0"
+git tag v0.2.0
+git push origin main --tags
+```
+
+4. The release workflow builds all images, pushes them to GHCR, and publishes the Helm chart
+5. Verify images and chart in the GitHub Packages tab
+
+<Callout type="info">
+  The release workflow automatically sets the chart version and appVersion from the git tag during packaging. The Chart.yaml commit is for local reference; the published chart always matches the tag.
+</Callout>
+
+## Deploying a Release
+
+After a release is published, deploy to a cluster:
+
+```bash
+# Fresh install
+helm install argoplane oci://ghcr.io/natrontech/charts/argoplane \
+  --version 0.2.0 \
+  --namespace argocd \
+  -f values-prod.yaml
+
+# Upgrade existing
+helm upgrade argoplane oci://ghcr.io/natrontech/charts/argoplane \
+  --version 0.2.0 \
+  --namespace argocd \
+  -f values-prod.yaml
+```
+
+Pin image tags in your values file for reproducible deployments:
+
+```yaml
+extensions:
+  metrics:
+    enabled: true
+    image:
+      repository: ghcr.io/natrontech/argoplane-metrics-backend
+      tag: "0.2.0"
+  backups:
+    enabled: true
+    image:
+      repository: ghcr.io/natrontech/argoplane-backups-backend
+      tag: "0.2.0"
+```
+
+When `tag` is empty (the default), the chart uses `.Chart.AppVersion` as the image tag.
+
+## GitOps with ArgoCD
+
+Deploy ArgoPlane releases via ArgoCD itself:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argoplane
+  namespace: argocd
+spec:
+  project: default
+  source:
+    chart: argoplane
+    repoURL: ghcr.io/natrontech/charts
+    targetRevision: 0.2.0
+    helm:
+      valueFiles:
+        - values-prod.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+```
+
+<Callout type="info">
+  ArgoCD supports OCI Helm charts natively since v2.6+. Use `chart` instead of `path` in the source spec, and set `repoURL` to the OCI registry (without `oci://` prefix).
+</Callout>
+
+## Dependabot
+
+Dependabot is configured to keep all dependencies current on a monthly schedule:
+
+- **Go modules**: all extension backends + integration tests
+- **npm**: all extension UIs + docs site
+- **Docker**: all Dockerfiles (base images)
+- **GitHub Actions**: workflow action versions
+
+PRs are grouped by ecosystem to reduce noise.
+
+## Adding a New Extension
+
+When adding a new extension to the CI/CD pipeline:
+
+1. Add the extension to `matrix.extension` arrays in `ci.yml` and `release.yml`
+2. Add the `COPY` line in `deploy/docker/Dockerfile.ui-extensions`
+3. Add dependabot entries (gomod, npm, docker) in `.github/dependabot.yml`
+4. Add the extension to `EXTENSIONS` in the `Makefile`
+5. Add the extension config to `deploy/helm/argoplane/values.yaml`

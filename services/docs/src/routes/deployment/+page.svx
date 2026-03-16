@@ -293,4 +293,5 @@ The Helm chart is for production and staging environments. The Makefile handles 
 ## Next
 
 - [ArgoCD Configuration](/deployment/argocd-configuration): detailed proxy routing and RBAC setup
+- [CI/CD Pipeline](/deployment/ci-cd): GitHub Actions workflows, release process, and container registry
 - [Architecture](/architecture): how extensions work under the hood

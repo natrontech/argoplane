@@ -33,7 +33,8 @@ export const navigation: NavItem[] = [
 		href: '/deployment',
 		children: [
 			{ title: 'Overview', href: '/deployment' },
-			{ title: 'ArgoCD Configuration', href: '/deployment/argocd-configuration' }
+			{ title: 'ArgoCD Configuration', href: '/deployment/argocd-configuration' },
+			{ title: 'CI/CD Pipeline', href: '/deployment/ci-cd' }
 		]
 	},
 	{

@@ -1,0 +1,179 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  GO_VERSION: "1.26"
+  NODE_VERSION: "20"
+
+jobs:
+  # --- Parse version from tag ---
+  meta:
+    name: Release Meta
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+  # --- Build and push extension backend images ---
+  backend-images:
+    name: Backend Image (${{ matrix.extension }})
+    runs-on: ubuntu-latest
+    needs: [meta]
+    strategy:
+      matrix:
+        extension: [metrics, backups, networking]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker meta
+        id: docker-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/natrontech/argoplane-${{ matrix.extension }}-backend
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: extensions/${{ matrix.extension }}/backend
+          push: true
+          tags: ${{ steps.docker-meta.outputs.tags }}
+          labels: ${{ steps.docker-meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.extension }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.extension }}
+          platforms: linux/amd64,linux/arm64
+
+  # --- Build and push UI extensions init container ---
+  ui-extensions-image:
+    name: UI Extensions Image
+    runs-on: ubuntu-latest
+    needs: [meta]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install shared dependencies
+        working-directory: extensions/shared
+        run: npm ci
+
+      - name: Build all UI extensions
+        run: |
+          for ext in metrics backups networking; do
+            echo "==> Building $ext UI"
+            (cd extensions/$ext/ui && npm install && npm run build)
+          done
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker meta
+        id: docker-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/natrontech/argoplane-ui-extensions
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/docker/Dockerfile.ui-extensions
+          push: true
+          tags: ${{ steps.docker-meta.outputs.tags }}
+          labels: ${{ steps.docker-meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+
+  # --- Build and push docs image ---
+  docs-image:
+    name: Docs Image
+    runs-on: ubuntu-latest
+    needs: [meta]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker meta
+        id: docker-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/natrontech/argoplane-docs
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: services/docs
+          push: true
+          tags: ${{ steps.docker-meta.outputs.tags }}
+          labels: ${{ steps.docker-meta.outputs.labels }}
+          cache-from: type=gha,scope=docs
+          cache-to: type=gha,mode=max,scope=docs
+          platforms: linux/amd64,linux/arm64
+
+  # --- Package and push Helm chart ---
+  helm-chart:
+    name: Helm Chart
+    runs-on: ubuntu-latest
+    needs: [meta, backend-images, ui-extensions-image, docs-image]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+
+      - name: Login to GHCR for Helm
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+
+      - name: Update Chart.yaml version
+        run: |
+          sed -i "s/^version:.*/version: ${{ needs.meta.outputs.version }}/" deploy/helm/argoplane/Chart.yaml
+          sed -i "s/^appVersion:.*/appVersion: \"${{ needs.meta.outputs.version }}\"/" deploy/helm/argoplane/Chart.yaml
+
+      - name: Package chart
+        run: helm package deploy/helm/argoplane/ --destination .helm-pkg/
+
+      - name: Push chart to GHCR
+        run: helm push .helm-pkg/argoplane-${{ needs.meta.outputs.version }}.tgz oci://${{ env.REGISTRY }}/natrontech/charts
