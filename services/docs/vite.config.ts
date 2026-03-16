@@ -29,7 +29,8 @@ function gitLastUpdatedPlugin() {
 						try {
 							const date = execSync(`git log -1 --format=%aI -- "${full}"`, {
 								encoding: 'utf-8',
-								cwd: process.cwd()
+								cwd: process.cwd(),
+								stdio: ['pipe', 'pipe', 'pipe']
 							}).trim();
 							if (date) {
 								const rel = relative(routesDir, dir);

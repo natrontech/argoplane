@@ -2,7 +2,7 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY package*.json svelte.config.js ./
 RUN npm ci
 
 COPY . .
