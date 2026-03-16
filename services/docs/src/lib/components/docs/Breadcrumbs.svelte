@@ -2,6 +2,7 @@
 	import { page } from '$app/stores';
 	import { navigation } from '$lib/config/navigation';
 	import type { NavItem } from '$lib/types';
+	import { ChevronRight } from 'lucide-svelte';
 
 	interface Crumb {
 		title: string;
@@ -42,7 +43,7 @@
 			Docs
 		</a>
 		{#each crumbs as crumb, i}
-			<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300 dark:text-gray-600"><polyline points="9 18 15 12 9 6"/></svg>
+			<ChevronRight size={10} class="text-gray-300 dark:text-gray-600" />
 			{#if i === crumbs.length - 1}
 				<span class="text-gray-600 dark:text-gray-300">{crumb.title}</span>
 			{:else}

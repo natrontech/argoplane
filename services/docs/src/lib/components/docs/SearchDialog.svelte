@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { afterNavigate } from '$app/navigation';
+	import { Search } from 'lucide-svelte';
 
 	let isOpen = $state(false);
 	let searchInput: HTMLInputElement | null = $state(null);
@@ -90,7 +91,7 @@
 	class="flex items-center gap-2 rounded-md border border-gray-200 px-2.5 py-1 text-xs text-gray-400 transition-colors hover:border-gray-300 hover:text-gray-600 dark:border-gray-700 dark:text-gray-500 dark:hover:border-gray-600 dark:hover:text-gray-300"
 	aria-label="Search documentation"
 >
-	<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+	<Search size={14} />
 	<span class="hidden sm:inline">Search</span>
 	<kbd class="hidden rounded-sm border border-gray-200 px-1 py-0.5 font-mono text-[10px] text-gray-400 sm:inline dark:border-gray-600 dark:text-gray-500">
 		{browser && navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl+'}K
@@ -114,7 +115,7 @@
 		>
 			<!-- Input -->
 			<div class="flex items-center gap-2 border-b border-gray-200 px-4 dark:border-gray-700">
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-gray-400"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+				<Search size={16} class="shrink-0 text-gray-400" />
 				<input
 					bind:this={searchInput}
 					type="text"
