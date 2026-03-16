@@ -66,7 +66,7 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({
     );
   }
 
-  if (!data || data.series.length === 0) {
+  if (!data || !data.series || data.series.length === 0) {
     return (
       <div style={emptyBox}>
         <span style={{ fontFamily: fonts.mono, fontSize: fontSize.xs, color: colors.gray400 }}>
@@ -77,10 +77,11 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({
   }
 
   // Convert GraphDataResponse to MetricsChart format
-  const timestamps = data.series[0].values.map((v) => v.time);
+  const firstValues = data.series[0]?.values || [];
+  const timestamps = firstValues.map((v) => v.time);
   const series = data.series.map((s) => ({
-    label: s.label,
-    values: s.values.map((v) => v.value === null ? NaN : v.value),
+    label: s.label || 'unknown',
+    values: (s.values || []).map((v) => v.value === null ? NaN : v.value),
   }));
 
   return (
