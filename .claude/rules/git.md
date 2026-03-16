@@ -12,13 +12,19 @@ Good commit points:
 
 ## Commit Messages
 
-Concise, imperative mood. Focus on "why" not "what".
+Use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). Concise, imperative mood. Focus on "why" not "what".
+
+Format: `<type>[optional scope]: <description>`
+
+Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
 
 ```
-Add metrics extension with Prometheus backend
-Create kind dev setup with idempotent scripts
-Add Velero backup status panel extension
-Wire up proxy extension config for metrics
+feat(metrics): add Prometheus range query support
+fix(backups): handle nil schedule in status panel
+docs: update extension API reference
+ci: add arm64 build to release workflow
+refactor(networking): extract flow parser into separate package
+chore: update Go dependencies
 ```
 
 ## Branch Strategy
