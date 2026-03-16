@@ -5,7 +5,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -o /networking-backend ./cmd/
 
-FROM alpine:3.19
+FROM alpine:3.23
 RUN apk --no-cache add ca-certificates
 COPY --from=builder /networking-backend /usr/local/bin/networking-backend
 USER 65534:65534
