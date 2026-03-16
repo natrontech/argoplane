@@ -5,8 +5,8 @@
 - [kind](https://kind.sigs.k8s.io/) for local Kubernetes clusters
 - [kubectl](https://kubernetes.io/docs/tasks/tools/) for cluster interaction
 - [helm](https://helm.sh/) for installing operators
-- [Node.js 20+](https://nodejs.org/) for building UI extensions
-- [Go 1.26+](https://go.dev/) for building backend services
+- [Node.js 20+](https://nodejs.org/) for building UI extensions and portal frontend
+- [Go 1.26+](https://go.dev/) for building backend services and portal backend
 
 ## Local Development Stack
 
@@ -30,6 +30,26 @@ make deploy-extensions          # Deploy backends, UI bundles, and proxy config
 
 Each extension's UI is built with webpack/vite and produces a single `extension.js` bundle. The backend is a Go binary built into a Docker image. The UI extensions init container (`deploy/docker/Dockerfile.ui-extensions`) packages all JS bundles for production use as an argocd-server init container.
 
+## Portal Development
+
+The portal has a SvelteKit frontend and Go backend that run separately in dev:
+
+```sh
+# Terminal 1: SvelteKit dev server (hot reload, proxies /api/* to :8080)
+cd services/portal/frontend && npm run dev    # Runs on :5173
+
+# Terminal 2: Go backend (REST API, OIDC, K8s access)
+cd services/portal/backend && go run ./cmd/   # Runs on :8080
+```
+
+In development, Vite's proxy config forwards `/api/*` requests to the Go backend. In production, the Go binary serves both the API and the built static files from the same port.
+
+### Portal Prerequisites (in addition to dev stack)
+
+- ArgoCD running with Dex configured (for OIDC auth)
+- Dex `staticClient` entry for the portal (id: `argoplane-portal`)
+- `.env` file in `services/portal/backend/` with Dex credentials, ArgoCD URL, session secret
+
 ## Integration Tests
 
 ```sh
@@ -50,6 +70,8 @@ make clean-all        # Destroy everything
 
 ## Verifying Changes
 
+### Extension changes
+
 After editing Go backend code, rebuild and redeploy to the kind cluster:
 
 ```sh
@@ -65,13 +87,19 @@ cd extensions/<name>/ui && npm run build
 make load-extensions     # Reload into argocd-server
 ```
 
+### Portal changes
+
+Frontend changes: hot-reloaded automatically by Vite dev server.
+
+Backend changes: restart `go run ./cmd/` in the portal backend directory.
+
 ## Paths
 
 Always use absolute literal paths. Never use `$HOME` or `~` in commands.
 
 ## Environment Files
 
-`.env` files are gitignored. Each backend service has a `.env.example` documenting required variables.
+`.env` files are gitignored. Each backend service has a `.env.example` documenting required variables. The portal backend's `.env.example` documents Dex, ArgoCD, and session configuration.
 
 ## Claude: Do Not Start Services
 

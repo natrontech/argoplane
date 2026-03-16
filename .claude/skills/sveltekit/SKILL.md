@@ -1,13 +1,13 @@
 ---
 name: sveltekit
-description: Scaffold and set up SvelteKit + TypeScript + Tailwind CSS v4 + shadcn-svelte projects for ArgoPlane. Use this skill for the self-service portal, documentation site, or any SvelteKit-based service. Trigger when the user mentions "portal", "self-service", "docs site", "SvelteKit", "shadcn-svelte", or wants to build a developer-facing UI outside of ArgoCD extensions.
+description: Scaffold and set up SvelteKit + TypeScript + Tailwind CSS v4 + shadcn-svelte projects for ArgoPlane. Use this skill for the self-service portal frontend, documentation site, or any SvelteKit-based service. Trigger when the user mentions "portal frontend", "self-service UI", "docs site", "SvelteKit", "shadcn-svelte", or wants to build a developer-facing UI outside of ArgoCD extensions.
 ---
 
 # SvelteKit Project Setup
 
 This skill scaffolds and configures SvelteKit projects for ArgoPlane. It covers two main surfaces:
 
-1. **Self-service portal** (`services/portal/`): standalone web app for self-service platform capabilities
+1. **Portal frontend** (`services/portal/frontend/`): standalone web app for self-service platform capabilities
 2. **Documentation site** (`services/docs/`): mdsvex-powered docs site at docs.argoplane.io
 
 Both share the same design system (Tailwind v4 + shadcn-svelte + ArgoPlane tokens).
@@ -19,16 +19,27 @@ Both share the same design system (Tailwind v4 + shadcn-svelte + ArgoPlane token
 - **shadcn-svelte** for headless UI components
 - **Heebo** font (body) + **JetBrains Mono** (data/code)
 
-## Scaffolding a new portal project
+## Portal Frontend Architecture
 
-If the portal doesn't exist yet, scaffold it under `services/portal/`.
+The portal frontend is part of a larger system:
+
+- **Frontend** (SvelteKit): static files served by the Go backend in production
+- **Backend** (Go at `services/portal/backend/`): REST API at `/api/v1/*`, OIDC auth, K8s access, ArgoCD API, Git operations
+- **Auth**: OIDC via ArgoCD's Dex instance (same users, same groups as ArgoCD)
+- **Adapter**: `@sveltejs/adapter-static` (output is static files, Go serves them)
+
+In development, Vite proxies `/api/*` to the Go backend running on a separate port.
+
+## Scaffolding the portal frontend
+
+If the portal frontend doesn't exist yet, scaffold it under `services/portal/frontend/`.
 
 ### Step 1: Create the SvelteKit project
 
 ```bash
-cd /Users/janlauber/code/github.com/natrontech/argoplane
-npx sv create portal --template minimal --types ts --no-add-ons --no-install
-cd portal
+cd /Users/janlauber/code/github.com/natrontech/argoplane/services/portal
+npx sv create frontend --template minimal --types ts --no-add-ons --no-install
+cd frontend
 npm install
 ```
 
@@ -63,7 +74,47 @@ In `src/app.html`, add font links in `<head>`:
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 ```
 
-### Step 5: Create base layout
+### Step 5: Configure adapter-static
+
+Install and configure `@sveltejs/adapter-static`:
+
+```bash
+npm install -D @sveltejs/adapter-static
+```
+
+In `svelte.config.js`:
+```javascript
+import adapter from '@sveltejs/adapter-static';
+
+const config = {
+  kit: {
+    adapter: adapter({
+      pages: 'build',
+      assets: 'build',
+      fallback: 'index.html',  // SPA fallback for client-side routing
+    }),
+  },
+};
+```
+
+### Step 6: Configure Vite proxy
+
+In `vite.config.ts`, proxy API calls to the Go backend:
+
+```typescript
+export default defineConfig({
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
+  },
+});
+```
+
+### Step 7: Create base layout
 
 Create `src/routes/+layout.svelte`:
 
@@ -129,25 +180,40 @@ Use Tailwind's `dark:` variant. The semantic mappings:
 | `border-gray-200` | `dark:border-gray-700` |
 | `text-orange-500` | `dark:text-orange-400` |
 
-## File structure (portal)
+## File structure (portal frontend)
 
 ```
-services/portal/
+services/portal/frontend/
   src/
     routes/
-      +layout.svelte        # Base layout with app.css import
-      +page.svelte           # Home page
-      (app)/                 # Authenticated route group
-        +layout.svelte       # App shell (sidebar, header)
-        dashboard/
-          +page.svelte
+      +layout.svelte              # Root layout
+      +page.svelte                # Landing / login
+      (app)/                      # Authenticated route group
+        +layout.svelte            # App shell (sidebar, header, breadcrumbs)
+        +layout.ts                # Auth guard
+        dashboard/+page.svelte    # Team dashboard
+        catalog/
+          +page.svelte            # Service catalog browser
+          [xrd]/+page.svelte      # XRD detail + claim form
+        apps/
+          +page.svelte            # Team's applications
+          new/+page.svelte        # Deploy new app wizard
+        teams/
+          +page.svelte            # Team management
+          [team]/+page.svelte     # Team detail
+        admin/                    # Platform engineer views
+          rbac/+page.svelte       # RBAC editor
+          projects/+page.svelte   # AppProject management
+          clusters/+page.svelte   # Cluster inventory
     lib/
       components/
-        ui/                  # shadcn-svelte components (auto-generated)
-      api/                   # API client functions
-      types/                 # TypeScript type definitions
-    app.css                  # Tailwind v4 theme with ArgoPlane tokens
-    app.html                 # HTML shell with font links
+        ui/                       # shadcn-svelte components (auto-generated)
+        app/                      # App-specific components (sidebar, header, etc.)
+      api/                        # API client functions (fetch from /api/v1/*)
+      types/                      # TypeScript type definitions
+      stores/                     # Svelte stores (auth state, theme, etc.)
+    app.css                       # Tailwind v4 theme with ArgoPlane tokens
+    app.html                      # HTML shell with font links
   static/
   svelte.config.js
   vite.config.ts
@@ -168,11 +234,12 @@ The documentation site lives at `services/docs/`. It uses the same SvelteKit + T
 
 ### Key differences from portal
 
-| Aspect | Portal | Docs site |
-|--------|--------|-----------|
+| Aspect | Portal frontend | Docs site |
+|--------|----------------|-----------|
 | Content | Svelte components | mdsvex markdown (.svx) |
-| Adapter | adapter-node | adapter-node (prerendered) |
+| Adapter | adapter-static (served by Go) | adapter-node (prerendered) |
 | Layout | App shell (sidebar, dashboard) | 3-column docs (sidebar nav, content, TOC) |
+| Auth | OIDC via Go backend | None (public) |
 | Search | N/A | Pagefind (static WASM) |
 
 ### File structure (docs)
@@ -189,10 +256,17 @@ services/docs/
       extensions/
         metrics/+page.svx
         backups/+page.svx
+      portal/
+        overview/+page.svx
+        service-catalog/+page.svx
+        team-onboarding/+page.svx
+        rbac-management/+page.svx
+        progressive-gitops/+page.svx
       developing/
         +page.svx
         ui-extensions/+page.svx
         backend-services/+page.svx
+        portal-backend/+page.svx
         design-system/+page.svx
     lib/
       components/docs/       # Sidebar, TOC, Header, Callout, PrevNext

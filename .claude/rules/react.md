@@ -27,10 +27,51 @@ Every extension entry point registers via `window.extensionsAPI`:
 ### Available Registration Methods (ArgoCD v3.x)
 
 - `registerResourceExtension(component, group, kind, title, opts?)` - resource detail tabs
-- `registerSystemLevelExtension(component, title, path, icon)` - sidebar pages (path sets the URL route)
+- `registerSystemLevelExtension(component, title, options)` - sidebar pages (`options.icon` for FontAwesome class)
 - `registerStatusPanelExtension(component, title, id, flyout?)` - app status bar items
-- `registerTopBarActionMenuExt(component, title, id, flyout?, shouldDisplay?, icon?, isMiddle?)` - action buttons
+- `registerTopBarActionMenuExt(component, title, id, flyout?, shouldDisplay?, iconClassName?, isMiddle?)` - action buttons in top toolbar
 - `registerAppViewExtension(component, title, icon, shouldDisplay?)` - app detail views (supports `shouldDisplay` callback since v3.2)
+
+### When to Use Each Registration Type
+
+| Type | Use for | Example |
+|------|---------|---------|
+| Resource tab | Per-resource operational data | Metrics for a Deployment, flows for a Pod |
+| App view | Per-app operational views | All backups for this app, all network flows |
+| Status panel | Health at a glance in app header | CPU/memory summary, backup status, flow stats |
+| System-level | Cross-app dashboards (sidebar page) | ArgoPlane Overview, Alerts Dashboard |
+| Top bar action | Global action buttons | Portal link, cluster health summary |
+
+### System-Level Extensions
+
+System-level extensions add sidebar pages. Use them for aggregated, cross-app views:
+
+```typescript
+window.extensionsAPI.registerSystemLevelExtension(
+  OverviewComponent,
+  'ArgoPlane',
+  { icon: 'fa-th-large' }
+);
+```
+
+Good for: cluster health dashboards, cross-app alert views, backup overview, network policy matrix.
+Not good for: service catalogs, multi-step forms, team management (those belong in the portal).
+
+### Top Bar Action Menu
+
+Action buttons with optional flyout panels:
+
+```typescript
+window.extensionsAPI.registerTopBarActionMenuExt(
+  PortalLinkComponent,
+  'ArgoPlane Portal',
+  'argoplane-portal',
+  undefined,          // flyout (optional)
+  () => true,         // shouldDisplay
+  'fa-external-link-alt',
+  false               // isMiddle
+);
+```
 
 ## Component Props
 
@@ -45,6 +86,8 @@ interface ExtensionProps {
 ```
 
 Status panel extensions receive `openFlyout()` in props for sliding panels.
+
+System-level extensions receive no resource-specific props (they're global pages).
 
 ## File Structure
 
