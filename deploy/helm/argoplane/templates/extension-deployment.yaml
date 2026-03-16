@@ -10,6 +10,7 @@ metadata:
     {{- include "argoplane.extensionLabels" (dict "name" $name "root" $) | nindent 4 }}
 spec:
   replicas: {{ $ext.replicas | default 1 }}
+  revisionHistoryLimit: {{ $ext.revisionHistoryLimit | default 3 }}
   selector:
     matchLabels:
       {{- include "argoplane.extensionSelectorLabels" (dict "name" $name) | nindent 6 }}

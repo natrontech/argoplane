@@ -56,6 +56,8 @@ extensions:
       pullPolicy: IfNotPresent
     # -- Number of replicas
     replicas: 1
+    # -- Revision history limit
+    revisionHistoryLimit: 3
     # -- Service port
     port: 8080
     # -- Environment variables passed to the backend container
@@ -113,6 +115,7 @@ extensions:
       tag: ""
       pullPolicy: IfNotPresent
     replicas: 1
+    revisionHistoryLimit: 3
     port: 8081
     env:
       VELERO_NAMESPACE: "velero"
@@ -163,6 +166,7 @@ extensions:
       tag: ""
       pullPolicy: IfNotPresent
     replicas: 1
+    revisionHistoryLimit: 3
     port: 8082
     env:
       HUBBLE_RELAY_URL: "hubble-relay.kube-system.svc:80"
@@ -218,7 +222,20 @@ services:
         memory: 32Mi
       limits:
         memory: 64Mi
+    podLabels: {}
     podAnnotations: {}
+    priorityClassName: ""
+    podSecurityContext:
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 65534
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop: ["ALL"]
     nodeSelector: {}
     tolerations: []
     affinity: {}

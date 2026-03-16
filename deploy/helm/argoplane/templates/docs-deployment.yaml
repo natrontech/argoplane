@@ -11,6 +11,7 @@ metadata:
     app.kubernetes.io/component: docs
 spec:
   replicas: {{ $docs.replicas | default 1 }}
+  revisionHistoryLimit: {{ $docs.revisionHistoryLimit | default 3 }}
   selector:
     matchLabels:
       app.kubernetes.io/name: argoplane-docs
@@ -25,6 +26,13 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
+      {{- with $docs.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      {{- with $docs.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- include "argoplane.imagePullSecrets" $ | nindent 6 }}
       containers:
         - name: docs
@@ -50,13 +58,10 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- with $docs.securityContext }}
           securityContext:
-            runAsNonRoot: true
-            runAsUser: 65534
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: ["ALL"]
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
       {{- with $docs.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
