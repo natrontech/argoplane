@@ -13,12 +13,12 @@ ArgoPlane is a two-layer developer platform built on ArgoCD:
 
 | Belongs in **extensions** (inside ArgoCD) | Belongs in **portal** (standalone app) |
 |------------------------------------------|---------------------------------------|
-| Per-resource operational data (metrics, logs, traces) | Tenant onboarding (generate values.yaml, commit to tenant repo) |
-| Per-app operational views (backups, networking, alerts) | Service catalog (browse what the tenant chart offers) |
+| Per-resource operational data (metrics, logs, traces) | Tenant onboarding (generate values.yaml, commit to onboarding repo) |
+| Per-app operational views (backups, networking, alerts) | Service catalog (browse Helm chart templates and Crossplane XRDs) |
 | Status panels (health at a glance) | Team membership (assign OIDC groups to AppProject roles) |
-| System-level dashboards (cross-app alerts, cluster health) | Simple app deployment (form to Git to ArgoCD) |
+| System-level dashboards (cross-app alerts, cluster health) | Simple app deployment (pick template, fill form, portal commits Application manifest to tenant GitOps repo) |
 | Resource-scoped actions (trigger backup, restore) | Tenant dashboard (apps, sync status, resources) |
-| | Progressive GitOps (form to repo to full ownership) |
+| | Progressive GitOps (portal-managed to full ownership) |
 
 ### ArgoCD Extension Points
 
@@ -91,51 +91,117 @@ Browser → Go backend (:8080)
 
 The portal's core innovation: meet developers where they are and let them grow.
 
-**Level 0 (Portal-managed)**: Developer fills a form (image, port, env vars). Portal generates manifests, commits to a portal-managed Git repo. ArgoCD syncs. Developer doesn't touch YAML.
+Progressive GitOps levels are emergent, not explicit tiers that teams select. They describe a natural progression based on how teams interact with their GitOps repo.
 
-**Level 1 (Repo-aware)**: Team connects their own Git repo. Portal scaffolds directory structure. ArgoCD Application points at their repo. They start editing YAML.
+**Level 0 (Portal-managed)**: All resources in the tenant GitOps repo carry the `argoplane.io/managed-by: portal` annotation. Developers use forms exclusively. Portal creates the GitOps repo, generates all manifests, and commits on their behalf.
 
-**Level 2 (GitOps native)**: Team owns everything in Git. Portal is read-only: dashboards, service discovery, status. ArgoCD is their interface.
+**Level 1 (Mixed ownership)**: Some resources have the portal annotation, others are hand-written by the team. Developers use the portal for quick deployments and edit YAML directly for fine-tuned control. Both coexist.
+
+**Level 2 (GitOps native)**: No portal annotations remain. The portal is read-only: dashboards, service discovery, status. The team owns everything in Git. ArgoCD is their interface.
+
+### The Two-Repo Model
+
+The portal operates across two Git repositories per tenant:
+
+**Tenant onboarding repo** (platform-managed, shared across all tenants):
+Contains `tenants/<cluster>/<name>/values.yaml` files. An ApplicationSet with a git file generator discovers tenant directories and creates ArgoCD Applications that render the tenant Helm chart. The portal commits here for onboarding and tenant configuration changes.
+
+**Tenant GitOps repo** (per-tenant, tenant-owned):
+Contains the tenant's application manifests and platform resource claims. The tenant Helm chart creates a root ArgoCD Application pointing at this repo. Developers (or the portal on their behalf) commit here for app deployments and resource requests.
+
+```
+tenant-onboarding-repo/                    tenant-gitops-repo/  (per tenant)
+  clusters/                                  apps/
+    prod-cluster-01/                           my-api.yaml          # ArgoCD Application → common Helm chart + values
+      tenants-appset.yaml                      my-worker.yaml       # ArgoCD Application → common Helm chart + values
+      tenants-project.yaml                   resources/
+  tenants/                                     postgres-main/
+    prod-cluster-01/                             claim.yaml         # Crossplane XRD claim
+      base-values.yaml                         redis-cache/
+      team-alpha/                                claim.yaml         # Crossplane XRD claim
+        values.yaml
+      team-beta/
+        values.yaml
+```
 
 ### The Tenant Chart Pattern
 
 The portal builds on a proven pattern: **tenant Helm charts** with **ApplicationSet discovery**.
 
-The platform team maintains a tenant Helm chart that defines everything a tenant gets: namespaces (with PSS labels), AppProjects (with resource whitelists and role definitions), RBAC (group-to-role mappings), network policies (Cilium), secrets integration (ESO + ClusterSecretStore), monitoring (AlertmanagerConfig + PrometheusRules), and platform resources (Crossplane claims for KeyVault, storage, Harbor projects, etc.).
+The platform team maintains a tenant Helm chart that creates guardrails for each tenant: namespace (with Pod Security Standards labels), AppProject (with resource whitelists and role definitions), RBAC (group-to-role mappings), baseline network policies (Cilium), resource quotas, Kyverno policy bindings, AlertmanagerConfig, and a root ArgoCD Application pointing at the tenant's GitOps repo.
 
-A tenant GitOps repo contains per-cluster directories with per-tenant `values.yaml` files. An ApplicationSet with a git file generator automatically creates an ArgoCD Application for each tenant directory.
+The tenant chart does NOT create platform resources like Crossplane claims, databases, registries, or similar. Those are self-service: developers request them by committing Crossplane XRD claims to the `resources/` directory in their tenant GitOps repo.
 
-**Onboarding a tenant = creating a directory with a values.yaml and committing.**
+**Onboarding a tenant = creating a directory with a values.yaml in the onboarding repo and committing.**
 
-The portal is a UI over this pattern:
+### App Deployment via Common Helm Chart
 
-```
-Platform team owns:                    Portal provides:
-┌────────────────────────────────┐    ┌────────────────────────────────┐
-│ Tenant Helm chart              │    │ Form that generates values.yaml│
-│   (what a tenant CAN get)      │    │   (what THIS tenant gets)      │
-│                                │    │                                │
-│ ApplicationSet                 │    │ Tenant onboarding wizard       │
-│   (discovers tenant dirs)      │    │   → fill form                  │
-│                                │    │   → generate values.yaml       │
-│ base-values.yaml per cluster   │    │   → commit to tenant repo      │
-│   (cluster-level defaults)     │    │   → ApplicationSet picks it up │
-│                                │    │                                │
-│ Role definitions               │    │ Team membership management     │
-│ Resource whitelists            │    │   → assign OIDC groups to roles│
-│ Network policy templates       │    │   → scoped to own tenant       │
-│ Crossplane compositions        │    │   → update values.yaml + commit│
-└────────────────────────────────┘    └────────────────────────────────┘
-```
+Applications are deployed as ArgoCD Application manifests in the tenant GitOps repo. Each Application manifest references an external common Helm chart (e.g., bedag/common or a platform-maintained chart published to an OCI registry). The Application manifest specifies the chart reference and per-app values (image, port, replicas, env vars, etc.).
+
+The portal generates these Application manifests: the developer picks an app template (web-app, worker, cron-job), fills a form, and the portal writes an Application YAML to `apps/<name>.yaml` in the tenant GitOps repo. Power users create and edit these manifests directly.
+
+### Service Catalog
+
+The service catalog has two discovery mechanisms:
+
+**Helm chart templates**: curated by the platform team in a ConfigMap (`argoplane-catalog-charts`). Each entry has a display name, description, chart reference (OCI registry URL + version), category, and default values. These represent the app templates developers pick from when deploying (web-app, worker, cron-job, etc.).
+
+**Crossplane XRDs**: auto-discovered from the Kubernetes API. The portal lists XRDs that carry the `argoplane.io/catalog: "true"` label and cross-references each XRD's group/kind against the tenant's AppProject resource whitelist. Developers only see XRDs their tenant is allowed to claim. Selecting an XRD opens a form; submitting commits a claim YAML to `resources/<name>/claim.yaml` in the tenant GitOps repo.
+
+### GitOps Repo Connection
+
+ArgoCD repocreds (GitHub App) provide org-wide repository access. The portal can create repos for Level 0 teams (full auto-provisioning) or accept user-provided repo URLs. The tenant chart references the repo URL from the tenant's `values.yaml` and creates the root ArgoCD Application pointing at it.
+
+### Annotation-Based Ownership
+
+Portal-generated resources carry the `argoplane.io/managed-by: portal` annotation. The portal only writes to resources it annotated. It never overwrites resources without this annotation.
+
+Users can take ownership of any portal-managed resource by removing the annotation. Once the annotation is gone, the portal treats that resource as read-only. This is how teams naturally progress from Level 0 to Level 2: they gradually take ownership of individual resources until none carry the portal annotation.
 
 ### Ownership Model
 
+The portal provides:
+
+```
+Platform team owns:                           Portal provides:
+┌──────────────────────────────────────┐    ┌──────────────────────────────────────┐
+│ Tenant Helm chart                    │    │ Form that generates values.yaml      │
+│   (guardrails: ns, AppProject, RBAC, │    │   (what THIS tenant gets)            │
+│    quotas, net policies, Kyverno)    │    │                                      │
+│                                      │    │ Tenant onboarding wizard             │
+│ Common app Helm chart                │    │   → fill form                        │
+│   (maintained + published to OCI)    │    │   → generate values.yaml             │
+│                                      │    │   → commit to onboarding repo        │
+│ Catalog ConfigMap                    │    │   → ApplicationSet picks it up       │
+│   (argoplane-catalog-charts)         │    │                                      │
+│                                      │    │ App deployment forms                 │
+│ ApplicationSet                       │    │   → pick chart template from catalog │
+│   (discovers tenant dirs)            │    │   → fill form (image, port, env)     │
+│                                      │    │   → generate Application manifest    │
+│ ArgoCD repocreds (GitHub App)        │    │   → commit to tenant GitOps repo     │
+│   (org-wide repo access)             │    │                                      │
+│                                      │    │ Platform resource request forms      │
+│ base-values.yaml per cluster         │    │   → pick XRD from catalog            │
+│   (cluster-level defaults)           │    │   → fill form                        │
+│                                      │    │   → generate claim YAML              │
+│ Role definitions                     │    │   → commit to tenant GitOps repo     │
+│ Resource whitelists                  │    │                                      │
+│ Network policy templates             │    │ Team membership management           │
+│ Crossplane compositions + XRDs       │    │   → assign OIDC groups to roles      │
+│                                      │    │   → scoped to own tenant             │
+│                                      │    │   → update values.yaml + commit      │
+└──────────────────────────────────────┘    └──────────────────────────────────────┘
+```
+
 **Platform team** (owns the structure):
-- Defines the tenant Helm chart (what resources a tenant gets)
+- Defines the tenant Helm chart (guardrails: namespace, AppProject, RBAC, quotas, net policies, Kyverno bindings, AlertmanagerConfig, root Application)
+- Maintains the common app Helm chart and publishes it to an OCI registry
+- Curates the catalog ConfigMap (`argoplane-catalog-charts`) with chart templates
 - Defines role templates (viewer, developer, admin) and their permissions
-- Sets resource whitelists, network policy templates, Crossplane compositions
+- Sets resource whitelists, network policy templates, Crossplane compositions and XRDs
 - Manages base-values.yaml per cluster (cluster-level defaults)
 - Maintains the ApplicationSet configuration
+- Configures ArgoCD repocreds (GitHub App) for org-wide repo access
 
 **Team leads** (self-service within guardrails):
 - Manage team membership: assign OIDC groups to roles within their tenant's AppProject
@@ -143,58 +209,80 @@ Platform team owns:                    Portal provides:
 - This is scoped: team leads can only manage their own tenant
 
 **Developers** (consume platform services):
-- Browse the service catalog (what the tenant chart can provision)
-- Deploy apps via forms (portal generates manifests, commits to their tenant's GitOps repo)
-- Request platform resources (databases, registries, secrets) through the catalog
+- Deploy apps via common Helm chart forms (pick template, fill values, portal generates Application manifest in tenant GitOps repo)
+- Request platform resources via Crossplane XRD claim forms (portal generates claim YAML in tenant GitOps repo)
+- Browse the service catalog (Helm chart templates and Crossplane XRDs available to their tenant)
+
+### Tenant values.yaml Structure
+
+```yaml
+name: team-alpha
+displayName: "Team Alpha"
+cluster: prod-cluster-01
+
+roles:
+  admin:
+    groups: ["oidc:team-alpha-leads"]
+  developer:
+    groups: ["oidc:team-alpha-devs"]
+  viewer:
+    groups: ["oidc:team-alpha-viewers"]
+
+gitopsRepo:
+  url: "https://github.com/my-org/team-alpha-apps.git"
+  branch: "main"
+  path: "."
+
+quotas:
+  cpu: "20"
+  memory: "40Gi"
+  pods: "50"
+
+networkPolicies:
+  denyAllIngress: true
+  allowDNS: true
+  allowIntraNamespace: true
+  allowFromMonitoring: true
+
+podSecurityStandard: restricted
+
+allowedResources:
+  - group: postgresql.platform.example.com
+    kind: PostgreSQLInstance
+  - group: redis.platform.example.com
+    kind: RedisInstance
+```
 
 ### Portal Features (MVP)
 
 | Feature | Persona | Pain it solves |
 |---------|---------|---------------|
 | **Auth via Dex** | All | Same identity as ArgoCD, SSO, groups-based access |
-| **Tenant onboarding** | Platform eng, Team leads | Fill a form → generate values.yaml → commit to tenant repo. Namespace, AppProject, RBAC, network policies, secrets: all from one commit. |
-| **Service catalog** | Developers | Browse what the tenant chart offers: databases, storage, registries, secrets integration. Platform team publishes; developers consume. |
+| **Tenant onboarding** | Platform eng, Team leads | Fill a form, generate values.yaml, commit to onboarding repo. Namespace, AppProject, RBAC, quotas, network policies, Kyverno bindings: all from one commit. |
+| **Service catalog** | Developers | Browse Helm chart templates AND Crossplane XRDs. Platform team curates charts in ConfigMap; XRDs auto-discovered from K8s API, filtered by `argoplane.io/catalog: "true"` label, cross-referenced with tenant's AppProject resource whitelist. |
 | **Team membership** | Team leads | Assign OIDC groups to roles within your tenant's AppProject. Self-service, scoped. |
-| **Simple app deploy** | Developers | Image + port + env → form → Git commit → ArgoCD sync |
+| **Simple app deploy** | Developers | Pick app template (web-app, worker, cron-job), fill form, portal generates ArgoCD Application manifest referencing common chart, commits to tenant GitOps repo. |
 
 ### Portal Features (Later)
 
 | Feature | Persona | Description |
 |---------|---------|-------------|
 | **Tenant dashboard** | Team leads | Overview of tenant's apps, resources, sync status, group assignments |
-| **Platform resource requests** | Developers | Request databases, caches, registries via catalog forms. Updates tenant values.yaml. |
-| **GitOps repo setup** | DevOps | Connect team repo, scaffold structure, update tenant values with repo URL |
+| **GitOps repo creation** | Developers | Level 0 auto-provisioning: portal creates the tenant GitOps repo, scaffolds directory structure, and configures the tenant values.yaml with the repo URL |
 | **Environment promotion** | Developers | Update image tag in Git for staging/prod promotion |
 | **Cluster inventory** | Platform eng | Installed operators, CRDs, node pools, capacity |
-| **Audit trail** | All | Git history of tenant repo is the audit log. Portal links to commits. |
+| **Audit trail** | All | Git history of both repos is the audit log. Portal links to commits. |
 
 ### What the Portal Does NOT Do
 
 - **No CI/CD**: building images is GitHub Actions / GitLab CI territory
 - **No monitoring dashboards**: that's Grafana. Extensions handle contextual metrics
-- **No secret management**: that's External Secrets Operator (the tenant chart wires it up)
+- **No secret management**: that's External Secrets Operator, handled by the platform team outside the tenant chart pattern
 - **No direct K8s mutations for apps**: portal commits to Git, ArgoCD reconciles
 - **No RBAC policy editing**: platform team owns role definitions in the tenant chart. Portal only manages group-to-role assignments within existing roles.
 - **No Backstage**: purpose-built for ArgoCD platforms, not a generic plugin framework
-
-### Tenant GitOps Repo Structure
-
-```
-tenant-repo/
-  clusters/
-    prod-cluster-01/
-      tenants-appset.yaml          # ApplicationSet (git file generator)
-      tenants-project.yaml         # AppProject for tenant management
-  tenants/
-    prod-cluster-01/
-      base-values.yaml             # Cluster defaults (area, environment, secrets store)
-      team-alpha/
-        values.yaml                # Team Alpha's tenant config
-      team-beta/
-        values.yaml                # Team Beta's tenant config
-```
-
-The portal commits to `tenants/<cluster>/<team>/values.yaml`. The ApplicationSet discovers it. ArgoCD renders the tenant Helm chart with those values. The tenant gets everything defined in the chart.
+- **No tenant chart editing**: portal only generates values.yaml for the onboarding repo and manifests for the tenant GitOps repo. The tenant Helm chart is platform team territory.
+- **No common chart editing**: platform team owns the common app Helm chart. Portal only fills in values when generating Application manifests.
 
 ## Not Planned (as extensions)
 
@@ -205,7 +293,7 @@ The portal commits to `tenants/<cluster>/<team>/values.yaml`. The ApplicationSet
 | **gitops** | ArgoCD itself handles this |
 | **platform catalog** | Portal feature, not an extension. ArgoCD's extension system is too limited for catalog-style browsing |
 | **self-service** | Portal feature. Forms, multi-step wizards, and state don't fit extensions |
-| **tenant management** | Portal feature. Generates values.yaml and commits to tenant GitOps repo |
+| **tenant management** | Portal feature. Generates values.yaml and commits to tenant onboarding repo |
 | **RBAC editing** | Platform team owns role definitions in the tenant chart. Portal only manages group-to-role assignments within tenants. |
 
 ## Maybe Later
@@ -228,6 +316,8 @@ The portal commits to `tenants/<cluster>/<team>/values.yaml`. The ApplicationSet
 
 **Smart links.** Connect the dots between systems. An alert should link to its Grafana dashboard, runbook, and source YAML. A policy violation should link to the policy definition. Logs should link to the trace ID.
 
-**Git as the control plane.** The portal never directly creates application-level K8s resources. The flow is always: user action → portal generates YAML → Git commit → ArgoCD sync → Kubernetes. GitOps remains the single source of truth.
+**Git as the control plane.** The portal never directly creates application-level K8s resources. The flow is always: user action, portal generates YAML, Git commit, ArgoCD sync, Kubernetes. GitOps remains the single source of truth.
 
 **Progressive disclosure.** Don't force GitOps knowledge on day one. Let teams start with forms and grow into owning their Git repos. The portal supports every point on that spectrum.
+
+**Annotation-based ownership.** Portal-generated resources carry `argoplane.io/managed-by: portal`. Users can take ownership by removing the annotation. Portal never overwrites resources it didn't create. This enables a smooth, resource-by-resource transition from portal-managed to fully GitOps-native.

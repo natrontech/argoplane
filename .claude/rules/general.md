@@ -37,11 +37,12 @@ Served directly by the Go backend: `/api/v1/...`
 
 Groups:
 - `/api/v1/auth/*` - OIDC login/callback/logout/me
-- `/api/v1/catalog/*` - service catalog (XRDs, StorageClasses, IngressClasses)
-- `/api/v1/apps/*` - application management
-- `/api/v1/claims/*` - Crossplane claims
-- `/api/v1/teams/*` - team management
-- `/api/v1/admin/*` - platform admin (RBAC, projects, clusters)
+- `/api/v1/tenants/*` - tenant lifecycle (onboarding, config, membership)
+- `/api/v1/catalog/charts` - Helm chart templates (from ConfigMap, for app deployment)
+- `/api/v1/catalog/xrds` - Crossplane XRDs (auto-discovered, for platform resources)
+- `/api/v1/apps/*` - app management (ArgoCD Application manifests in tenant GitOps repo)
+- `/api/v1/resources/*` - platform resources (Crossplane XRD claims in tenant GitOps repo)
+- `/api/v1/clusters/*` - cluster listing
 - `/api/v1/health` - healthcheck
 
 ## Backend Services
@@ -61,7 +62,7 @@ The portal backend is a Go HTTP server that:
 1. Handles OIDC auth via Dex (login, callback, session management)
 2. Queries K8s API via `client-go` (XRDs, StorageClasses, namespaces, CRDs)
 3. Queries ArgoCD REST API (Applications, Projects, RBAC)
-4. Commits to Git repos (portal-managed or team-owned) for app deploys and claims
+4. Commits to two Git repos: onboarding repo (tenant values.yaml) and tenant GitOps repo (ArgoCD Application manifests, Crossplane claims)
 5. Serves SvelteKit static files in production
 
 No gRPC. No GraphQL. Plain HTTP/JSON REST.

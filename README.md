@@ -54,47 +54,48 @@ A self-service portal for everything ArgoCD's extension system can't handle: bro
 | Feature | Who it's for | What it does |
 |---------|-------------|--------------|
 | **Tenant onboarding** | Platform eng, Team leads | Fill a form, portal generates a tenant values.yaml, commits to the tenant GitOps repo. ApplicationSet picks it up. Namespace, AppProject, RBAC, network policies, secrets integration: all from one commit. |
-| **Service catalog** | Developers | Browse what the platform offers: databases, storage, registries, secrets. The tenant Helm chart defines what's possible; the portal makes it discoverable. |
+| **Service catalog** | Developers | Browse what the platform offers. Helm chart templates for apps (web-app, worker, cron-job), Crossplane XRDs for platform resources (databases, caches, registries). Platform team curates; developers consume. |
 | **Team membership** | Team leads | Assign OIDC groups to roles within your tenant's AppProject. Self-service, scoped to your own project. |
-| **Simple app deploy** | Developers | "I have a container image, run it." Portal generates the YAML, commits to Git, ArgoCD syncs. |
+| **Simple app deploy** | Developers | Pick an app template, fill in image and port. Portal generates an ArgoCD Application manifest referencing the common Helm chart, commits to your GitOps repo. ArgoCD syncs. |
 | **Tenant dashboard** | Team leads | Overview of your tenant: apps, sync status, resources, group assignments. |
 
 The portal answers: **"What does my platform offer, and how do I use it?"**
 
 ### The Tenant Chart Pattern
 
-The platform team defines a **tenant Helm chart** that describes everything a tenant gets: namespaces, AppProjects, RBAC roles, network policies, secrets integration, monitoring, Crossplane resources. An **ApplicationSet** with a git file generator discovers tenants automatically.
+The platform team defines a **tenant Helm chart** that creates guardrails: namespaces (with Pod Security Standards), AppProjects (with resource whitelists), a root ArgoCD Application pointing at the tenant's own GitOps repo, baseline network policies, resource quotas, and Kyverno policy bindings. An **ApplicationSet** with a git file generator discovers tenants automatically.
 
-The portal is a UI over the tenant chart's values schema. It doesn't manage RBAC or namespaces directly. It generates the right `values.yaml` and commits it. ArgoCD does the rest.
+Each tenant gets their own **GitOps repo** where apps (as ArgoCD Application manifests referencing a common Helm chart) and platform resources (as Crossplane XRD claims) live. The portal generates these manifests through forms and commits them. Power users edit the repo directly.
 
 ```
 Platform team owns:                Portal provides:
-  Tenant Helm chart                  UI form for values.yaml
-  ApplicationSet config              Tenant onboarding wizard
-  Base values per cluster            Team membership management
-  Role definitions                   Service catalog browser
-  Resource whitelists                App deployment wizard
+  Tenant Helm chart (guardrails)     Tenant onboarding wizard
+  Common app Helm chart              App deployment forms
+  Crossplane XRDs + Compositions     Platform resource request forms
+  Catalog ConfigMap (chart list)     Service catalog browser
+  ApplicationSet config              Team membership management
+  ArgoCD repocreds                   GitOps repo creation (Level 0)
 ```
 
 ## Progressive GitOps
 
 This is the core idea. Not everyone starts as a GitOps expert. ArgoPlane meets developers where they are:
 
-**Start simple.** A developer fills a form: container image, port, environment variables. The portal generates Kubernetes manifests, commits them to Git, and ArgoCD syncs. The developer sees their app running. They never touched YAML.
+**Start simple (Level 0).** A developer picks "Web Application" from the catalog, fills in image and port. The portal generates an ArgoCD Application manifest referencing the common Helm chart, commits it to the team's GitOps repo. ArgoCD syncs. The developer never touched YAML. Need a database? Pick "PostgreSQL" from the catalog. Portal generates a Crossplane claim, commits it. Done.
 
-**Grow gradually.** The team connects their own Git repo. The portal scaffolds the directory structure. They start editing manifests, learning the patterns. ArgoCD syncs from their repo.
+**Grow gradually (Level 1).** The team starts editing manifests in their GitOps repo alongside portal-generated ones. They learn the patterns: how the common chart works, how Crossplane claims look. Portal-generated resources carry an `argoplane.io/managed-by: portal` annotation so the portal knows what it owns.
 
-**Own it completely.** The team manages everything in Git. The portal is read-only for them: dashboards, service discovery, status. ArgoCD is their interface. They're GitOps natives.
+**Own it completely (Level 2).** The team manages everything in Git. Portal is read-only: dashboards, service discovery, status. ArgoCD is their interface. They're GitOps natives.
 
-The Git repo always exists. At every level, GitOps is the source of truth. The portal is just the on-ramp.
+The GitOps repo always exists. At every level, Git is the source of truth. The portal is just the on-ramp.
 
 ## Architecture
 
 ```
 ArgoCD UI                          ArgoPlane Portal
 ├── ArgoPlane extensions           ├── SvelteKit frontend
-│   ├── Resource tabs              │   ├── Service catalog
-│   ├── App views                  │   ├── App deploy wizard
+│   ├── Resource tabs              │   ├── Service catalog (charts + XRDs)
+│   ├── App views                  │   ├── App deploy (common Helm chart)
 │   ├── Status panels              │   ├── Tenant onboarding
 │   └── Sidebar dashboards         │   └── Team membership
 │                                  │
@@ -102,7 +103,7 @@ ArgoCD UI                          ArgoPlane Portal
 │                      backends    │                  ├── OIDC (Dex)
 │                      ├── Prom    │                  ├── K8s API
 │                      ├── Velero  │                  ├── ArgoCD API
-│                      └── Hubble  │                  └── Git
+│                      └── Hubble  │                  └── Git (2 repos)
 │                                  │
 └── ArgoCD RBAC + Dex auth         └── Same Dex, same groups
 ```

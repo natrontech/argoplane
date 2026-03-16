@@ -14,7 +14,7 @@ ArgoPlane gives developers operational superpowers inside ArgoCD, then adds a li
 
 **Layer 1 (extensions)**: operational visibility inside ArgoCD. Metrics, logs, alerts, backups, network flows, policy violations, traces. Resource tabs, app views, status panels, and system-level dashboards. All inside ArgoCD, zero context switching. Works for power users who live in ArgoCD.
 
-**Layer 2 (portal)**: a self-service platform built on SvelteKit + Go. Service catalog (what does my platform offer?), team onboarding (self-service namespace + RBAC + AppProject), RBAC management (stop editing ConfigMaps by hand), and progressive GitOps (start with a form, graduate to owning your Git repo). One Go binary, no database, auth via ArgoCD's Dex.
+**Layer 2 (portal)**: a self-service platform built on SvelteKit + Go. Service catalog (Helm chart templates for apps, Crossplane XRDs for platform resources), tenant onboarding (one form generates a values.yaml, commits to Git, ApplicationSet does the rest), team membership (assign OIDC groups to roles, scoped to your tenant), and progressive GitOps (start with a form, graduate to owning your Git repo). One Go binary, no database, auth via ArgoCD's Dex.
 
 The broader pitch: you don't need to adopt Backstage, Port, or Humanitec when you can extend ArgoCD with world-class extensions and add a lightweight portal for self-service and management.
 
@@ -29,11 +29,11 @@ ArgoPlane's differentiator: extensions live inside ArgoCD (no new UI for ops tas
 
 ## Three personas, three value props
 
-**Platform engineers**: "I can finally manage RBAC visually, onboard teams in one click, and publish my Crossplane XRDs as a service catalog. No more Slack tickets for namespace creation."
+**Platform engineers**: "I define the tenant chart and Crossplane XRDs. The portal turns them into a self-service catalog and tenant onboarding wizard. Teams onboard themselves. No more Slack tickets for namespace creation."
 
-**Team leads**: "My team can self-serve. They browse the catalog, deploy apps, and request resources without waiting for the platform team. And I can see everything in one dashboard."
+**Team leads**: "My team can self-serve. They browse the catalog, deploy apps via a common Helm chart, and request databases via Crossplane claims. All through forms that commit to our GitOps repo. I manage team membership myself."
 
-**Developers**: "I don't need to learn Kubernetes or GitOps on day one. I fill a form, my app runs. When I'm ready, I own the Git repo and become a GitOps power user."
+**Developers**: "I don't need to learn Kubernetes or GitOps on day one. I pick 'Web Application' from the catalog, fill in my image and port, and it runs. When I'm ready, I edit the YAML in our GitOps repo directly."
 
 ## Open Source
 

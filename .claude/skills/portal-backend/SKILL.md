@@ -1,6 +1,6 @@
 ---
 name: portal-backend
-description: Scaffold and develop the ArgoPlane Portal Go backend. Use when the user wants to build portal API endpoints, set up OIDC auth, add K8s/ArgoCD integration, or work on the portal's Go server. Trigger when the user mentions "portal backend", "portal API", "portal auth", "RBAC editor", "team onboarding API", "service catalog API", or wants to build Go code for the portal.
+description: Scaffold and develop the ArgoPlane Portal Go backend. Use when the user wants to build portal API endpoints, set up OIDC auth, add K8s/ArgoCD integration, or work on the portal's Go server. Trigger when the user mentions "portal backend", "portal API", "portal auth", "tenant onboarding", "service catalog API", "catalog API", "common Helm chart", or wants to build Go code for the portal.
 user-invocable: true
 argument-hint: "[feature-name]"
 allowed-tools: Bash(mkdir *), Write, Read, Glob, Grep
@@ -19,7 +19,7 @@ The portal backend is a Go HTTP server at `services/portal/backend/` that:
 3. Provides REST API endpoints for the portal frontend
 4. Queries Kubernetes API via `client-go`
 5. Queries ArgoCD REST API for Applications, Projects, RBAC
-6. Commits to Git repos for progressive GitOps
+6. Commits to two Git repos: onboarding repo (tenant values.yaml) and tenant GitOps repo (app manifests, resource claims)
 
 ## Directory Structure
 
@@ -36,22 +36,25 @@ services/portal/backend/
       session.go               # Session management (secure cookies)
       middleware.go            # Auth middleware (validate session, extract user)
     tenants/
-      handler.go               # Tenant CRUD (via tenant GitOps repo commits)
+      handler.go               # Tenant CRUD (via onboarding repo commits)
       values.go                # Generate/parse tenant values.yaml
       membership.go            # OIDC group → role assignment in values
       onboarding.go            # Tenant onboarding workflow
     catalog/
-      features.go              # Tenant chart feature discovery (what can be enabled)
-      xrd.go                   # Crossplane XRD listing and details
-      storage.go               # StorageClass discovery
+      charts.go                # Helm chart template discovery from ConfigMap
+      xrd.go                   # Crossplane XRD discovery (argoplane.io/catalog label)
     apps/
-      handler.go               # Application CRUD (via Git commits + ArgoCD API)
-      manifest.go              # Manifest generation (Deployment, Service, Ingress)
+      handler.go               # Application CRUD (via tenant GitOps repo commits)
+      application.go           # ArgoCD Application manifest generation (common Helm chart)
+    resources/
+      handler.go               # Platform resource CRUD (via tenant GitOps repo commits)
+      claim.go                 # Crossplane XRD claim manifest generation
     argocd/
       client.go                # ArgoCD REST API client
     gitops/
-      repo.go                  # Git operations (clone, commit, push)
-      values.go                # YAML generation helpers for values.yaml
+      onboarding_repo.go       # Onboarding repo operations (tenants/ values.yaml)
+      tenant_repo.go           # Tenant GitOps repo operations (apps/, resources/)
+      values.go                # YAML generation helpers
     k8s/
       client.go                # Kubernetes client-go setup
   go.mod
@@ -81,9 +84,10 @@ type Config struct {
     ArgocdURL        string `envconfig:"ARGOCD_URL" required:"true"`
     ArgocdAuthToken  string `envconfig:"ARGOCD_AUTH_TOKEN"`
     SessionSecret    string `envconfig:"SESSION_SECRET" required:"true"`
-    TenantRepoURL    string `envconfig:"TENANT_REPO_URL" required:"true"`
-    TenantRepoBranch string `envconfig:"TENANT_REPO_BRANCH" default:"main"`
-    TenantChartRef   string `envconfig:"TENANT_CHART_REF"`
+    OnboardingRepoURL    string `envconfig:"ONBOARDING_REPO_URL" required:"true"`
+    OnboardingRepoBranch string `envconfig:"ONBOARDING_REPO_BRANCH" default:"main"`
+    CatalogConfigMap     string `envconfig:"CATALOG_CONFIGMAP" default:"argoplane-catalog-charts"`
+    ChartRegistryURL     string `envconfig:"CHART_REGISTRY_URL"`
     LogLevel         string `envconfig:"LOG_LEVEL" default:"info"`
     StaticDir        string `envconfig:"STATIC_DIR" default:"./static"`
     KubeConfig       string `envconfig:"KUBECONFIG"`
@@ -110,14 +114,20 @@ mux.HandleFunc("GET /api/v1/tenants/{cluster}/{name}/membership", s.tenants.Hand
 mux.HandleFunc("PUT /api/v1/tenants/{cluster}/{name}/membership", s.tenants.HandleUpdateMembership)
 
 // Service catalog (authenticated)
-mux.HandleFunc("GET /api/v1/catalog/features", s.catalog.HandleFeatures)
-mux.HandleFunc("GET /api/v1/catalog/xrds", s.catalog.HandleXRDs)
-mux.HandleFunc("GET /api/v1/catalog/storageclasses", s.catalog.HandleStorageClasses)
+mux.HandleFunc("GET /api/v1/catalog/charts", s.catalog.HandleCharts)    // Helm chart templates from ConfigMap
+mux.HandleFunc("GET /api/v1/catalog/xrds", s.catalog.HandleXRDs)        // Crossplane XRDs with catalog label
 
-// Applications (authenticated, tenant-scoped)
+// Applications (authenticated, tenant-scoped, writes to tenant GitOps repo)
 mux.HandleFunc("GET /api/v1/apps", s.apps.HandleList)
 mux.HandleFunc("POST /api/v1/apps", s.apps.HandleCreate)
 mux.HandleFunc("GET /api/v1/apps/{namespace}/{name}", s.apps.HandleGet)
+mux.HandleFunc("PUT /api/v1/apps/{namespace}/{name}", s.apps.HandleUpdate)
+mux.HandleFunc("DELETE /api/v1/apps/{namespace}/{name}", s.apps.HandleDelete)
+
+// Platform resources (authenticated, tenant-scoped, writes to tenant GitOps repo)
+mux.HandleFunc("GET /api/v1/resources", s.resources.HandleList)
+mux.HandleFunc("POST /api/v1/resources", s.resources.HandleCreate)
+mux.HandleFunc("DELETE /api/v1/resources/{namespace}/{name}", s.resources.HandleDelete)
 
 // Clusters (authenticated)
 mux.HandleFunc("GET /api/v1/clusters", s.clusters.HandleList)
@@ -174,34 +184,60 @@ func (s *Server) authorizedTenants(ctx context.Context, groups []string) ([]Tena
 
 All queries are scoped by the user's authorized tenants. Never return data from tenants the user doesn't belong to.
 
-## Tenant GitOps Repo Operations
+## Git Operations (Two Repos)
 
-The portal's primary write path is committing to the tenant GitOps repo:
+The portal commits to two Git repos:
 
 ```go
-type TenantRepo struct {
+// Onboarding repo: tenant lifecycle (values.yaml)
+type OnboardingRepo struct {
     repoURL  string
     branch   string
-    // auth: deploy key or GitHub App token
 }
 
 // Onboard a new tenant: create directory + values.yaml
-func (r *TenantRepo) CreateTenant(ctx context.Context, cluster, name string, values TenantValues) error {
-    // Clone repo (or pull latest)
-    // Create tenants/<cluster>/<name>/values.yaml
-    // Git add, commit, push
+func (r *OnboardingRepo) CreateTenant(ctx context.Context, cluster, name string, values TenantValues) error {
+    // Create tenants/<cluster>/<name>/values.yaml via GitHub/GitLab API
     // ApplicationSet discovers the new directory, creates Application
-    // ArgoCD renders tenant Helm chart with values, syncs
+    // ArgoCD renders tenant Helm chart with values (guardrails)
 }
 
-// Update tenant config (membership, features, network policies)
-func (r *TenantRepo) UpdateTenant(ctx context.Context, cluster, name string, values TenantValues) error {
-    // Pull latest
-    // Update tenants/<cluster>/<name>/values.yaml
-    // Git add, commit, push
+// Update tenant config (membership, quotas, allowed resources)
+func (r *OnboardingRepo) UpdateTenant(ctx context.Context, cluster, name string, values TenantValues) error {
+    // Update tenants/<cluster>/<name>/values.yaml via GitHub/GitLab API
     // ArgoCD detects drift, syncs
 }
+
+// Tenant GitOps repo: apps and platform resources
+type TenantGitOpsRepo struct {
+    repoURL  string
+    branch   string
+}
+
+// Deploy an app: generate ArgoCD Application manifest referencing common Helm chart
+func (r *TenantGitOpsRepo) CreateApp(ctx context.Context, namespace, name string, chartRef ChartRef, values map[string]any) error {
+    // Generate ArgoCD Application manifest with common chart + values
+    // Add argoplane.io/managed-by: portal annotation
+    // Commit to apps/<name>.yaml in tenant GitOps repo
+}
+
+// Request a platform resource: generate Crossplane XRD claim
+func (r *TenantGitOpsRepo) CreateResource(ctx context.Context, namespace, name string, xrd XRDRef, params map[string]any) error {
+    // Generate Crossplane XRD claim manifest
+    // Add argoplane.io/managed-by: portal annotation
+    // Commit to resources/<name>/claim.yaml in tenant GitOps repo
+}
 ```
+
+Use GitHub/GitLab REST API for single-file operations (stateless). Use shallow clones for multi-file operations. Authenticate via GitHub App tokens or deploy keys (shared via ArgoCD repocreds).
+
+## Service Catalog Discovery
+
+The catalog combines two sources:
+
+1. **Helm chart templates**: read from a ConfigMap (name from `CATALOG_CONFIGMAP` env var). Platform team curates entries with chart name, repo URL, version, description, and default values. Used for app deployment (web-app, worker, cron-job profiles).
+
+2. **Crossplane XRDs**: auto-discovered from K8s API. Filtered by `argoplane.io/catalog: "true"` label. Cross-referenced with tenant's AppProject resource whitelist. Used for platform resources (databases, caches, registries).
 
 ## Key Dependencies
 

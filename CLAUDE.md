@@ -11,10 +11,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Core Idea
 
-Developers deploying through ArgoCD can see if their app is synced. What they can't see: their logs, alerts, backup status, network flows, policy violations, or what the platform offers. Platform engineers can't easily manage RBAC, onboard teams, or publish their platform services.
+Developers deploying through ArgoCD can see if their app is synced. What they can't see: their logs, alerts, backup status, network flows, policy violations, or what the platform offers. Platform engineers can't easily onboard teams or make their platform services discoverable.
 
 **Extensions** (inside ArgoCD) surface operational visibility: "What's happening with my app?"
 **Portal** (standalone) adds self-service and management: "What does my platform offer, and how do I use it?"
+
+The portal builds on the **tenant chart pattern**: a platform team defines a tenant Helm chart (guardrails: namespace, AppProject, policies, quotas) and each tenant gets their own GitOps repo for apps (via a common Helm chart) and platform resources (via Crossplane XRD claims). The portal is a UI that generates manifests and commits to Git. ArgoCD does the rest.
 
 Extensions fall into two categories:
 
@@ -49,14 +51,14 @@ The portal is a single Go binary that serves the SvelteKit frontend and REST API
 - **Velero**: Backup/restore (backups extension)
 - **Cilium/Hubble**: Network visibility (networking extension)
 - **Kyverno**: Policy enforcement (policies extension)
-- **Crossplane**: Platform resource abstraction (portal service catalog)
+- **Crossplane**: Platform resource abstraction (XRD claims for databases, caches, registries in tenant GitOps repos)
 - **Tempo/Jaeger**: Distributed tracing (traces extension, future)
 - **cert-manager**: Certificate lifecycle (certificates extension, future)
 
 ### Multi-Tenancy
 
 Extensions: ArgoCD's native RBAC and AppProjects for tenant isolation.
-Portal: OIDC groups from Dex map to teams, namespaces, and ArgoCD AppProjects.
+Portal: Two-repo model. A **tenant onboarding repo** (platform-managed) holds per-tenant `values.yaml` files discovered by an ApplicationSet. Each tenant gets a **GitOps repo** (tenant-owned) for apps and platform resources. OIDC groups from Dex map to roles in the tenant's AppProject.
 
 ### State
 
@@ -110,7 +112,7 @@ docs/
 
 **Future (Phase 3):** Traces (Tempo/Jaeger), Certificates (cert-manager), Scaling (HPA/KEDA)
 
-**Phase 4:** ArgoPlane Portal (SvelteKit + Go). Auth via Dex, service catalog, team onboarding, RBAC editor, AppProject management, simple app deploy, progressive GitOps.
+**Phase 4:** ArgoPlane Portal (SvelteKit + Go). Auth via Dex, tenant onboarding (values.yaml to onboarding repo), service catalog (Helm chart templates + Crossplane XRDs), app deployment (common Helm chart via ArgoCD Application manifests), platform resource requests (XRD claims), team membership (OIDC groups to roles), progressive GitOps (Level 0 forms to Level 2 full Git ownership).
 
 See [`docs/extension-roadmap.md`](docs/extension-roadmap.md) for the full phased roadmap.
 

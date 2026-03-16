@@ -79,10 +79,10 @@ staticClients:
 ### K8s Access
 
 Use `client-go` for:
-- Reading tenant chart values schema (what can be configured per tenant)
-- Reading platform capabilities (StorageClasses, IngressClasses, CRDs, XRDs)
+- Reading Crossplane XRDs with `argoplane.io/catalog: "true"` label (service catalog)
+- Reading catalog ConfigMap for Helm chart templates (app deployment catalog)
 - Reading tenant status (namespaces, AppProjects, Applications)
-- Reading Crossplane XRDs and compositions (service catalog)
+- Reading AppProject resource whitelists (filter catalog by tenant permissions)
 
 For in-cluster: automatic service account. For dev: kubeconfig.
 
@@ -95,15 +95,20 @@ Use ArgoCD's REST API for:
 
 Authenticate with a service account token or forward the user's OIDC token.
 
-### Git Access (Tenant GitOps Repo)
+### Git Access (Two Repos)
 
-The portal's primary write operation is committing to the tenant GitOps repo:
+The portal commits to two Git repos:
+
+**Tenant onboarding repo** (platform-managed, shared):
 - **Tenant onboarding**: create `tenants/<cluster>/<tenant>/values.yaml` and commit
-- **Tenant config changes**: update values.yaml (membership, features, network policies) and commit
-- **App deploys**: commit manifests to the tenant's app directory
-- **Service requests**: update tenant values to enable features (databases, registries, etc.)
+- **Tenant config changes**: update values.yaml (membership, quotas, allowed resources) and commit
 
-Use a Git library (e.g., `go-git`) or shell out to `git` CLI. Authenticate with deploy keys or GitHub App tokens.
+**Tenant GitOps repo** (per-tenant, tenant-owned):
+- **App deploys**: generate ArgoCD Application manifest (referencing common Helm chart with values), commit to `apps/<name>.yaml`
+- **Platform resources**: generate Crossplane XRD claim manifest, commit to `resources/<name>/claim.yaml`
+- All portal-generated resources carry `argoplane.io/managed-by: portal` annotation
+
+Use GitHub/GitLab REST API for single-file operations (stateless, no clone needed). Use shallow clones for multi-file operations. Authenticate with GitHub App tokens or deploy keys via ArgoCD repocreds.
 
 ### API Routes
 
@@ -124,15 +129,21 @@ mux.HandleFunc("PUT /api/v1/tenants/{cluster}/{name}", s.handleUpdateTenant)
 mux.HandleFunc("GET /api/v1/tenants/{cluster}/{name}/membership", s.handleMembership)
 mux.HandleFunc("PUT /api/v1/tenants/{cluster}/{name}/membership", s.handleUpdateMembership)
 
-// Service catalog (derived from tenant chart capabilities)
-mux.HandleFunc("GET /api/v1/catalog/features", s.handleFeatures)
-mux.HandleFunc("GET /api/v1/catalog/xrds", s.handleXRDs)
-mux.HandleFunc("GET /api/v1/catalog/storageclasses", s.handleStorageClasses)
+// Service catalog (authenticated)
+mux.HandleFunc("GET /api/v1/catalog/charts", s.handleCharts)    // Helm chart templates from ConfigMap
+mux.HandleFunc("GET /api/v1/catalog/xrds", s.handleXRDs)        // Crossplane XRDs with catalog label
 
-// Applications (tenant-scoped)
+// Applications (tenant-scoped, writes to tenant GitOps repo)
 mux.HandleFunc("GET /api/v1/apps", s.handleApps)
 mux.HandleFunc("POST /api/v1/apps", s.handleCreateApp)
 mux.HandleFunc("GET /api/v1/apps/{namespace}/{name}", s.handleApp)
+mux.HandleFunc("PUT /api/v1/apps/{namespace}/{name}", s.handleUpdateApp)
+mux.HandleFunc("DELETE /api/v1/apps/{namespace}/{name}", s.handleDeleteApp)
+
+// Platform resources (tenant-scoped, writes to tenant GitOps repo)
+mux.HandleFunc("GET /api/v1/resources", s.handleResources)
+mux.HandleFunc("POST /api/v1/resources", s.handleCreateResource)
+mux.HandleFunc("DELETE /api/v1/resources/{namespace}/{name}", s.handleDeleteResource)
 
 // Clusters
 mux.HandleFunc("GET /api/v1/clusters", s.handleClusters)
@@ -152,9 +163,10 @@ type Config struct {
     ArgocdURL        string `envconfig:"ARGOCD_URL" required:"true"`
     ArgocdAuthToken  string `envconfig:"ARGOCD_AUTH_TOKEN"`
     SessionSecret    string `envconfig:"SESSION_SECRET" required:"true"`
-    TenantRepoURL    string `envconfig:"TENANT_REPO_URL" required:"true"`
-    TenantRepoBranch string `envconfig:"TENANT_REPO_BRANCH" default:"main"`
-    TenantChartRef   string `envconfig:"TENANT_CHART_REF"`
+    OnboardingRepoURL    string `envconfig:"ONBOARDING_REPO_URL" required:"true"`
+    OnboardingRepoBranch string `envconfig:"ONBOARDING_REPO_BRANCH" default:"main"`
+    CatalogConfigMap     string `envconfig:"CATALOG_CONFIGMAP" default:"argoplane-catalog-charts"`
+    ChartRegistryURL     string `envconfig:"CHART_REGISTRY_URL"`
     LogLevel         string `envconfig:"LOG_LEVEL" default:"info"`
     StaticDir        string `envconfig:"STATIC_DIR" default:"./static"`
 }
@@ -162,13 +174,13 @@ type Config struct {
 
 ## Multi-Tenancy
 
-OIDC groups from Dex map to tenants via the tenant chart's `adminGroupIds` and role bindings in AppProjects:
+OIDC groups from Dex map to tenants via the tenant values.yaml roles and ArgoCD AppProject role bindings:
 
 ```
 OIDC groups → Tenant AppProject roles → Scoped access
 ```
 
-The portal reads tenant configurations from the tenant GitOps repo and ArgoCD AppProjects to determine which tenants a user can see and manage. Users only see tenants where their OIDC groups match an admin or contributor group.
+The portal reads tenant configurations from the onboarding repo and ArgoCD AppProjects to determine which tenants a user can see and manage. For each authorized tenant, the portal also reads the tenant's GitOps repo to show apps and resources. Users only see tenants where their OIDC groups match a role.
 
 ## Deployment
 
@@ -187,8 +199,9 @@ cd services/portal/backend && go run ./cmd/   # :8080
 
 - No CI/CD (that's GitHub Actions / GitLab CI)
 - No monitoring dashboards (that's Grafana; extensions handle contextual metrics)
-- No secret management (that's External Secrets Operator; the tenant chart wires it up)
+- No secret management (that's the platform team's domain; handled via operators like ESO, OpenBao, etc.)
 - No direct K8s mutations (commit to Git, ArgoCD syncs)
 - No RBAC policy editing (platform team owns role definitions in the tenant chart; portal only manages group-to-role assignments)
-- No tenant chart editing (platform team owns the chart; portal only generates values.yaml)
+- No tenant chart editing (platform team owns the chart; portal only generates values.yaml for the onboarding repo)
+- No common chart editing (platform team owns the common Helm chart; portal only fills in values)
 - No Backstage (purpose-built for ArgoCD platforms, not a generic plugin framework)
