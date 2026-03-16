@@ -6,9 +6,17 @@ Each extension is a self-contained module under `extensions/<name>/`:
 
 - `extensions/metrics/` - Prometheus metrics integration
 - `extensions/backups/` - Velero backup/restore visibility
-- `extensions/networking/` - Cilium/Hubble network flows (future)
-- `extensions/security/` - Image scan results (future)
-- `extensions/secrets/` - External Secrets status (future)
+- `extensions/networking/` - Cilium/Hubble network flows
+- `extensions/logs/` - Loki log aggregation (Phase 2)
+- `extensions/policies/` - Kyverno policy reports (Phase 2)
+- `extensions/alerts/` - Prometheus/Alertmanager alerts (Phase 2)
+
+## Portal Structure
+
+The portal lives at `services/portal/` with two subdirectories:
+
+- `services/portal/frontend/` - SvelteKit + TypeScript + Tailwind v4 + shadcn-svelte
+- `services/portal/backend/` - Go HTTP server (REST API, OIDC, K8s, ArgoCD, Git)
 
 ## API Naming
 
@@ -19,7 +27,26 @@ Concise, precise, consistent. Use domain terminology.
 - **Action verbs for mutations**: `TriggerBackup`, `RestoreBackup`
 - **No obscure abbreviations**: prefer clarity over brevity
 
+### Extension APIs
+
+Served via ArgoCD proxy: `/extensions/<name>/api/v1/...`
+
+### Portal APIs
+
+Served directly by the Go backend: `/api/v1/...`
+
+Groups:
+- `/api/v1/auth/*` - OIDC login/callback/logout/me
+- `/api/v1/catalog/*` - service catalog (XRDs, StorageClasses, IngressClasses)
+- `/api/v1/apps/*` - application management
+- `/api/v1/claims/*` - Crossplane claims
+- `/api/v1/teams/*` - team management
+- `/api/v1/admin/*` - platform admin (RBAC, projects, clusters)
+- `/api/v1/health` - healthcheck
+
 ## Backend Services
+
+### Extension backends
 
 Each extension backend is a Go HTTP server that:
 
@@ -27,7 +54,17 @@ Each extension backend is a Go HTTP server that:
 2. Exposes a JSON HTTP API consumed by the UI extension via ArgoCD's proxy
 3. Receives ArgoCD identity headers (`Argocd-Username`, `Argocd-User-Id`, `Argocd-User-Groups`, `Argocd-Target-Cluster-URL`, `Argocd-Target-Cluster-Name`)
 
-No gRPC between extensions. No GraphQL. Plain HTTP/JSON via ArgoCD proxy.
+### Portal backend
+
+The portal backend is a Go HTTP server that:
+
+1. Handles OIDC auth via Dex (login, callback, session management)
+2. Queries K8s API via `client-go` (XRDs, StorageClasses, namespaces, CRDs)
+3. Queries ArgoCD REST API (Applications, Projects, RBAC)
+4. Commits to Git repos (portal-managed or team-owned) for app deploys and claims
+5. Serves SvelteKit static files in production
+
+No gRPC. No GraphQL. Plain HTTP/JSON REST.
 
 ## Dependency Injection
 
@@ -54,12 +91,15 @@ Never manually edit files with `.gen.go` suffix or `generated.go`. Regenerate fr
 
 ## Deployment
 
-**Production: Helm chart** at `deploy/helm/argoplane/`. Deploys extension backends, services, proxy config, RBAC policies, custom styles, and branding. Each extension is a toggle in `values.yaml`. The chart generates ConfigMaps that users merge into ArgoCD's own config.
+**Production: Helm chart** at `deploy/helm/argoplane/`. Deploys extension backends, the portal, services, proxy config, RBAC policies, custom styles, and branding. Each extension is a toggle in `values.yaml`. The portal is a separate Deployment.
 
 **UI extension bundles** are packaged into an init container image (`deploy/docker/Dockerfile.ui-extensions`). This image runs as an init container on argocd-server, copying JS bundles into `/tmp/extensions/`. Build with `make build-ui-extensions-image`.
+
+**Portal** is a single Docker image containing the Go binary and built SvelteKit static files. Build with `deploy/docker/Dockerfile.portal`.
 
 **Development: Makefile** workflow uses `kubectl apply` and `kubectl cp` for fast iteration. Not for production.
 
 - Backend Docker images tagged with git commit hash (or `dev` locally)
 - UI extensions init container image: `ghcr.io/natrontech/argoplane-ui-extensions:<version>`
+- Portal image: `ghcr.io/natrontech/argoplane-portal:<version>`
 - Helm chart handles everything except patching ArgoCD's own ConfigMaps/Deployment (documented in NOTES.txt)

@@ -6,12 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **ArgoPlane** is a two-layer developer platform built on ArgoCD:
 
-1. **ArgoCD extensions**: best-in-class operational tools (metrics, logs, backups, alerts, networking, policies, traces) that live inside ArgoCD's UI. These work standalone for power users.
-2. **ArgoPlane Portal** (future): a separate developer portal layer that adds platform discoverability, self-service, and aggregated views on top of ArgoCD. Loosely coupled: extensions never depend on the portal.
+1. **ArgoCD extensions**: best-in-class operational tools (metrics, logs, backups, alerts, networking, policies, traces) that live inside ArgoCD's UI. Resource tabs, app views, status panels, and system-level sidebar pages. These work standalone for power users.
+2. **ArgoPlane Portal**: a standalone self-service platform (SvelteKit + Go) that adds platform discoverability, self-service, team onboarding, RBAC management, and progressive GitOps on top of ArgoCD. Loosely coupled: extensions never depend on the portal.
 
 ## Core Idea
 
-Developers deploying through ArgoCD can see if their app is synced. What they can't see: their logs, alerts, backup status, network flows, policy violations, or what the platform offers. ArgoPlane's extensions surface operational visibility inside ArgoCD. The portal (later) adds discoverability and self-service that ArgoCD's extension system can't handle well.
+Developers deploying through ArgoCD can see if their app is synced. What they can't see: their logs, alerts, backup status, network flows, policy violations, or what the platform offers. Platform engineers can't easily manage RBAC, onboard teams, or publish their platform services.
+
+**Extensions** (inside ArgoCD) surface operational visibility: "What's happening with my app?"
+**Portal** (standalone) adds self-service and management: "What does my platform offer, and how do I use it?"
 
 Extensions fall into two categories:
 
@@ -22,30 +25,42 @@ Extensions fall into two categories:
 
 ### Extension Pattern
 
-Every ArgoPlane feature follows the same pattern:
+Every ArgoPlane extension follows the same pattern:
 
-1. **React/TypeScript UI extension** registered via `window.extensionsAPI` (resource tabs, status panels, system-level pages)
+1. **React/TypeScript UI extension** registered via `window.extensionsAPI` (resource tabs, status panels, system-level pages, app views, top bar actions)
 2. **Go backend service** that queries the underlying system (Prometheus, Velero, Cilium, etc.)
 3. **ArgoCD proxy extension** that routes `/extensions/<name>/*` requests from the UI to the Go backend
+
+### Portal Pattern
+
+The portal is a single Go binary that serves the SvelteKit frontend and REST API:
+
+1. **SvelteKit frontend** (TypeScript + Tailwind v4 + shadcn-svelte) built as static files
+2. **Go backend** that serves the API and static files from the same port
+3. **Auth via Dex**: OIDC against ArgoCD's Dex instance (same users, same groups)
+4. **Git as control plane**: portal commits manifests to Git, ArgoCD syncs
 
 ### Key Components
 
 - **ArgoCD v3.3.3**: GitOps engine, UI host, RBAC, proxy extension routing
+- **Dex**: OIDC provider (bundled with ArgoCD), shared by ArgoCD and the portal
 - **Prometheus**: Metrics and alerts (metrics + alerts extensions)
 - **Loki**: Log aggregation (logs extension)
 - **Velero**: Backup/restore (backups extension)
 - **Cilium/Hubble**: Network visibility (networking extension)
 - **Kyverno**: Policy enforcement (policies extension)
+- **Crossplane**: Platform resource abstraction (portal service catalog)
 - **Tempo/Jaeger**: Distributed tracing (traces extension, future)
 - **cert-manager**: Certificate lifecycle (certificates extension, future)
 
 ### Multi-Tenancy
 
-ArgoPlane relies on ArgoCD's native RBAC and AppProjects for tenant isolation. No additional auth layer.
+Extensions: ArgoCD's native RBAC and AppProjects for tenant isolation.
+Portal: OIDC groups from Dex map to teams, namespaces, and ArgoCD AppProjects.
 
 ### State
 
-No database. All state comes from Kubernetes (ArgoCD Applications, CRDs, operator resources), Prometheus, and Git.
+No database. All state comes from Kubernetes (ArgoCD Applications, CRDs, operator resources), Prometheus, Git, and Dex.
 
 ## Monorepo Structure
 
@@ -64,12 +79,18 @@ extensions/
   backups/
     ui/
     backend/         # Go service querying Velero
+  networking/
+    ui/
+    backend/         # Go service querying Cilium/Hubble
   ...
 services/
+  portal/
+    frontend/        # SvelteKit + Tailwind v4 + shadcn-svelte
+    backend/         # Go HTTP server (REST API, OIDC, K8s, ArgoCD, Git)
   docs/              # Documentation site (SvelteKit + mdsvex)
 deploy/
   helm/argoplane/    # Helm chart for production deployment
-  docker/            # Dockerfiles (UI extensions init container)
+  docker/            # Dockerfiles (UI extensions init container, portal)
   argocd/            # ArgoCD configuration (styles, proxy config, branding)
   extensions/        # Per-extension deployment manifests (dev)
 hack/                # Kind cluster, ArgoCD setup, dev scripts
@@ -85,9 +106,11 @@ docs/
 
 **Next (Phase 2):** Logs (Loki), Policies (Kyverno), Alerts (Prometheus Rules / Alertmanager)
 
+**Phase 2.5:** System-level extensions (ArgoPlane Overview sidebar page, Alerts Dashboard, Portal link button)
+
 **Future (Phase 3):** Traces (Tempo/Jaeger), Certificates (cert-manager), Scaling (HPA/KEDA)
 
-**Phase 4:** ArgoPlane Portal (SvelteKit). Platform discoverability, self-service catalog (Crossplane), aggregated views. Planned separately.
+**Phase 4:** ArgoPlane Portal (SvelteKit + Go). Auth via Dex, service catalog, team onboarding, RBAC editor, AppProject management, simple app deploy, progressive GitOps.
 
 See [`docs/extension-roadmap.md`](docs/extension-roadmap.md) for the full phased roadmap.
 
@@ -99,6 +122,16 @@ make argocd-password # Print admin password
 make argocd-portforward  # Port-forward UI to localhost:8080
 make test-integration    # Run integration tests
 make clean-all           # Destroy everything
+```
+
+### Portal Development
+
+```sh
+# Terminal 1: SvelteKit dev server
+cd services/portal/frontend && npm run dev    # :5173, proxies /api to :8080
+
+# Terminal 2: Go backend
+cd services/portal/backend && go run ./cmd/   # :8080
 ```
 
 ## Commands
@@ -116,7 +149,7 @@ make clean-all           # Destroy everything
 
 ## Deployment
 
-For production, use the Helm chart at `deploy/helm/argoplane/`. It deploys extension backends, proxy config, RBAC, styles, and branding ConfigMaps. UI bundles are loaded via an init container image (`deploy/docker/Dockerfile.ui-extensions`). See `services/docs/` for full deployment and ArgoCD configuration docs.
+For production, use the Helm chart at `deploy/helm/argoplane/`. It deploys extension backends, the portal, proxy config, RBAC, styles, and branding ConfigMaps. UI bundles are loaded via an init container image (`deploy/docker/Dockerfile.ui-extensions`). See `services/docs/` for full deployment and ArgoCD configuration docs.
 
 ## License
 
