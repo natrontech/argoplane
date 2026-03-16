@@ -98,12 +98,16 @@ export const PolicyFlowsTab: React.FC<{ resource: any; tree?: any; application: 
   const fetchData = React.useCallback(() => {
     if (!namespace) return;
     const flowsP = fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter, directionFilter)
-      .catch(() => ({ flows: [], hubble: false } as FlowsResponse));
+      .catch(() => null);
     const endpointsP = fetchEndpoints(namespace, appNamespace, appName, project)
-      .catch(() => [] as EndpointSummary[]);
+      .catch(() => null);
 
     Promise.all([flowsP, endpointsP])
-      .then(([fl, ep]) => { setFlowsResponse(fl); setEndpoints(ep); setError(null); })
+      .then(([fl, ep]) => {
+        if (fl !== null) setFlowsResponse(fl);
+        if (ep !== null) setEndpoints(ep);
+        setError(null);
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [namespace, appNamespace, appName, project, timeRange, verdictFilter, directionFilter]);

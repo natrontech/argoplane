@@ -9,18 +9,20 @@ import (
 	"github.com/natrontech/argoplane/extensions/networking/backend/internal/hubble"
 )
 
-// FlowsHandler handles requests for Hubble flow data.
+// FlowsHandler handles requests for Hubble flow data. It uses a FlowBuffer
+// to accumulate flows across requests so that short-lived flows are not lost
+// between UI refresh intervals.
 type FlowsHandler struct {
-	hubbleClient *hubble.Client
+	buffer *hubble.FlowBuffer
 }
 
-// NewFlowsHandler creates a new FlowsHandler. If hubbleClient is nil,
+// NewFlowsHandler creates a new FlowsHandler. If buffer is nil,
 // the handler returns an empty response indicating Hubble is not configured.
-func NewFlowsHandler(hubbleClient *hubble.Client) *FlowsHandler {
-	return &FlowsHandler{hubbleClient: hubbleClient}
+func NewFlowsHandler(buffer *hubble.FlowBuffer) *FlowsHandler {
+	return &FlowsHandler{buffer: buffer}
 }
 
-// Handle returns recent flows for a namespace from Hubble Relay.
+// Handle returns recent flows for a namespace from the flow buffer.
 func (h *FlowsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
 	if namespace == "" {
@@ -28,7 +30,7 @@ func (h *FlowsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.hubbleClient == nil {
+	if h.buffer == nil {
 		WriteJSON(w, map[string]any{
 			"flows":   []any{},
 			"hubble":  false,
@@ -62,7 +64,7 @@ func (h *FlowsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	verdict := r.URL.Query().Get("verdict")
 	direction := r.URL.Query().Get("direction")
 
-	flows, err := h.hubbleClient.Flows(r.Context(), hubble.FlowsRequest{
+	flows, err := h.buffer.Flows(r.Context(), hubble.FlowsRequest{
 		Namespace: namespace,
 		Since:     since,
 		Limit:     limit,

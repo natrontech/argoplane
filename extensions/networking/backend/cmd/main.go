@@ -18,9 +18,11 @@ import (
 )
 
 type Config struct {
-	Port           string `envconfig:"PORT" default:"8082"`
-	LogLevel       string `envconfig:"LOG_LEVEL" default:"info"`
-	HubbleRelayURL string `envconfig:"HUBBLE_RELAY_URL" default:""`
+	Port                   string        `envconfig:"PORT" default:"8082"`
+	LogLevel               string        `envconfig:"LOG_LEVEL" default:"info"`
+	HubbleRelayURL         string        `envconfig:"HUBBLE_RELAY_URL" default:""`
+	FlowBufferRetention    time.Duration `envconfig:"FLOW_BUFFER_RETENTION" default:"15m"`
+	FlowBufferMaxPerNs     int           `envconfig:"FLOW_BUFFER_MAX_PER_NS" default:"5000"`
 }
 
 func main() {
@@ -59,11 +61,18 @@ func main() {
 		slog.Info("hubble relay not configured, flows endpoint will return empty results")
 	}
 
+	// Create flow buffer to accumulate flows across requests.
+	var flowBuffer *hubble.FlowBuffer
+	if hubbleClient != nil {
+		flowBuffer = hubble.NewFlowBuffer(hubbleClient, config.FlowBufferRetention, config.FlowBufferMaxPerNs)
+		slog.Info("flow buffer initialized", "retention", config.FlowBufferRetention, "maxPerNs", config.FlowBufferMaxPerNs)
+	}
+
 	// Create handlers.
 	policiesHandler := handler.NewPoliciesHandler(dynClient)
 	endpointsHandler := handler.NewEndpointsHandler(dynClient)
 	identitiesHandler := handler.NewIdentitiesHandler(dynClient)
-	flowsHandler := handler.NewFlowsHandler(hubbleClient)
+	flowsHandler := handler.NewFlowsHandler(flowBuffer)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/policies", policiesHandler.HandleNamespaced)

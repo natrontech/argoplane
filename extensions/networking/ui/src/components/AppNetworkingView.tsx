@@ -53,22 +53,64 @@ function openPolicy(appNs: string, appName: string, policy: PolicySummary) {
 // Policy-to-flow matching
 // ============================================================
 
-function findMatchingPolicies(flow: FlowSummary, policies: PolicySummary[], endpoints: EndpointSummary[]): PolicySummary[] {
+interface PolicyMatch {
+  policy: PolicySummary;
+  defaultDeny: boolean; // true if this policy causes default deny (selects the pod but has no rules for this direction)
+}
+
+function findMatchingPolicies(flow: FlowSummary, policies: PolicySummary[], endpoints: EndpointSummary[]): PolicyMatch[] {
   if (flow.verdict !== 'DROPPED') return [];
   const targetPod = flow.direction === 'INGRESS' ? flow.destPod : flow.sourcePod;
   const targetNs = flow.direction === 'INGRESS' ? flow.destNamespace : flow.sourceNamespace;
   if (!targetPod) return [];
   const ep = endpoints.find((e) => e.name === targetPod && e.namespace === targetNs);
   const podLabels = ep?.labels || {};
-  return policies.filter((p) => {
-    if (flow.direction === 'INGRESS' && !p.hasIngress) return false;
-    if (flow.direction === 'EGRESS' && !p.hasEgress) return false;
-    if (p.scope === 'namespace' && p.namespace && p.namespace !== targetNs) return false;
+
+  const matches: PolicyMatch[] = [];
+
+  for (const p of policies) {
+    // Check namespace scope.
+    if (p.scope === 'namespace' && p.namespace && p.namespace !== targetNs) continue;
+
+    // Check if the policy's endpointSelector matches the pod.
     if (p.endpointSelector && Object.keys(p.endpointSelector).length > 0) {
-      return Object.entries(p.endpointSelector).every(([k, v]) => podLabels[`k8s:${k}`] === v || podLabels[k] === v);
+      const selectorMatches = Object.entries(p.endpointSelector).every(
+        ([k, v]) => podLabels[`k8s:${k}`] === v || podLabels[k] === v
+      );
+      if (!selectorMatches) continue;
     }
-    return true;
-  });
+
+    // Policy selects this pod. Now check if it has rules for this direction.
+    const hasRulesForDirection = flow.direction === 'INGRESS' ? p.hasIngress : p.hasEgress;
+
+    if (hasRulesForDirection) {
+      // Policy has explicit rules for this direction. It could be allowing
+      // other traffic while implicitly denying this flow.
+      matches.push({ policy: p, defaultDeny: false });
+    } else {
+      // Policy selects the pod but has NO rules for this direction.
+      // In Cilium, ANY policy selecting a pod activates default deny
+      // for the directions it declares. But if another policy on this
+      // pod declares rules for this direction, this pod already has
+      // default deny active. Mark as default deny contributor.
+      //
+      // Also: a policy with ingress rules but no egress rules does NOT
+      // create default deny for egress. So only flag as default deny
+      // if at least one other policy on this pod has rules for this direction.
+      matches.push({ policy: p, defaultDeny: true });
+    }
+  }
+
+  // If we only have default-deny matches (no policy with explicit rules for
+  // this direction), check if ANY policy that selects this pod has rules for
+  // this direction. If none do, this is a pure default deny scenario.
+  const hasExplicitMatch = matches.some((m) => !m.defaultDeny);
+  if (!hasExplicitMatch && matches.length > 0) {
+    // Keep the default deny matches. They are the policies selecting the pod
+    // that collectively cause traffic to be denied.
+  }
+
+  return matches;
 }
 
 // ============================================================
@@ -267,10 +309,16 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
   const fetchAll = React.useCallback(() => {
     if (!namespace) return;
     Promise.all([
-      fetchPoliciesWithOwnership(namespace, resourceRefs, appNamespace, appName, project).catch(() => [] as PolicySummary[]),
-      fetchEndpoints(namespace, appNamespace, appName, project).catch(() => [] as EndpointSummary[]),
-      fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter, directionFilter).catch(() => ({ flows: [], hubble: false } as FlowsResponse)),
-    ]).then(([pol, ep, fl]) => { setPolicies(pol); setEndpoints(ep); setFlowsResponse(fl); setError(null); })
+      fetchPoliciesWithOwnership(namespace, resourceRefs, appNamespace, appName, project).catch(() => null),
+      fetchEndpoints(namespace, appNamespace, appName, project).catch(() => null),
+      fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter, directionFilter).catch(() => null),
+    ]).then(([pol, ep, fl]) => {
+      // Only update state if the fetch succeeded; keep previous data on failure.
+      if (pol !== null) setPolicies(pol);
+      if (ep !== null) setEndpoints(ep);
+      if (fl !== null) setFlowsResponse(fl);
+      setError(null);
+    })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [namespace, appNamespace, appName, project, resourceRefs, timeRange, verdictFilter, directionFilter]);
@@ -301,8 +349,8 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
   const policyDropCounts = React.useMemo(() => {
     const counts = new Map<string, number>();
     for (const f of flows.filter((f) => f.verdict === 'DROPPED')) {
-      for (const p of findMatchingPolicies(f, policies, endpoints)) {
-        const key = `${p.scope}-${p.name}`;
+      for (const m of findMatchingPolicies(f, policies, endpoints)) {
+        const key = `${m.policy.scope}-${m.policy.name}`;
         counts.set(key, (counts.get(key) || 0) + 1);
       }
     }
@@ -536,7 +584,9 @@ const FlowRow: React.FC<{
   const dstLinkable = f.destPod && isPodInTree(f.destNamespace, f.destPod);
   const isDrop = f.verdict === 'DROPPED';
 
-  const matchingPolicies = React.useMemo(() => isDrop ? findMatchingPolicies(f, policies, endpoints) : [], [f, isDrop, policies, endpoints]);
+  const policyMatches = React.useMemo(() => isDrop ? findMatchingPolicies(f, policies, endpoints) : [], [f, isDrop, policies, endpoints]);
+  const matchingPolicies = React.useMemo(() => policyMatches.map((m) => m.policy), [policyMatches]);
+  const hasDefaultDeny = React.useMemo(() => policyMatches.some((m) => m.defaultDeny) && !policyMatches.some((m) => !m.defaultDeny), [policyMatches]);
 
   return (<>
     <tr style={{ ...(isDrop ? dropRowStyle : {}), cursor: 'pointer' }} onClick={onToggleExpand}>
@@ -557,12 +607,13 @@ const FlowRow: React.FC<{
       <td style={tdStyle}>
         {matchingPolicies.length > 0 ? (
           <div style={policyChipRow}>
-            {matchingPolicies.slice(0, 2).map((p) => isPolicyInTree(p) ? (
+            {hasDefaultDeny && <span style={{ ...policyChipPlain, color: colors.yellowText, borderColor: colors.yellow }}>default deny</span>}
+            {matchingPolicies.slice(0, hasDefaultDeny ? 1 : 2).map((p) => isPolicyInTree(p) ? (
               <span key={p.name} onClick={(e) => { e.stopPropagation(); openPolicy(appNamespace, appName, p); }} style={policyChipLink} title={`Open ${p.name}`}>{p.name}</span>
             ) : (
               <span key={p.name} style={policyChipPlain} onClick={(e) => { e.stopPropagation(); onPolicyClick(p.name); }} title={`View ${p.name}`}>{p.name}</span>
             ))}
-            {matchingPolicies.length > 2 && <span style={policyChipPlain}>+{matchingPolicies.length - 2}</span>}
+            {matchingPolicies.length > (hasDefaultDeny ? 1 : 2) && <span style={policyChipPlain}>+{matchingPolicies.length - (hasDefaultDeny ? 1 : 2)}</span>}
           </div>
         ) : isDrop ? <span style={{ color: colors.gray400, fontSize: fontSize.xs }}>unknown</span> : <span style={{ color: colors.gray300, fontSize: fontSize.xs }}>-</span>}
       </td>
@@ -584,22 +635,38 @@ const FlowRow: React.FC<{
             <div style={whyDropped}>
               <div style={whyDroppedTitle}>Why was this dropped?</div>
               {f.dropReason && <div style={whyDroppedReason}>Cilium drop reason: <strong>{f.dropReason}</strong></div>}
-              {matchingPolicies.length > 0 ? (
+              {policyMatches.length > 0 ? (
                 <div style={whyDroppedDetail}>
-                  Matching {f.direction === 'INGRESS' ? 'ingress' : 'egress'} policies on {f.direction === 'INGRESS' ? f.destPod : f.sourcePod}:
-                  {matchingPolicies.map((p) => (
-                    <div key={p.name} style={whyDroppedPolicy}>
-                      <strong>{p.name}</strong> ({p.ownership})
-                      {(f.direction === 'INGRESS' ? p.ingressRules : p.egressRules)?.map((r, ri) => (
-                        <div key={ri} style={ruleDetail}>
-                          {f.direction === 'INGRESS' ? 'Allow' : 'Allow'} {r.ports.join(', ')} {f.direction === 'INGRESS' ? 'from' : 'to'} {r.peers.join(', ')}
+                  {hasDefaultDeny ? (
+                    <>
+                      <div style={{ marginBottom: 6, color: colors.yellowText }}>
+                        Default deny: the following {policyMatches.length === 1 ? 'policy selects' : 'policies select'} {f.direction === 'INGRESS' ? f.destPod : f.sourcePod} but {policyMatches.length === 1 ? 'has' : 'have'} no {f.direction === 'INGRESS' ? 'ingress' : 'egress'} rules allowing this traffic. In Cilium, any policy selecting a pod activates default deny for the directions it governs.
+                      </div>
+                      {policyMatches.map((m) => (
+                        <div key={m.policy.name} style={whyDroppedPolicy}>
+                          <strong>{m.policy.name}</strong> ({m.policy.ownership}, {m.policy.scope})
+                          {m.defaultDeny && <span style={{ marginLeft: 6, fontSize: fontSize.xs, color: colors.yellowText }}>default deny</span>}
                         </div>
                       ))}
-                      <div style={ruleExplanation}>
-                        This policy does not have a rule that permits {f.protocol}:{f.destPort} {f.direction === 'INGRESS' ? 'from' : 'to'} {f.direction === 'INGRESS' ? (f.sourcePod || f.sourceIP || 'the source') : (f.destPod || f.destDNS || f.destIP || 'the destination')}.
-                      </div>
-                    </div>
-                  ))}
+                    </>
+                  ) : (
+                    <>
+                      Matching {f.direction === 'INGRESS' ? 'ingress' : 'egress'} policies on {f.direction === 'INGRESS' ? f.destPod : f.sourcePod}:
+                      {policyMatches.map((m) => (
+                        <div key={m.policy.name} style={whyDroppedPolicy}>
+                          <strong>{m.policy.name}</strong> ({m.policy.ownership})
+                          {(f.direction === 'INGRESS' ? m.policy.ingressRules : m.policy.egressRules)?.map((r, ri) => (
+                            <div key={ri} style={ruleDetail}>
+                              Allow {r.ports.join(', ')} {f.direction === 'INGRESS' ? 'from' : 'to'} {r.peers.join(', ')}
+                            </div>
+                          ))}
+                          <div style={ruleExplanation}>
+                            This policy does not have a rule that permits {f.protocol}:{f.destPort} {f.direction === 'INGRESS' ? 'from' : 'to'} {f.direction === 'INGRESS' ? (f.sourcePod || f.sourceIP || 'the source') : (f.destPod || f.destDNS || f.destIP || 'the destination')}.
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               ) : (
                 <div style={whyDroppedDetail}>No matching policies found. Traffic may be denied by a default-deny policy or a policy not visible to this app.</div>

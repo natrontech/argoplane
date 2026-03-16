@@ -53,11 +53,16 @@ function openPolicy(appNs: string, appName: string, policy: PolicySummary) {
 // Policy matching for dropped flows
 // ============================================================
 
+interface PolicyMatch {
+  policy: PolicySummary;
+  defaultDeny: boolean;
+}
+
 function findMatchingPolicies(
   flow: FlowSummary,
   policies: PolicySummary[],
   endpoints: EndpointSummary[],
-): PolicySummary[] {
+): PolicyMatch[] {
   if (flow.verdict !== 'DROPPED') return [];
 
   const targetPod = flow.direction === 'INGRESS' ? flow.destPod : flow.sourcePod;
@@ -67,18 +72,23 @@ function findMatchingPolicies(
   const ep = endpoints.find((e) => e.name === targetPod && e.namespace === targetNs);
   const podLabels = ep?.labels || {};
 
-  return policies.filter((p) => {
-    if (flow.direction === 'INGRESS' && !p.hasIngress) return false;
-    if (flow.direction === 'EGRESS' && !p.hasEgress) return false;
-    if (p.scope === 'namespace' && p.namespace && p.namespace !== targetNs) return false;
+  const matches: PolicyMatch[] = [];
+
+  for (const p of policies) {
+    if (p.scope === 'namespace' && p.namespace && p.namespace !== targetNs) continue;
 
     if (p.endpointSelector && Object.keys(p.endpointSelector).length > 0) {
-      return Object.entries(p.endpointSelector).every(
+      const selectorMatches = Object.entries(p.endpointSelector).every(
         ([k, v]) => podLabels[`k8s:${k}`] === v || podLabels[k] === v,
       );
+      if (!selectorMatches) continue;
     }
-    return true;
-  });
+
+    const hasRulesForDirection = flow.direction === 'INGRESS' ? p.hasIngress : p.hasEgress;
+    matches.push({ policy: p, defaultDeny: !hasRulesForDirection });
+  }
+
+  return matches;
 }
 
 // ============================================================
@@ -136,14 +146,19 @@ export const PodFlowsTab: React.FC<{ resource: any; tree?: any; application: any
   const fetchData = React.useCallback(() => {
     if (!namespace) return;
     const flowsP = fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter, directionFilter)
-      .catch(() => ({ flows: [], hubble: false } as FlowsResponse));
+      .catch(() => null);
     const policiesP = fetchPoliciesWithOwnership(namespace, resourceRefs, appNamespace, appName, project)
-      .catch(() => [] as PolicySummary[]);
+      .catch(() => null);
     const endpointsP = fetchEndpoints(namespace, appNamespace, appName, project)
-      .catch(() => [] as EndpointSummary[]);
+      .catch(() => null);
 
     Promise.all([flowsP, policiesP, endpointsP])
-      .then(([fl, pol, ep]) => { setFlowsResponse(fl); setPolicies(pol); setEndpoints(ep); setError(null); })
+      .then(([fl, pol, ep]) => {
+        if (fl !== null) setFlowsResponse(fl);
+        if (pol !== null) setPolicies(pol);
+        if (ep !== null) setEndpoints(ep);
+        setError(null);
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [namespace, appNamespace, appName, project, resourceRefs, timeRange, verdictFilter, directionFilter]);
@@ -257,7 +272,9 @@ export const PodFlowsTab: React.FC<{ resource: any; tree?: any; application: any
                     const isDrop = f.verdict === 'DROPPED';
                     const peerLinkable = peerPod && isPodInTree(peerNs, peerPod);
 
-                    const matchingPolicies = isDrop ? findMatchingPolicies(f, policies, endpoints) : [];
+                    const policyMatches = isDrop ? findMatchingPolicies(f, policies, endpoints) : [];
+                    const matchingPolicies = policyMatches.map((m) => m.policy);
+                    const hasDefaultDeny = policyMatches.some((m) => m.defaultDeny) && !policyMatches.some((m) => !m.defaultDeny);
 
                     return (
                       <tr key={`${f.time}-${i}`} style={isDrop ? dropRow : undefined}>
@@ -285,7 +302,8 @@ export const PodFlowsTab: React.FC<{ resource: any; tree?: any; application: any
                         <td style={tdStyle}>
                           {matchingPolicies.length > 0 ? (
                             <div style={policyChipRow}>
-                              {matchingPolicies.slice(0, 2).map((p) => isPolicyInTree(p) ? (
+                              {hasDefaultDeny && <span style={{ ...policyChipPlain, color: colors.yellowText, borderColor: colors.yellow }}>default deny</span>}
+                              {matchingPolicies.slice(0, hasDefaultDeny ? 1 : 2).map((p) => isPolicyInTree(p) ? (
                                 <span
                                   key={p.name}
                                   onClick={(e) => { e.stopPropagation(); openPolicy(appNamespace, appName, p); }}
@@ -303,8 +321,8 @@ export const PodFlowsTab: React.FC<{ resource: any; tree?: any; application: any
                                   {p.name}
                                 </span>
                               ))}
-                              {matchingPolicies.length > 2 && (
-                                <span style={policyChipPlain}>+{matchingPolicies.length - 2}</span>
+                              {matchingPolicies.length > (hasDefaultDeny ? 1 : 2) && (
+                                <span style={policyChipPlain}>+{matchingPolicies.length - (hasDefaultDeny ? 1 : 2)}</span>
                               )}
                             </div>
                           ) : isDrop ? (
