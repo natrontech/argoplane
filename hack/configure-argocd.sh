@@ -91,10 +91,10 @@ fi
 # Grant extension invoke permissions (required in ArgoCD v3)
 log "Configuring extension RBAC"
 kubectl -n "${ARGOCD_NS}" patch configmap argocd-rbac-cm --type merge \
-    -p '{"data":{"policy.csv":"p, role:admin, extensions, invoke, metrics, allow\np, role:admin, extensions, invoke, backups, allow\np, role:admin, extensions, invoke, networking, allow\n","policy.default":"role:admin"}}' \
+    -p '{"data":{"policy.csv":"p, role:admin, extensions, invoke, metrics, allow\np, role:admin, extensions, invoke, backups, allow\np, role:admin, extensions, invoke, networking, allow\np, role:admin, extensions, invoke, logs, allow\n","policy.default":"role:admin"}}' \
     2>/dev/null || \
     kubectl -n "${ARGOCD_NS}" create configmap argocd-rbac-cm \
-        --from-literal=policy.csv="$(printf 'p, role:admin, extensions, invoke, metrics, allow\np, role:admin, extensions, invoke, backups, allow\np, role:admin, extensions, invoke, networking, allow\n')" \
+        --from-literal=policy.csv="$(printf 'p, role:admin, extensions, invoke, metrics, allow\np, role:admin, extensions, invoke, backups, allow\np, role:admin, extensions, invoke, networking, allow\np, role:admin, extensions, invoke, logs, allow\n')" \
         --from-literal=policy.default=role:admin
 
 # Restart argocd-server to pick up all changes

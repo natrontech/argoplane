@@ -2,6 +2,7 @@
   "data": {
     "extension.config.metrics": "services:\n- url: http://argoplane-metrics-backend.argocd.svc:8080\n",
     "extension.config.backups": "services:\n- url: http://argoplane-backups-backend.argocd.svc:8081\n",
-    "extension.config.networking": "services:\n- url: http://argoplane-networking-backend.argocd.svc:8082\n"
+    "extension.config.networking": "services:\n- url: http://argoplane-networking-backend.argocd.svc:8082\n",
+    "extension.config.logs": "services:\n- url: http://argoplane-logs-backend.argocd.svc:8083\n"
   }
 }

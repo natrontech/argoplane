@@ -204,6 +204,48 @@ extensions:
           resources: ["ciliumnetworkpolicies", "ciliumclusterwidenetworkpolicies", "ciliumendpoints", "ciliumidentities"]
           verbs: ["get", "list", "watch"]
 
+  logs:
+    enabled: false
+    image:
+      repository: ghcr.io/natrontech/argoplane-logs-backend
+      tag: ""
+      pullPolicy: IfNotPresent
+    replicas: 1
+    revisionHistoryLimit: 3
+    port: 8083
+    env:
+      LOKI_URL: "http://loki.monitoring.svc:3100"
+      LOG_LEVEL: "info"
+    extraEnv: []
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+    podLabels: {}
+    podAnnotations: {}
+    priorityClassName: ""
+    podSecurityContext:
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 65534
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop: ["ALL"]
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    serviceAccount:
+      create: false
+      annotations: {}
+    rbac:
+      rules: []
+
 # -- Optional ArgoPlane services (docs site, portal)
 services:
   docs:

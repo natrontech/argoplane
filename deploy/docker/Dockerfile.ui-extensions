@@ -20,5 +20,6 @@ RUN mkdir -p /extensions
 COPY extensions/metrics/ui/dist/extension-metrics.js /extensions/
 COPY extensions/backups/ui/dist/extension-backups.js /extensions/
 COPY extensions/networking/ui/dist/extension-networking.js /extensions/
+COPY extensions/logs/ui/dist/extension-logs.js /extensions/
 COPY deploy/argocd/argoplane-links.js /extensions/extension-argoplane-links.js
 ENTRYPOINT ["cp", "-r", "/extensions/.", "/tmp/extensions/"]

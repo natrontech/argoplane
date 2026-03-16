@@ -34,7 +34,7 @@ jobs:
     needs: [meta]
     strategy:
       matrix:
-        extension: [metrics, backups, networking]
+        extension: [metrics, backups, networking, logs]
     steps:
       - uses: actions/checkout@v4
 
@@ -84,6 +84,7 @@ jobs:
             extensions/metrics/ui/package-lock.json
             extensions/backups/ui/package-lock.json
             extensions/networking/ui/package-lock.json
+            extensions/logs/ui/package-lock.json
 
       - name: Install shared dependencies
         working-directory: extensions/shared
@@ -91,7 +92,7 @@ jobs:
 
       - name: Build all UI extensions
         run: |
-          for ext in metrics backups networking; do
+          for ext in metrics backups networking logs; do
             echo "==> Building $ext UI"
             (cd extensions/$ext/ui && npm ci && npm run build)
           done

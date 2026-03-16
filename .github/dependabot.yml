@@ -30,6 +30,16 @@ updates:
         patterns:
           - "*"
 
+  # Go modules - logs backend
+  - package-ecosystem: gomod
+    directory: /extensions/logs/backend
+    schedule:
+      interval: monthly
+    groups:
+      go-dependencies:
+        patterns:
+          - "*"
+
   # Go modules - integration tests
   - package-ecosystem: gomod
     directory: /tests
@@ -70,6 +80,16 @@ updates:
         patterns:
           - "*"
 
+  # npm - logs UI
+  - package-ecosystem: npm
+    directory: /extensions/logs/ui
+    schedule:
+      interval: monthly
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+
   # npm - docs site
   - package-ecosystem: npm
     directory: /services/docs
@@ -103,6 +123,16 @@ updates:
   # Docker - networking backend
   - package-ecosystem: docker
     directory: /extensions/networking/backend
+    schedule:
+      interval: monthly
+    groups:
+      docker-dependencies:
+        patterns:
+          - "*"
+
+  # Docker - logs backend
+  - package-ecosystem: docker
+    directory: /extensions/logs/backend
     schedule:
       interval: monthly
     groups:

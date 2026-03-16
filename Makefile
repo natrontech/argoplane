@@ -6,7 +6,7 @@ CLUSTER_NAME    ?= argoplane-dev
 ARGOCD_VERSION  ?= v3.3.3
 ARGOCD_NS       := argocd
 KIND_CONFIG     := hack/kind-config.yaml
-EXTENSIONS      := metrics backups networking
+EXTENSIONS      := metrics backups networking logs
 
 # --- Cluster lifecycle ---
 
@@ -81,6 +81,10 @@ prometheus: cluster ## Install kube-prometheus-stack (idempotent)
 velero: cluster ## Install Velero with MinIO (idempotent)
 	@bash hack/install-velero.sh
 
+.PHONY: loki
+loki: cluster ## Install Loki + Promtail for log aggregation (idempotent)
+	@bash hack/install-loki.sh
+
 .PHONY: crossplane
 crossplane: cluster ## Install Crossplane (idempotent)
 	@echo "==> Installing Crossplane"
@@ -103,7 +107,7 @@ external-secrets: cluster ## Install External Secrets Operator (idempotent)
 # --- Dev environment ---
 
 .PHONY: dev-infra
-dev-infra: argocd argocd-configure prometheus velero ## Full local dev stack (kind + ArgoCD + operators)
+dev-infra: argocd argocd-configure prometheus velero loki ## Full local dev stack (kind + ArgoCD + operators)
 	@echo ""
 	@echo "==> Dev infrastructure ready!"
 	@echo "    Run 'make argocd-portforward' to access the UI"
