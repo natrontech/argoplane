@@ -38,6 +38,7 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
     new Set(['debug', 'info', 'warn', 'error'])
   );
   const [searchText, setSearchText] = React.useState('');
+  const [debouncedSearch, setDebouncedSearch] = React.useState('');
   const [timeRange, setTimeRange] = React.useState<TimeRange>('1h');
 
   const namespace = resource?.metadata?.namespace || '';
@@ -49,6 +50,12 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
 
   const isPod = kind === 'Pod';
   const showPod = !isPod;
+
+  // Debounce search text: only update debouncedSearch after 500ms of no typing
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchText), 500);
+    return () => clearTimeout(timer);
+  }, [searchText]);
 
   const fetchAll = React.useCallback(() => {
     if (!namespace || !name) return;
@@ -64,7 +71,7 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
       namespace,
       ...(isPod ? { pod: name } : { resource: name, kind }),
       container: selectedContainer || undefined,
-      filter: searchText || undefined,
+      filter: debouncedSearch || undefined,
       severity: severityFilter,
       start: start.toISOString(),
       end: end.toISOString(),
@@ -83,7 +90,7 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [namespace, name, kind, isPod, selectedContainer, searchText, activeSeverities, timeRange, appNamespace, appName, project]);
+  }, [namespace, name, kind, isPod, selectedContainer, debouncedSearch, activeSeverities, timeRange, appNamespace, appName, project]);
 
   // Fetch containers for the dropdown
   React.useEffect(() => {
@@ -93,8 +100,8 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
       .catch(() => setContainers([]));
   }, [namespace, appNamespace, appName, project]);
 
+  // Fetch data when filters change (but not on every keystroke thanks to debounce)
   React.useEffect(() => {
-    setLoading(true);
     fetchAll();
   }, [fetchAll]);
 

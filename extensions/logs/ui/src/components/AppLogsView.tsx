@@ -46,12 +46,19 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
     new Set(['debug', 'info', 'warn', 'error'])
   );
   const [searchText, setSearchText] = React.useState('');
+  const [debouncedSearch, setDebouncedSearch] = React.useState('');
   const [timeRange, setTimeRange] = React.useState<TimeRange>('1h');
 
   const namespace = application?.spec?.destination?.namespace || '';
   const appName = application?.metadata?.name || '';
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
+
+  // Debounce search text: only update debouncedSearch after 500ms of no typing
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchText), 500);
+    return () => clearTimeout(timer);
+  }, [searchText]);
 
   const fetchAll = React.useCallback(() => {
     if (!namespace) return;
@@ -67,7 +74,7 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
       namespace,
       pod: selectedPod || undefined,
       container: selectedContainer || undefined,
-      filter: searchText || undefined,
+      filter: debouncedSearch || undefined,
       severity: severityFilter,
       start: start.toISOString(),
       end: end.toISOString(),
@@ -86,7 +93,7 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [namespace, selectedPod, selectedContainer, searchText, activeSeverities, timeRange, appNamespace, appName, project]);
+  }, [namespace, selectedPod, selectedContainer, debouncedSearch, activeSeverities, timeRange, appNamespace, appName, project]);
 
   // Fetch containers and pods for dropdowns
   React.useEffect(() => {
@@ -99,8 +106,8 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
       .catch(() => setPods([]));
   }, [namespace, appNamespace, appName, project]);
 
+  // Fetch data when filters change (but not on every keystroke thanks to debounce)
   React.useEffect(() => {
-    setLoading(true);
     fetchAll();
   }, [fetchAll]);
 

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StatusBadge, colors, fonts, fontSize } from '@argoplane/shared';
+import { colors, fonts } from '@argoplane/shared';
 import { LogEntry, Severity } from '../types';
 
 interface LogLineProps {
@@ -32,57 +32,65 @@ function formatTimestamp(ts: string): string {
   return `${h}:${m}:${s}.${ms}`;
 }
 
-export const LogLine: React.FC<LogLineProps> = ({ entry, showPod }) => {
+/** Shorten pod name: "guestbook-ui-84774bdc6f-k2x9n" -> "guestbook-ui..k2x9n" */
+function shortenPod(pod: string): string {
+  const match = pod.match(/^(.+)-[a-f0-9]{8,10}-([a-z0-9]{5})$/);
+  if (match) return `${match[1]}..${match[2]}`;
+  return pod;
+}
+
+export const LogLine: React.FC<LogLineProps> = React.memo(({ entry, showPod }) => {
   const isError = entry.severity === 'error';
+  const isWarn = entry.severity === 'warn';
+  const color = severityColor[entry.severity];
 
   return (
     <div style={{
       display: 'flex',
-      alignItems: 'flex-start',
-      gap: 8,
-      padding: '2px 8px',
+      alignItems: 'baseline',
+      gap: 6,
+      padding: '1px 8px',
       fontFamily: fonts.mono,
-      fontSize: fontSize.xs,
-      lineHeight: '20px',
-      backgroundColor: isError ? 'rgba(220, 38, 38, 0.05)' : 'transparent',
-      borderBottom: `1px solid ${colors.gray200}`,
+      fontSize: '11px',
+      lineHeight: '18px',
+      backgroundColor: isError ? 'rgba(220, 38, 38, 0.06)' : isWarn ? 'rgba(234, 179, 8, 0.04)' : 'transparent',
+      borderBottom: '1px solid #f5f5f4',
     }}>
-      <span style={{ color: colors.gray500, whiteSpace: 'nowrap', flexShrink: 0 }}>
+      <span style={{ color: colors.gray500, whiteSpace: 'nowrap', flexShrink: 0, fontSize: '10px' }}>
         {formatTimestamp(entry.timestamp)}
       </span>
-      <StatusBadge
-        status={entry.severity === 'error' ? 'failed' : entry.severity === 'warn' ? 'degraded' : entry.severity === 'debug' ? 'in-progress' : 'healthy'}
-        label=""
-      />
       <span style={{
-        color: severityColor[entry.severity],
-        fontWeight: 600,
-        fontSize: fontSize.xs,
-        minWidth: 28,
+        color,
+        fontWeight: 700,
+        fontSize: '10px',
+        minWidth: 24,
         flexShrink: 0,
+        textAlign: 'center',
       }}>
         {severityLabel[entry.severity]}
       </span>
       {showPod && entry.labels?.pod && (
-        <span style={{
-          color: colors.gray500,
-          whiteSpace: 'nowrap',
-          flexShrink: 0,
-          maxWidth: 180,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-        }}>
-          {entry.labels.pod}
+        <span
+          title={entry.labels.pod}
+          style={{
+            color: colors.gray500,
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+            fontSize: '10px',
+          }}
+        >
+          {shortenPod(entry.labels.pod)}
         </span>
       )}
       <span style={{
         color: colors.gray800,
         whiteSpace: 'pre-wrap',
-        wordBreak: 'break-all',
+        wordBreak: 'break-word',
         flex: 1,
+        overflow: 'hidden',
       }}>
         {entry.line}
       </span>
     </div>
   );
-};
+});
