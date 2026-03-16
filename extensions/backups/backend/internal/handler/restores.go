@@ -128,6 +128,9 @@ func (h *RestoresHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 				"name":      restoreName,
 				"namespace": h.veleroNamespace,
 				"labels": map[string]interface{}{
+					"argoplane.io/triggered-by": sanitizeLabelValue(username),
+				},
+				"annotations": map[string]interface{}{
 					"argoplane.io/triggered-by": username,
 				},
 			},

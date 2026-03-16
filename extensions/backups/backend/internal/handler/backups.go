@@ -109,8 +109,11 @@ func (h *BackupsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	backupName := fmt.Sprintf("%s-ondemand-%d", req.Namespace, time.Now().Unix())
 
 	labels := map[string]interface{}{
-		"argoplane.io/triggered-by": username,
+		"argoplane.io/triggered-by": sanitizeLabelValue(username),
 		"argoplane.io/on-demand":    "true",
+	}
+	annotations := map[string]interface{}{
+		"argoplane.io/triggered-by": username,
 	}
 	if req.ScheduleName != "" {
 		labels["velero.io/schedule-name"] = req.ScheduleName
@@ -122,9 +125,10 @@ func (h *BackupsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 			"apiVersion": "velero.io/v1",
 			"kind":       "Backup",
 			"metadata": map[string]interface{}{
-				"name":      backupName,
-				"namespace": h.veleroNamespace,
-				"labels":    labels,
+				"name":        backupName,
+				"namespace":   h.veleroNamespace,
+				"labels":      labels,
+				"annotations": annotations,
 			},
 			"spec": map[string]interface{}{
 				"includedNamespaces": []interface{}{req.Namespace},
@@ -170,6 +174,9 @@ func (h *BackupsHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 				"name":      deleteReqName,
 				"namespace": h.veleroNamespace,
 				"labels": map[string]interface{}{
+					"argoplane.io/triggered-by": sanitizeLabelValue(username),
+				},
+				"annotations": map[string]interface{}{
 					"argoplane.io/triggered-by": username,
 				},
 			},
