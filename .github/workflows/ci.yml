@@ -45,7 +45,7 @@ jobs:
 
       - name: Build
         working-directory: extensions/${{ matrix.extension }}/backend
-        run: CGO_ENABLED=0 go build ./cmd/
+        run: CGO_ENABLED=0 go build -o /dev/null ./cmd/
 
   # --- Go integration tests module ---
   go-test-lint:
