@@ -20,13 +20,14 @@ interface ConfigDashboardProps {
   groupKind: string;
   namespace: string;
   name: string;
+  namePattern?: string; // Override auto-computed name pattern (e.g., ".*" for namespace-wide)
   appNamespace: string;
   appName: string;
   project: string;
 }
 
 export const ConfigDashboard: React.FC<ConfigDashboardProps> = ({
-  applicationName, groupKind, namespace, name,
+  applicationName, groupKind, namespace, name, namePattern,
   appNamespace, appName, project,
 }) => {
   const [config, setConfig] = React.useState<DashboardConfig | null>(null);
@@ -61,9 +62,9 @@ export const ConfigDashboard: React.FC<ConfigDashboardProps> = ({
     ? rows.filter((r) => r.tab === activeTab || (!r.tab && activeTab === tabs[0]))
     : rows;
 
-  // For workloads, the name template should match pods: "name-.*"
-  // For pods, exact match: "name"
-  const nameParam = groupKind === 'pod' ? name : `${name}-.*`;
+  // Use explicit pattern if provided, otherwise auto-compute:
+  // workloads: "name-.*", pods: exact "name"
+  const nameParam = namePattern || (groupKind === 'pod' ? name : `${name}-.*`);
 
   return (
     <div>

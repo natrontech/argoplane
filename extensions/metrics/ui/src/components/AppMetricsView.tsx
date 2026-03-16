@@ -127,6 +127,7 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
           groupKind="deployment"
           namespace={namespace}
           name={appName}
+          namePattern=".*"
           appNamespace={appNamespace}
           appName={appName}
           project={project}
