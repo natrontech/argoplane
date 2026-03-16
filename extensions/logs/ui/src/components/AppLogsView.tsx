@@ -1,15 +1,5 @@
 import * as React from 'react';
-import {
-  Loading,
-  EmptyState,
-  SectionHeader,
-  MetricCard,
-  colors,
-  fonts,
-  fontSize,
-  panel,
-  spacing,
-} from '@argoplane/shared';
+import { fonts } from '@argoplane/shared';
 import { fetchLogs, fetchLabelValues, fetchVolume } from '../api';
 import { LogEntry, Severity, TimeRange, VolumePoint } from '../types';
 import { LogLine } from './LogLine';
@@ -132,74 +122,109 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
   const errorCount = entries.filter((e) => e.severity === 'error').length;
   const warnCount = entries.filter((e) => e.severity === 'warn').length;
 
-  if (loading) return <Loading />;
+  if (loading) {
+    return (
+      <div style={{
+        backgroundColor: '#0d0d14',
+        borderRadius: 4,
+        padding: '40px 0',
+        textAlign: 'center',
+        fontFamily: fonts.mono,
+        fontSize: '12px',
+        color: '#8e8e8e',
+      }}>
+        Loading logs...
+      </div>
+    );
+  }
 
   if (error) {
     return (
-      <div style={panel}>
+      <div style={{
+        backgroundColor: '#0d0d14',
+        borderRadius: 4,
+        padding: '24px',
+        textAlign: 'center',
+      }}>
         <div style={{
-          padding: spacing[4],
-          color: colors.red,
           fontFamily: fonts.mono,
-          fontSize: fontSize.sm,
-          textAlign: 'center',
+          fontSize: '12px',
+          color: '#ff5286',
         }}>
-          <div>Failed to load logs: {error}</div>
-          <button
-            onClick={() => { setLoading(true); fetchAll(); }}
-            style={{
-              marginTop: spacing[2],
-              padding: '4px 12px',
-              border: `1px solid ${colors.gray200}`,
-              borderRadius: 4,
-              cursor: 'pointer',
-              fontFamily: fonts.mono,
-              fontSize: fontSize.xs,
-            }}
-          >
-            Retry
-          </button>
+          Failed to load logs: {error}
         </div>
+        <button
+          onClick={() => { setLoading(true); fetchAll(); }}
+          style={{
+            marginTop: 8,
+            padding: '4px 12px',
+            border: '1px solid #2a2a3a',
+            borderRadius: 4,
+            backgroundColor: '#1a1a2e',
+            color: '#e0e0e0',
+            cursor: 'pointer',
+            fontFamily: fonts.mono,
+            fontSize: '11px',
+          }}
+        >
+          Retry
+        </button>
       </div>
     );
   }
 
   return (
-    <div style={{ ...panel, maxWidth: '100%' }}>
-      <SectionHeader title="LOGS" />
-
+    <div style={{
+      backgroundColor: '#0d0d14',
+      borderRadius: 4,
+      border: '1px solid #1e1e1e',
+      overflow: 'hidden',
+    }}>
       {/* Stats row */}
       <div style={{
         display: 'flex',
-        gap: spacing[3],
-        padding: `${spacing[2]}px ${spacing[3]}px`,
-        borderBottom: `1px solid ${colors.gray200}`,
+        gap: 16,
+        padding: '8px 12px',
+        backgroundColor: '#111118',
+        borderBottom: '1px solid #1e1e1e',
       }}>
-        <MetricCard label="Total Entries" value={String(totalEntries)} unit="lines" />
-        <MetricCard label="Errors" value={String(errorCount)} unit="lines" />
-        <MetricCard label="Warnings" value={String(warnCount)} unit="lines" />
+        <div style={{ fontFamily: fonts.mono, fontSize: '11px' }}>
+          <span style={{ color: '#8e8e8e' }}>Total </span>
+          <span style={{ color: '#e0e0e0' }}>{totalEntries}</span>
+        </div>
+        <div style={{ fontFamily: fonts.mono, fontSize: '11px' }}>
+          <span style={{ color: '#8e8e8e' }}>Errors </span>
+          <span style={{ color: errorCount > 0 ? '#ff5286' : '#555' }}>{errorCount}</span>
+        </div>
+        <div style={{ fontFamily: fonts.mono, fontSize: '11px' }}>
+          <span style={{ color: '#8e8e8e' }}>Warnings </span>
+          <span style={{ color: warnCount > 0 ? '#ff9830' : '#555' }}>{warnCount}</span>
+        </div>
       </div>
 
-      {/* Pod selector (app view only) */}
+      {/* Pod selector */}
       {pods.length > 1 && (
         <div style={{
-          padding: `${spacing[1]}px ${spacing[3]}px`,
-          borderBottom: `1px solid ${colors.gray200}`,
+          padding: '6px 12px',
+          borderBottom: '1px solid #1e1e1e',
+          backgroundColor: '#111118',
           display: 'flex',
           alignItems: 'center',
-          gap: spacing[2],
+          gap: 8,
         }}>
-          <span style={{ fontFamily: fonts.mono, fontSize: fontSize.xs, color: colors.gray500 }}>Pod:</span>
+          <span style={{ fontFamily: fonts.mono, fontSize: '11px', color: '#8e8e8e' }}>Pod:</span>
           <select
             value={selectedPod}
             onChange={(e) => setSelectedPod(e.target.value)}
             style={{
               fontFamily: fonts.mono,
-              fontSize: fontSize.xs,
+              fontSize: '11px',
               padding: '4px 8px',
-              border: `1px solid ${colors.gray200}`,
+              border: '1px solid #2a2a3a',
               borderRadius: 4,
-              backgroundColor: 'white',
+              backgroundColor: '#1a1a2e',
+              color: '#e0e0e0',
+              outline: 'none',
             }}
           >
             <option value="">All pods</option>
@@ -227,7 +252,15 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
 
       <div style={{ maxHeight: 600, overflowY: 'auto' }}>
         {entries.length === 0 ? (
-          <EmptyState message="No logs found for the selected filters" />
+          <div style={{
+            padding: '40px 0',
+            textAlign: 'center',
+            fontFamily: fonts.mono,
+            fontSize: '12px',
+            color: '#555',
+          }}>
+            No logs found for the selected filters
+          </div>
         ) : (
           entries.map((entry, i) => (
             <LogLine key={`${entry.timestamp}-${i}`} entry={entry} showPod={true} />
@@ -237,15 +270,14 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
 
       {entries.length > 0 && (
         <div style={{
-          padding: `${spacing[2]}px ${spacing[3]}px`,
-          borderTop: `1px solid ${colors.gray200}`,
+          padding: '6px 12px',
+          borderTop: '1px solid #1e1e1e',
           fontFamily: fonts.mono,
-          fontSize: fontSize.xs,
-          color: colors.gray500,
-          display: 'flex',
-          justifyContent: 'space-between',
+          fontSize: '11px',
+          color: '#555',
+          backgroundColor: '#111118',
         }}>
-          <span>Showing {entries.length}{totalEntries > entries.length ? ` of ${totalEntries}+` : ''} entries</span>
+          Showing {entries.length}{totalEntries > entries.length ? ` of ${totalEntries}+` : ''} entries
         </div>
       )}
     </div>

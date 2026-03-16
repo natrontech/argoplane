@@ -1,14 +1,5 @@
 import * as React from 'react';
-import {
-  Loading,
-  EmptyState,
-  SectionHeader,
-  colors,
-  fonts,
-  fontSize,
-  panel,
-  spacing,
-} from '@argoplane/shared';
+import { fonts } from '@argoplane/shared';
 import { fetchLogs, fetchLabelValues, fetchVolume } from '../api';
 import { ExtensionProps, LogEntry, Severity, TimeRange, VolumePoint } from '../types';
 import { LogLine } from './LogLine';
@@ -122,40 +113,64 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
     });
   }, []);
 
-  if (loading) return <Loading />;
+  if (loading) {
+    return (
+      <div style={{
+        backgroundColor: '#0d0d14',
+        borderRadius: 4,
+        padding: '40px 0',
+        textAlign: 'center',
+        fontFamily: fonts.mono,
+        fontSize: '12px',
+        color: '#8e8e8e',
+      }}>
+        Loading logs...
+      </div>
+    );
+  }
 
   if (error) {
     return (
-      <div style={panel}>
+      <div style={{
+        backgroundColor: '#0d0d14',
+        borderRadius: 4,
+        padding: '24px',
+        textAlign: 'center',
+      }}>
         <div style={{
-          padding: spacing[4],
-          color: colors.red,
           fontFamily: fonts.mono,
-          fontSize: fontSize.sm,
-          textAlign: 'center',
+          fontSize: '12px',
+          color: '#ff5286',
         }}>
-          <div>Failed to load logs: {error}</div>
-          <button
-            onClick={() => { setLoading(true); fetchAll(); }}
-            style={{
-              marginTop: spacing[2],
-              padding: '4px 12px',
-              border: `1px solid ${colors.gray200}`,
-              borderRadius: 4,
-              cursor: 'pointer',
-              fontFamily: fonts.mono,
-              fontSize: fontSize.xs,
-            }}
-          >
-            Retry
-          </button>
+          Failed to load logs: {error}
         </div>
+        <button
+          onClick={() => { setLoading(true); fetchAll(); }}
+          style={{
+            marginTop: 8,
+            padding: '4px 12px',
+            border: '1px solid #2a2a3a',
+            borderRadius: 4,
+            backgroundColor: '#1a1a2e',
+            color: '#e0e0e0',
+            cursor: 'pointer',
+            fontFamily: fonts.mono,
+            fontSize: '11px',
+          }}
+        >
+          Retry
+        </button>
       </div>
     );
   }
 
   return (
-    <div style={panel}>
+    <div style={{
+      backgroundColor: '#0d0d14',
+      borderRadius: 4,
+      border: '1px solid #1e1e1e',
+      overflow: 'hidden',
+    }}>
       <LogToolbar
         containers={containers}
         selectedContainer={selectedContainer}
@@ -173,7 +188,15 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
 
       <div style={{ maxHeight: 600, overflowY: 'auto' }}>
         {entries.length === 0 ? (
-          <EmptyState message="No logs found for the selected filters" />
+          <div style={{
+            padding: '40px 0',
+            textAlign: 'center',
+            fontFamily: fonts.mono,
+            fontSize: '12px',
+            color: '#555',
+          }}>
+            No logs found for the selected filters
+          </div>
         ) : (
           entries.map((entry, i) => (
             <LogLine key={`${entry.timestamp}-${i}`} entry={entry} showPod={showPod} />
@@ -183,15 +206,14 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
 
       {entries.length > 0 && (
         <div style={{
-          padding: `${spacing[2]}px ${spacing[3]}px`,
-          borderTop: `1px solid ${colors.gray200}`,
+          padding: '6px 12px',
+          borderTop: '1px solid #1e1e1e',
           fontFamily: fonts.mono,
-          fontSize: fontSize.xs,
-          color: colors.gray500,
-          display: 'flex',
-          justifyContent: 'space-between',
+          fontSize: '11px',
+          color: '#555',
+          backgroundColor: '#111118',
         }}>
-          <span>Showing {entries.length}{totalEntries > entries.length ? ` of ${totalEntries}+` : ''} entries</span>
+          Showing {entries.length}{totalEntries > entries.length ? ` of ${totalEntries}+` : ''} entries
         </div>
       )}
     </div>
