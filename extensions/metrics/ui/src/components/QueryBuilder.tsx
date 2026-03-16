@@ -14,8 +14,8 @@ import {
 } from '@argoplane/shared';
 import { fetchCustomQuery, fetchDiscoverMetrics, fetchLabelNames, fetchLabelValues } from '../api';
 import { CustomQueryResult, TimeRange, DiscoveredMetric, NamedSeries } from '../types';
-import { MultiSeriesChart } from './MultiSeriesChart';
-import { TimeRangeSelector } from './TimeRangeSelector';
+import { MetricsChart } from './MetricsChart';
+import { DurationSelector } from './DurationSelector';
 
 interface QueryBuilderProps {
   namespace: string;
@@ -255,7 +255,7 @@ export const QueryBuilder: React.FC<QueryBuilderProps> = ({
 
       {/* Controls */}
       <div style={controlsRow}>
-        <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
+        <DurationSelector value={timeRange} onChange={setTimeRange} />
         <Button primary onClick={runQuery} disabled={loading || !query}>
           {loading ? 'Running...' : 'Execute'}
         </Button>
@@ -289,12 +289,13 @@ export const QueryBuilder: React.FC<QueryBuilderProps> = ({
                   };
                 });
                 return (
-                  <MultiSeriesChart
+                  <MetricsChart
                     timestamps={timestamps}
                     series={aligned}
                     colors={SERIES_COLORS}
-                    height={220}
+                    height={200}
                     timeRange={timeRange}
+                    syncId="argoplane-query"
                     formatValue={formatSmartValue}
                   />
                 );
