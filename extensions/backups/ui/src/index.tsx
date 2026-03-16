@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { AppBackupsView } from './components/AppBackupsView';
-import { BackupStatusPanel } from './components/BackupStatusPanel';
+
 import { ScheduleBackupsTab } from './components/ScheduleBackupsTab';
 import { BackupDetailTab } from './components/BackupDetailTab';
 
@@ -10,13 +10,6 @@ import { BackupDetailTab } from './components/BackupDetailTab';
     AppBackupsView,
     'Backups',
     'fa-archive'
-  );
-
-  // Status panel: compact backup status in the app header
-  window.extensionsAPI.registerStatusPanelExtension(
-    BackupStatusPanel,
-    'Backups',
-    'backups'
   );
 
   // Schedule resource tab: backups from a specific schedule
