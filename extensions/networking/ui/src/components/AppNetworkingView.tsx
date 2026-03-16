@@ -101,15 +101,6 @@ function findMatchingPolicies(flow: FlowSummary, policies: PolicySummary[], endp
     }
   }
 
-  // If we only have default-deny matches (no policy with explicit rules for
-  // this direction), check if ANY policy that selects this pod has rules for
-  // this direction. If none do, this is a pure default deny scenario.
-  const hasExplicitMatch = matches.some((m) => !m.defaultDeny);
-  if (!hasExplicitMatch && matches.length > 0) {
-    // Keep the default deny matches. They are the policies selecting the pod
-    // that collectively cause traffic to be denied.
-  }
-
   return matches;
 }
 
@@ -669,7 +660,16 @@ const FlowRow: React.FC<{
                   )}
                 </div>
               ) : (
-                <div style={whyDroppedDetail}>No matching policies found. Traffic may be denied by a default-deny policy or a policy not visible to this app.</div>
+                <div style={whyDroppedDetail}>{(() => {
+                  const targetPod = f.direction === 'INGRESS' ? f.destPod : f.sourcePod;
+                  const targetNs = f.direction === 'INGRESS' ? f.destNamespace : f.sourceNamespace;
+                  const ep = endpoints.find((e) => e.name === targetPod && e.namespace === targetNs);
+                  const enforcing = f.direction === 'INGRESS' ? ep?.ingressEnforcement : ep?.egressEnforcement;
+                  if (enforcing === 'true') {
+                    return `Policy enforcement is active on ${targetPod} for ${f.direction.toLowerCase()}. Traffic is denied by default. The enforcing policy may not be visible to this application (e.g., a clusterwide policy in another namespace).`;
+                  }
+                  return 'No matching policies found. Traffic may be denied by a default-deny policy or a policy not visible to this app.';
+                })()}</div>
               )}
             </div>
           )}

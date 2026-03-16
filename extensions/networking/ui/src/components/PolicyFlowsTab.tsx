@@ -71,14 +71,15 @@ export const PolicyFlowsTab: React.FC<{ resource: any; tree?: any; application: 
     return result;
   }, [resource]);
 
+  // In Cilium, having `ingress` or `egress` defined in the spec (even as an
+  // empty array) activates default deny for that direction. So we check for
+  // the field's existence, not whether it has rules.
   const hasIngress = React.useMemo(() => {
-    const ingress = resource?.spec?.ingress;
-    return Array.isArray(ingress) && ingress.length > 0;
+    return resource?.spec?.ingress !== undefined;
   }, [resource]);
 
   const hasEgress = React.useMemo(() => {
-    const egress = resource?.spec?.egress;
-    return Array.isArray(egress) && egress.length > 0;
+    return resource?.spec?.egress !== undefined;
   }, [resource]);
 
   // Build tree node keys for pod link checks
