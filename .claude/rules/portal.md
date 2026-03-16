@@ -32,24 +32,48 @@ src/routes/
   +layout.svelte              # Root layout
   +page.svelte                # Landing / login
   (app)/                      # Authenticated route group
-    +layout.svelte            # App shell (sidebar, header, breadcrumbs)
+    +layout.svelte            # App shell (sidebar, header, command palette)
     +layout.ts                # Auth guard (redirect if not logged in)
-    dashboard/+page.svelte    # Tenant dashboard (apps, sync status, resources)
-    catalog/
-      +page.svelte            # Service catalog browser (what the tenant chart offers)
-      [feature]/+page.svelte  # Feature detail + enable/configure form
-    apps/
-      +page.svelte            # Tenant's applications
-      new/+page.svelte        # Deploy new app wizard
     tenants/
       +page.svelte            # Tenant list (platform eng view)
       new/+page.svelte        # Onboard new tenant wizard
-      [tenant]/
-        +page.svelte          # Tenant detail (status, config, membership)
+      [cluster]/[name]/
+        +layout.svelte        # Tenant-scoped layout (tenant selector, sidebar nav)
+        +page.svelte          # Tenant dashboard (summary cards, recent activity)
+        apps/
+          +page.svelte        # Tenant's applications (table with sync status)
+          new/+page.svelte    # Deploy new app wizard (template → configure → review)
+          [name]/+page.svelte # App detail (status, YAML, events, history)
+        resources/
+          +page.svelte        # Platform resources (table with provisioning status)
+          new/+page.svelte    # Request resource wizard (pick XRD → fill form → review)
+          [name]/+page.svelte # Resource detail (status, claim YAML, events)
+        alerts/+page.svelte   # Aggregated alerts across tenant apps
+        backups/+page.svelte  # Backup status across tenant apps
+        activity/+page.svelte # Activity feed (Git commits, sync events)
         membership/+page.svelte  # OIDC group → role assignment
+        settings/+page.svelte    # Tenant settings (quotas, network policies)
+    catalog/
+      +page.svelte            # Service catalog (Helm chart templates + XRDs)
+      charts/[name]/+page.svelte  # Chart template detail
+      xrds/[group]/[kind]/+page.svelte  # XRD detail + request form
     clusters/
       +page.svelte            # Cluster list (which clusters, which tenants)
+      [name]/+page.svelte     # Cluster detail (capacity, tenants, operators)
 ```
+
+### UX Patterns
+
+- **Command palette** (Cmd+K): global search across tenants, apps, resources, catalog, actions
+- **Tenant context**: sidebar scoped to selected tenant. URL always includes `tenants/{cluster}/{name}/`
+- **Skeleton loading**: data areas show skeleton placeholders, never spinners for initial load
+- **Real-time updates**: SSE from backend for sync status, alert, and deploy events
+- **Toast notifications**: bottom-right stack for action feedback (commit success, sync complete, errors)
+- **Drawers**: right-side panels for quick edits (app values, YAML view) without leaving the page
+- **Empty states with CTAs**: guide users to first action ("Deploy your first app" + catalog link)
+- **Keyboard shortcuts**: `g d` (dashboard), `g a` (apps), `g c` (catalog), `n a` (new app), `?` (help)
+
+See `.claude/skills/ux-design/` for complete UX patterns and component specifications.
 
 ## Backend (Go)
 
@@ -145,6 +169,16 @@ mux.HandleFunc("GET /api/v1/resources", s.handleResources)
 mux.HandleFunc("POST /api/v1/resources", s.handleCreateResource)
 mux.HandleFunc("DELETE /api/v1/resources/{namespace}/{name}", s.handleDeleteResource)
 
+// Aggregated operations (tenant-scoped, reads from ArgoCD/Prometheus/Velero APIs)
+mux.HandleFunc("GET /api/v1/tenants/{cluster}/{name}/alerts", s.handleAlerts)
+mux.HandleFunc("POST /api/v1/tenants/{cluster}/{name}/alerts/{id}/silence", s.handleSilenceAlert)
+mux.HandleFunc("GET /api/v1/tenants/{cluster}/{name}/backups", s.handleBackups)
+mux.HandleFunc("POST /api/v1/tenants/{cluster}/{name}/backups/trigger", s.handleTriggerBackup)
+mux.HandleFunc("GET /api/v1/tenants/{cluster}/{name}/activity", s.handleActivity)
+
+// Real-time events (SSE)
+mux.HandleFunc("GET /api/v1/events", s.handleSSE)
+
 // Clusters
 mux.HandleFunc("GET /api/v1/clusters", s.handleClusters)
 
@@ -195,12 +229,40 @@ cd services/portal/frontend && npm run dev    # :5173, proxies /api to :8080
 cd services/portal/backend && go run ./cmd/   # :8080
 ```
 
+## Portal Feature Tiers
+
+### Tier 1: Core Self-Service (MVP)
+Auth, tenant onboarding, service catalog, app deployment, resource requests, team membership, tenant dashboard.
+
+### Tier 2: Aggregated Operations
+Sync overview, alert aggregation (with silence/acknowledge), backup overview (with trigger), activity feed (Git history as audit trail), resource provisioning status.
+
+### Tier 3: Platform Intelligence (Later)
+CI/CD pipeline status (from annotations), image info (container registry), cost overview (OpenCost), environment promotion (Git commit), rollback (Git revert).
+
+### Tier 4: Security and Compliance (Later)
+Policy overview (Kyverno reports), image scanning (Harbor/Trivy), runtime security (Falco), certificate status (cert-manager), audit log.
+
+### Feature Discovery via Annotations
+
+The portal reads annotations on ArgoCD Applications to discover integrations:
+
+```yaml
+argoplane.io/ci-url: "https://github.com/org/repo/actions"
+argoplane.io/registry-url: "harbor.example.com/team/app"
+argoplane.io/grafana-url: "https://grafana.example.com/d/abc"
+argoplane.io/docs-url: "https://docs.example.com/app"
+argoplane.io/runbook-url: "https://wiki.example.com/runbooks/app"
+```
+
+No hardcoded integrations. Platform teams annotate what they want visible.
+
 ## What the Portal Does NOT Do
 
-- No CI/CD (that's GitHub Actions / GitLab CI)
-- No monitoring dashboards (that's Grafana; extensions handle contextual metrics)
+- No CI/CD execution (shows status from annotations, but building images is GitHub Actions / GitLab CI territory)
+- No deep monitoring (that's Grafana; portal shows summary metrics, extensions show per-resource detail)
 - No secret management (that's the platform team's domain; handled via operators like ESO, OpenBao, etc.)
-- No direct K8s mutations (commit to Git, ArgoCD syncs)
+- No direct K8s mutations for apps (commit to Git, ArgoCD syncs)
 - No RBAC policy editing (platform team owns role definitions in the tenant chart; portal only manages group-to-role assignments)
 - No tenant chart editing (platform team owns the chart; portal only generates values.yaml for the onboarding repo)
 - No common chart editing (platform team owns the common Helm chart; portal only fills in values)

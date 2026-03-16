@@ -49,6 +49,12 @@ services/portal/backend/
     resources/
       handler.go               # Platform resource CRUD (via tenant GitOps repo commits)
       claim.go                 # Crossplane XRD claim manifest generation
+    ops/
+      alerts.go                # Aggregated alerts (Alertmanager API, tenant-scoped)
+      backups.go               # Aggregated backups (Velero via K8s, tenant-scoped)
+      activity.go              # Activity feed (Git history from both repos)
+    events/
+      sse.go                   # Server-Sent Events for real-time updates
     argocd/
       client.go                # ArgoCD REST API client
     gitops/
@@ -88,6 +94,8 @@ type Config struct {
     OnboardingRepoBranch string `envconfig:"ONBOARDING_REPO_BRANCH" default:"main"`
     CatalogConfigMap     string `envconfig:"CATALOG_CONFIGMAP" default:"argoplane-catalog-charts"`
     ChartRegistryURL     string `envconfig:"CHART_REGISTRY_URL"`
+    AlertmanagerURL  string `envconfig:"ALERTMANAGER_URL"`
+    PrometheusURL    string `envconfig:"PROMETHEUS_URL"`
     LogLevel         string `envconfig:"LOG_LEVEL" default:"info"`
     StaticDir        string `envconfig:"STATIC_DIR" default:"./static"`
     KubeConfig       string `envconfig:"KUBECONFIG"`
@@ -128,6 +136,16 @@ mux.HandleFunc("DELETE /api/v1/apps/{namespace}/{name}", s.apps.HandleDelete)
 mux.HandleFunc("GET /api/v1/resources", s.resources.HandleList)
 mux.HandleFunc("POST /api/v1/resources", s.resources.HandleCreate)
 mux.HandleFunc("DELETE /api/v1/resources/{namespace}/{name}", s.resources.HandleDelete)
+
+// Aggregated operations (authenticated, tenant-scoped)
+mux.HandleFunc("GET /api/v1/tenants/{cluster}/{name}/alerts", s.ops.HandleAlerts)
+mux.HandleFunc("POST /api/v1/tenants/{cluster}/{name}/alerts/{id}/silence", s.ops.HandleSilenceAlert)
+mux.HandleFunc("GET /api/v1/tenants/{cluster}/{name}/backups", s.ops.HandleBackups)
+mux.HandleFunc("POST /api/v1/tenants/{cluster}/{name}/backups/trigger", s.ops.HandleTriggerBackup)
+mux.HandleFunc("GET /api/v1/tenants/{cluster}/{name}/activity", s.ops.HandleActivity)
+
+// Real-time events (SSE, authenticated)
+mux.HandleFunc("GET /api/v1/events", s.events.HandleSSE)
 
 // Clusters (authenticated)
 mux.HandleFunc("GET /api/v1/clusters", s.clusters.HandleList)
@@ -238,6 +256,77 @@ The catalog combines two sources:
 1. **Helm chart templates**: read from a ConfigMap (name from `CATALOG_CONFIGMAP` env var). Platform team curates entries with chart name, repo URL, version, description, and default values. Used for app deployment (web-app, worker, cron-job profiles).
 
 2. **Crossplane XRDs**: auto-discovered from K8s API. Filtered by `argoplane.io/catalog: "true"` label. Cross-referenced with tenant's AppProject resource whitelist. Used for platform resources (databases, caches, registries).
+
+## Aggregated Operations
+
+The portal provides tenant-scoped aggregated views over data that extensions show per-resource:
+
+```go
+// Alerts: query Alertmanager API, filter by tenant namespaces
+type OpsHandler struct {
+    alertmanagerURL string
+    prometheusURL   string
+    argocd          *ArgocdClient
+    k8s             *K8sClient
+}
+
+// GET /api/v1/tenants/{cluster}/{name}/alerts
+// Returns all firing/pending alerts for tenant's namespaces
+func (h *OpsHandler) HandleAlerts(w http.ResponseWriter, r *http.Request) {
+    // Get tenant's namespaces from ArgoCD AppProject
+    // Query Alertmanager API: /api/v2/alerts?filter=namespace=~"ns1|ns2"
+    // Return aggregated, sorted by severity
+}
+
+// GET /api/v1/tenants/{cluster}/{name}/activity
+// Returns Git commit history from both repos as unified activity feed
+func (h *OpsHandler) HandleActivity(w http.ResponseWriter, r *http.Request) {
+    // Fetch recent commits from onboarding repo (tenant's values.yaml)
+    // Fetch recent commits from tenant GitOps repo (apps/, resources/)
+    // Merge, sort by timestamp, return
+}
+```
+
+## Server-Sent Events (SSE)
+
+Real-time updates for the frontend without polling:
+
+```go
+// GET /api/v1/events
+func (h *SSEHandler) HandleSSE(w http.ResponseWriter, r *http.Request) {
+    // Set headers: Content-Type: text/event-stream, Cache-Control: no-cache
+    // Watch ArgoCD Applications (via K8s watch or ArgoCD API)
+    // Watch Crossplane resources (via K8s watch)
+    // Emit events: sync-status-changed, resource-status-changed, alert-fired
+    // Scope events to user's authorized tenants
+}
+```
+
+Event types:
+- `sync-status-changed`: app sync status update (data: app name, new status)
+- `resource-status-changed`: Crossplane resource status (data: resource name, new status)
+- `alert-fired`: new alert (data: alert name, severity, app)
+- `alert-resolved`: alert cleared
+- `deploy-completed`: Git commit + ArgoCD sync done
+
+## Feature Discovery via Annotations
+
+The portal reads annotations on ArgoCD Applications to discover integrations:
+
+```go
+// Read annotations from ArgoCD Application
+func (h *AppsHandler) enrichWithAnnotations(app *ArgoApplication) AppDetail {
+    return AppDetail{
+        CIURL:       app.Annotations["argoplane.io/ci-url"],
+        RegistryURL: app.Annotations["argoplane.io/registry-url"],
+        GrafanaURL:  app.Annotations["argoplane.io/grafana-url"],
+        DocsURL:     app.Annotations["argoplane.io/docs-url"],
+        RunbookURL:  app.Annotations["argoplane.io/runbook-url"],
+    }
+}
+```
+
+No hardcoded integrations. Platform teams annotate what they want visible.
 
 ## Key Dependencies
 

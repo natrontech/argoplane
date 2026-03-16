@@ -145,3 +145,49 @@ Override shadcn-svelte's default styles to match ArgoPlane:
 - Follow the same design rules: 4px grid, 1px borders, max 4px radius, no shadows, no gradients, monospace for data.
 - Use semantic color names from the extended Tailwind config, not raw hex values.
 - Dark mode: use Tailwind's `dark:` variant. Map to the same semantic colors as the CSS design system.
+
+### Portal-Specific Components
+
+Build these on top of shadcn-svelte primitives:
+
+| Component | Purpose | shadcn Base |
+|-----------|---------|-------------|
+| `AppShell` | Sidebar + header + content layout | Custom layout |
+| `TenantSelector` | Dropdown to switch tenant context | `Select` |
+| `StatusSquare` | 8x8px colored status indicator | Custom |
+| `MetricCard` | Value + label + optional sparkline | `Card` |
+| `ActivityFeed` | Timeline of Git commits and events | Custom |
+| `YamlViewer` | Syntax-highlighted YAML with copy | Custom + Shiki |
+| `YamlDiff` | Side-by-side diff of YAML changes | Custom |
+| `CatalogCard` | Service catalog item with action | `Card` |
+| `WizardStepper` | Multi-step form with progress | Custom |
+| `ResourceBadge` | Kind + name with status square | `Badge` |
+| `QuotaBar` | Usage bar (CPU, memory, pods) | `Progress` |
+| `EmptyStateCTA` | Centered message + primary action | Custom |
+| `CommandPalette` | Global search (Cmd+K) | `Command` |
+| `FilterBar` | Search + filters + sort | Custom |
+| `AnnotationBadge` | Portal-managed vs user-owned | `Badge` |
+
+### Required shadcn-svelte Components
+
+Install these when scaffolding the portal:
+
+```
+button, card, table, dialog, select, input, badge, tabs,
+breadcrumb, dropdown-menu, command, form, label, textarea,
+checkbox, radio-group, sheet, separator, skeleton, toast,
+tooltip, avatar, progress, alert, collapsible, pagination,
+popover, scroll-area, switch
+```
+
+### Portal Interaction Patterns
+
+- **Command palette**: Cmd+K for global search across all entities and actions
+- **Skeleton loading**: match layout shape, never use spinners for initial loads
+- **Toast notifications**: bottom-right stack, auto-dismiss 5s, sticky for errors
+- **Drawers** (shadcn `Sheet`): right-side panel for quick edits without navigation
+- **Confirmation dialogs**: destructive actions only, require resource name for high-risk
+- **Keyboard shortcuts**: `g d` (dashboard), `g a` (apps), `n a` (new app), `?` (help)
+- **Real-time**: SSE for sync/alert/deploy events, no polling
+
+For complete UX patterns and wireframes, see `.claude/skills/ux-design/`.

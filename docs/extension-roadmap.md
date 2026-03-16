@@ -253,30 +253,74 @@ allowedResources:
     kind: RedisInstance
 ```
 
-### Portal Features (MVP)
+### Portal Feature Tiers
+
+#### Tier 1: Core Self-Service (MVP)
 
 | Feature | Persona | Pain it solves |
 |---------|---------|---------------|
 | **Auth via Dex** | All | Same identity as ArgoCD, SSO, groups-based access |
-| **Tenant onboarding** | Platform eng, Team leads | Fill a form, generate values.yaml, commit to onboarding repo. Namespace, AppProject, RBAC, quotas, network policies, Kyverno bindings: all from one commit. |
-| **Service catalog** | Developers | Browse Helm chart templates AND Crossplane XRDs. Platform team curates charts in ConfigMap; XRDs auto-discovered from K8s API, filtered by `argoplane.io/catalog: "true"` label, cross-referenced with tenant's AppProject resource whitelist. |
+| **Tenant dashboard** | Team leads | Summary cards (apps, sync status, alerts), recent activity, quota usage |
+| **Tenant onboarding** | Platform eng, Team leads | Wizard: fill form, generate values.yaml, commit to onboarding repo. Namespace, AppProject, RBAC, quotas, network policies, Kyverno bindings: all from one commit. |
+| **Service catalog** | Developers | Browse Helm chart templates (ConfigMap) AND Crossplane XRDs (auto-discovered, `argoplane.io/catalog: "true"` label, filtered by tenant's AppProject whitelist). |
 | **Team membership** | Team leads | Assign OIDC groups to roles within your tenant's AppProject. Self-service, scoped. |
-| **Simple app deploy** | Developers | Pick app template (web-app, worker, cron-job), fill form, portal generates ArgoCD Application manifest referencing common chart, commits to tenant GitOps repo. |
+| **App deployment** | Developers | Wizard: pick template (web-app, worker, cron-job), configure (image, port, env), review YAML diff, commit Application manifest to tenant GitOps repo. |
+| **Resource request** | Developers | Wizard: pick XRD from catalog, fill form from OpenAPI schema, review claim YAML, commit to tenant GitOps repo. |
+| **App management** | Developers | View, edit values (drawer), scale (replicas), delete. YAML view. Sync status. |
 
-### Portal Features (Later)
+#### Tier 2: Aggregated Operations
 
-| Feature | Persona | Description |
-|---------|---------|-------------|
-| **Tenant dashboard** | Team leads | Overview of tenant's apps, resources, sync status, group assignments |
-| **GitOps repo creation** | Developers | Level 0 auto-provisioning: portal creates the tenant GitOps repo, scaffolds directory structure, and configures the tenant values.yaml with the repo URL |
-| **Environment promotion** | Developers | Update image tag in Git for staging/prod promotion |
-| **Cluster inventory** | Platform eng | Installed operators, CRDs, node pools, capacity |
-| **Audit trail** | All | Git history of both repos is the audit log. Portal links to commits. |
+Extensions show per-resource data inside ArgoCD. The portal shows the big picture across all apps in a tenant.
+
+| Feature | Persona | Data Source | Description |
+|---------|---------|-------------|-------------|
+| **Sync overview** | All | ArgoCD API | Cross-app sync status on dashboard. Filterable, sortable. |
+| **Alert overview** | Team leads, Devs | Alertmanager API | All firing/pending alerts across tenant apps. Silence, acknowledge. |
+| **Backup overview** | Team leads | Velero API via K8s | Backup status across all apps. Trigger backup from portal. |
+| **Activity feed** | All | Git history (both repos) | Who deployed what, when. Git commits as audit trail. |
+| **Resource status** | Devs | Crossplane status via K8s | All platform resources with provisioning status. |
+| **Metrics summary** | All | Prometheus API | Tenant-scoped CPU/memory/request summary cards on dashboard. |
+
+#### Tier 3: Platform Intelligence (Later)
+
+| Feature | Persona | Data Source | Description |
+|---------|---------|-------------|-------------|
+| **CI/CD pipeline status** | Devs | GitHub Actions / GitLab CI API | Last build status, duration. Discovered via `argoplane.io/ci-url` annotation. |
+| **Image info** | Devs | Container registry API (Harbor, GHCR) | Image tag, vulnerabilities, size. Via `argoplane.io/registry-url` annotation. |
+| **Cost overview** | Team leads, Platform eng | OpenCost / Kubecost API | Per-tenant, per-app resource cost attribution. |
+| **Environment promotion** | Devs | Git API | Promote image tag from staging to prod (commit to GitOps repo). |
+| **Rollback** | Devs | Git API | Revert to previous image tag (Git revert commit). |
+| **GitOps repo creation** | Devs | GitHub/GitLab API | Level 0 auto-provisioning: create repo, scaffold dirs, configure tenant values. |
+| **Cluster inventory** | Platform eng | K8s API | Installed operators, CRDs, node pools, capacity. |
+
+#### Tier 4: Security and Compliance (Later)
+
+| Feature | Persona | Data Source | Description |
+|---------|---------|-------------|-------------|
+| **Policy overview** | Team leads | Kyverno PolicyReports | Cross-app policy violations, compliance score per tenant. |
+| **Image scanning** | Devs, Security | Harbor/Trivy API | Vulnerability summary per deployed image. |
+| **Runtime security** | Security, Platform eng | Falco API | Runtime alerts, suspicious activity per tenant. |
+| **Certificate status** | Platform eng | cert-manager via K8s | TLS cert expiry, renewal status across tenant. |
+| **Audit log** | All | Git history + K8s events | Comprehensive audit trail of all changes. |
+
+#### Feature Discovery via Annotations
+
+The portal reads annotations on ArgoCD Applications to discover integrations:
+
+```yaml
+argoplane.io/ci-url: "https://github.com/org/repo/actions"
+argoplane.io/registry-url: "harbor.example.com/team/app"
+argoplane.io/grafana-url: "https://grafana.example.com/d/abc"
+argoplane.io/docs-url: "https://docs.example.com/app"
+argoplane.io/runbook-url: "https://wiki.example.com/runbooks/app"
+```
+
+No hardcoded integrations. Platform teams annotate what they want visible.
 
 ### What the Portal Does NOT Do
 
-- **No CI/CD**: building images is GitHub Actions / GitLab CI territory
-- **No monitoring dashboards**: that's Grafana. Extensions handle contextual metrics
+- **No CI/CD execution**: shows status from annotations, but building images is GitHub Actions / GitLab CI territory
+- **No deep monitoring**: that's Grafana. Portal shows summary metrics; extensions show per-resource detail
 - **No secret management**: that's External Secrets Operator, handled by the platform team outside the tenant chart pattern
 - **No direct K8s mutations for apps**: portal commits to Git, ArgoCD reconciles
 - **No RBAC policy editing**: platform team owns role definitions in the tenant chart. Portal only manages group-to-role assignments within existing roles.
