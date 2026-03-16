@@ -71,8 +71,12 @@ extensions:
         memory: 64Mi
       limits:
         memory: 128Mi
+    # -- Extra labels added to pods
+    podLabels: {}
     # -- Pod annotations
     podAnnotations: {}
+    # -- Priority class name
+    priorityClassName: ""
     # -- Node selector
     nodeSelector: {}
     # -- Tolerations
@@ -107,7 +111,9 @@ extensions:
         memory: 64Mi
       limits:
         memory: 128Mi
+    podLabels: {}
     podAnnotations: {}
+    priorityClassName: ""
     nodeSelector: {}
     tolerations: []
     affinity: {}
@@ -144,7 +150,9 @@ extensions:
         memory: 64Mi
       limits:
         memory: 128Mi
+    podLabels: {}
     podAnnotations: {}
+    priorityClassName: ""
     nodeSelector: {}
     tolerations: []
     affinity: {}

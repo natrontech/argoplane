@@ -17,11 +17,21 @@ spec:
     metadata:
       labels:
         {{- include "argoplane.extensionSelectorLabels" (dict "name" $name) | nindent 8 }}
+        {{- with $ext.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       {{- with $ext.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
+      {{- with $ext.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       {{- include "argoplane.imagePullSecrets" $ | nindent 6 }}
       {{- if $ext.serviceAccount }}
       {{- if $ext.serviceAccount.create }}
