@@ -27,15 +27,19 @@ wait_for_rollout() {
 # then selects a Running pod (avoids Completed/Terminating pods).
 wait_for_pod() {
     local ns="$1" selector="$2" timeout="${3:-120}"
-    log "Waiting for pod ($selector) in $ns to be Ready..."
 
-    # Wait for at least one pod to be Ready
+    # All status output goes to stderr so stdout only contains the pod name.
+    echo "==> Waiting for pod ($selector) in $ns to be Ready..." >&2
+
+    # Wait for at least one Running+Ready pod.
+    # Use --field-selector to skip Completed/Terminating pods from previous rollouts.
     if ! kubectl -n "$ns" wait pod -l "$selector" \
-        --for=condition=Ready --timeout="${timeout}s" 2>/dev/null; then
+        --field-selector=status.phase=Running \
+        --for=condition=Ready --timeout="${timeout}s" >&2 2>&1; then
         die "Timed out waiting for pod ($selector) in $ns"
     fi
 
-    # Select a Running pod (avoids Completed/Terminating pods from previous rollout)
+    # Select the first Running pod name (stdout only, no noise).
     local pod
     pod=$(kubectl -n "$ns" get pods -l "$selector" \
         --field-selector=status.phase=Running \
