@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { fonts } from '@argoplane/shared';
+import { colors, fonts, fontSize, spacing } from '@argoplane/shared';
 import { LogEntry, Severity } from '../types';
 
 interface LogLineProps {
@@ -7,13 +7,13 @@ interface LogLineProps {
   showPod: boolean;
 }
 
-// Grafana-style severity colors
+// Severity bar colors using design system status tokens
 const severityBarColor: Record<Severity, string> = {
-  error: '#ff5286',
-  warn: '#ff9830',
-  info: '#4dbd74',
-  debug: '#6e9fff',
-  unknown: '#8e8e8e',
+  error: colors.redSolid,
+  warn: colors.yellowSolid,
+  info: colors.greenSolid,
+  debug: colors.blueSolid,
+  unknown: colors.gray300,
 };
 
 function formatTimestamp(ts: string): string {
@@ -44,49 +44,49 @@ export const LogLine: React.FC<LogLineProps> = React.memo(({ entry, showPod }) =
     <div
       style={{
         display: 'flex',
-        borderBottom: '1px solid #1e1e1e',
+        borderBottom: `1px solid ${colors.gray200}`,
         cursor: 'pointer',
-        transition: 'background-color 80ms',
+        transition: 'background-color 100ms',
       }}
       onClick={() => setExpanded(!expanded)}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#1a1a2e'; }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = colors.gray50; }}
       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
     >
-      {/* Severity color bar (Grafana style) */}
+      {/* Severity color bar */}
       <div style={{
         width: 4,
         flexShrink: 0,
         backgroundColor: barColor,
       }} />
 
-      <div style={{ flex: 1, minWidth: 0, padding: '4px 8px' }}>
+      <div style={{ flex: 1, minWidth: 0, padding: `${spacing[1]}px ${spacing[2]}px` }}>
         {/* Main log line */}
         <div style={{
           display: 'flex',
           alignItems: 'baseline',
-          gap: 8,
+          gap: spacing[2],
           fontFamily: fonts.mono,
-          fontSize: '12px',
+          fontSize: fontSize.xs,
           lineHeight: '20px',
         }}>
-          <span style={{ color: '#8e8e8e', whiteSpace: 'nowrap', flexShrink: 0 }}>
+          <span style={{ color: colors.gray500, whiteSpace: 'nowrap', flexShrink: 0 }}>
             {formatTimestamp(entry.timestamp)}
           </span>
           {showPod && labels.pod && (
             <span
               title={labels.pod}
               style={{
-                color: '#6e9fff',
+                color: colors.blueText,
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
-                fontSize: '11px',
+                fontSize: fontSize.xs,
               }}
             >
               {shortenPod(labels.pod)}
             </span>
           )}
           <span style={{
-            color: '#e0e0e0',
+            color: colors.gray800,
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
             flex: 1,
@@ -95,15 +95,15 @@ export const LogLine: React.FC<LogLineProps> = React.memo(({ entry, showPod }) =
           </span>
         </div>
 
-        {/* Expanded labels (Grafana-style key=value chips) */}
+        {/* Expanded labels (key=value chips) */}
         {expanded && labelKeys.length > 0 && (
           <div style={{
             display: 'flex',
             flexWrap: 'wrap',
-            gap: 4,
-            marginTop: 4,
-            paddingTop: 4,
-            borderTop: '1px solid #2a2a2a',
+            gap: spacing[1],
+            marginTop: spacing[1],
+            paddingTop: spacing[1],
+            borderTop: `1px solid ${colors.gray200}`,
           }}>
             {labelKeys.map((key) => (
               <span
@@ -111,17 +111,18 @@ export const LogLine: React.FC<LogLineProps> = React.memo(({ entry, showPod }) =
                 style={{
                   display: 'inline-flex',
                   fontFamily: fonts.mono,
-                  fontSize: '11px',
+                  fontSize: fontSize.xs,
                   lineHeight: '18px',
-                  padding: '1px 6px',
-                  backgroundColor: '#2a2a3a',
-                  borderRadius: 3,
-                  color: '#c0c0c0',
+                  padding: `1px ${spacing[2]}px`,
+                  backgroundColor: colors.gray100,
+                  borderRadius: 2,
+                  border: `1px solid ${colors.gray200}`,
+                  color: colors.gray600,
                 }}
               >
-                <span style={{ color: '#6e9fff' }}>{key}</span>
-                <span style={{ color: '#666', margin: '0 2px' }}>=</span>
-                <span style={{ color: '#e0e0e0' }}>{labels[key]}</span>
+                <span style={{ color: colors.blueText }}>{key}</span>
+                <span style={{ color: colors.gray400, margin: '0 2px' }}>=</span>
+                <span style={{ color: colors.gray800 }}>{labels[key]}</span>
               </span>
             ))}
           </div>

@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { fonts } from '@argoplane/shared';
-import { Severity, TimeRange } from '../types';
+import { colors, fonts, fontSize, spacing } from '@argoplane/shared';
+import { Severity, TimeSelection } from '../types';
+import { TimeRangePicker } from './TimeRangePicker';
 
 interface LogToolbarProps {
   containers: string[];
@@ -10,23 +11,16 @@ interface LogToolbarProps {
   onSeverityToggle: (severity: Severity) => void;
   searchText: string;
   onSearchChange: (text: string) => void;
-  timeRange: TimeRange;
-  onTimeRangeChange: (range: TimeRange) => void;
+  timeSelection: TimeSelection;
+  onTimeSelectionChange: (sel: TimeSelection) => void;
   onRefresh: () => void;
 }
 
-const TIME_RANGES: { label: string; value: TimeRange }[] = [
-  { label: '15m', value: '15m' },
-  { label: '1h', value: '1h' },
-  { label: '6h', value: '6h' },
-  { label: '24h', value: '24h' },
-];
-
-const SEVERITIES: { severity: Severity; color: string }[] = [
-  { severity: 'debug', color: '#6e9fff' },
-  { severity: 'info', color: '#4dbd74' },
-  { severity: 'warn', color: '#ff9830' },
-  { severity: 'error', color: '#ff5286' },
+const SEVERITIES: { severity: Severity; color: string; solidColor: string }[] = [
+  { severity: 'debug', color: colors.blueText, solidColor: colors.blueSolid },
+  { severity: 'info', color: colors.greenText, solidColor: colors.greenSolid },
+  { severity: 'warn', color: colors.yellowText, solidColor: colors.yellowSolid },
+  { severity: 'error', color: colors.redText, solidColor: colors.redSolid },
 ];
 
 export const LogToolbar: React.FC<LogToolbarProps> = ({
@@ -37,18 +31,17 @@ export const LogToolbar: React.FC<LogToolbarProps> = ({
   onSeverityToggle,
   searchText,
   onSearchChange,
-  timeRange,
-  onTimeRangeChange,
+  timeSelection,
+  onTimeSelectionChange,
   onRefresh,
 }) => {
   return (
     <div style={{
       display: 'flex',
       alignItems: 'center',
-      gap: 8,
-      padding: '8px 12px',
-      backgroundColor: '#111118',
-      borderBottom: '1px solid #1e1e1e',
+      gap: spacing[2],
+      padding: `${spacing[2]}px ${spacing[3]}px`,
+      borderBottom: `1px solid ${colors.gray200}`,
       flexWrap: 'wrap',
     }}>
       {/* Container selector */}
@@ -58,13 +51,12 @@ export const LogToolbar: React.FC<LogToolbarProps> = ({
           onChange={(e) => onContainerChange(e.target.value)}
           style={{
             fontFamily: fonts.mono,
-            fontSize: '11px',
-            padding: '4px 8px',
-            border: '1px solid #2a2a3a',
+            fontSize: fontSize.xs,
+            padding: `${spacing[1]}px ${spacing[2]}px`,
+            border: `1px solid ${colors.gray200}`,
             borderRadius: 4,
-            backgroundColor: '#1a1a2e',
-            color: '#e0e0e0',
-            outline: 'none',
+            backgroundColor: colors.white,
+            color: colors.gray800,
           }}
         >
           <option value="">All containers</option>
@@ -74,9 +66,9 @@ export const LogToolbar: React.FC<LogToolbarProps> = ({
         </select>
       )}
 
-      {/* Severity level filters (Grafana style) */}
-      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-        {SEVERITIES.map(({ severity, color }) => {
+      {/* Severity level filters */}
+      <div style={{ display: 'flex', gap: spacing[1], alignItems: 'center' }}>
+        {SEVERITIES.map(({ severity, color, solidColor }) => {
           const active = activeSeverities.has(severity);
           return (
             <button
@@ -85,24 +77,25 @@ export const LogToolbar: React.FC<LogToolbarProps> = ({
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 4,
-                padding: '3px 10px',
-                border: `1px solid ${active ? color : '#2a2a3a'}`,
+                gap: spacing[1],
+                padding: `3px ${spacing[2]}px`,
+                border: `1px solid ${active ? solidColor : colors.gray200}`,
                 borderRadius: 4,
-                backgroundColor: active ? `${color}18` : 'transparent',
+                backgroundColor: active ? `${solidColor}18` : 'transparent',
                 cursor: 'pointer',
                 fontFamily: fonts.mono,
-                fontSize: '11px',
-                color: active ? color : '#555',
-                transition: 'all 80ms',
+                fontSize: fontSize.xs,
+                color: active ? color : colors.gray400,
+                transition: 'all 100ms',
               }}
             >
+              {/* 8x8 status square */}
               <span style={{
                 display: 'inline-block',
                 width: 8,
                 height: 8,
-                borderRadius: 2,
-                backgroundColor: active ? color : '#333',
+                borderRadius: 1,
+                backgroundColor: active ? solidColor : colors.gray300,
                 flexShrink: 0,
               }} />
               {severity}
@@ -121,56 +114,33 @@ export const LogToolbar: React.FC<LogToolbarProps> = ({
           flex: 1,
           minWidth: 140,
           fontFamily: fonts.mono,
-          fontSize: '11px',
-          padding: '5px 10px',
-          border: '1px solid #2a2a3a',
+          fontSize: fontSize.xs,
+          padding: `${spacing[1]}px ${spacing[2]}px`,
+          border: `1px solid ${colors.gray200}`,
           borderRadius: 4,
-          backgroundColor: '#1a1a2e',
-          color: '#e0e0e0',
+          backgroundColor: colors.white,
+          color: colors.gray800,
           outline: 'none',
         }}
       />
 
-      {/* Time range selector */}
-      <div style={{ display: 'flex', gap: 2 }}>
-        {TIME_RANGES.map(({ label, value }) => {
-          const active = timeRange === value;
-          return (
-            <button
-              key={value}
-              onClick={() => onTimeRangeChange(value)}
-              style={{
-                padding: '3px 10px',
-                border: `1px solid ${active ? '#6e9fff' : '#2a2a3a'}`,
-                borderRadius: 4,
-                backgroundColor: active ? '#6e9fff' : 'transparent',
-                color: active ? '#111118' : '#8e8e8e',
-                cursor: 'pointer',
-                fontFamily: fonts.mono,
-                fontSize: '11px',
-                fontWeight: active ? 600 : 400,
-                transition: 'all 80ms',
-              }}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
+      {/* Time range picker (dropdown) */}
+      <TimeRangePicker value={timeSelection} onChange={onTimeSelectionChange} />
 
       {/* Refresh button */}
       <button
         onClick={onRefresh}
         style={{
-          padding: '4px 12px',
-          border: '1px solid #2a2a3a',
+          padding: `${spacing[1]}px ${spacing[3]}px`,
+          border: `1px solid ${colors.gray200}`,
           borderRadius: 4,
-          backgroundColor: '#1a1a2e',
-          color: '#e0e0e0',
+          backgroundColor: colors.gray100,
+          color: colors.gray800,
           cursor: 'pointer',
           fontFamily: fonts.mono,
-          fontSize: '11px',
-          transition: 'all 80ms',
+          fontSize: fontSize.xs,
+          fontWeight: 500,
+          transition: 'background-color 100ms',
         }}
       >
         Refresh

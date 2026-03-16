@@ -1,20 +1,21 @@
 import * as React from 'react';
-import { fonts } from '@argoplane/shared';
+import {
+  Loading,
+  EmptyState,
+  colors,
+  fonts,
+  fontSize,
+  panel,
+  spacing,
+} from '@argoplane/shared';
 import { fetchLogs, fetchLabelValues, fetchVolume } from '../api';
-import { ExtensionProps, LogEntry, Severity, TimeRange, VolumePoint } from '../types';
+import { ExtensionProps, LogEntry, Severity, TimeSelection, VolumePoint, resolveTimeSelection } from '../types';
 import { LogLine } from './LogLine';
 import { LogToolbar } from './LogToolbar';
 import { VolumeChart } from './VolumeChart';
 
 const REFRESH_INTERVAL = 30_000;
 const DEFAULT_LIMIT = 500;
-
-const TIME_RANGE_MS: Record<TimeRange, number> = {
-  '15m': 15 * 60 * 1000,
-  '1h': 60 * 60 * 1000,
-  '6h': 6 * 60 * 60 * 1000,
-  '24h': 24 * 60 * 60 * 1000,
-};
 
 export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) => {
   const [entries, setEntries] = React.useState<LogEntry[]>([]);
@@ -30,7 +31,10 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
   );
   const [searchText, setSearchText] = React.useState('');
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
-  const [timeRange, setTimeRange] = React.useState<TimeRange>('1h');
+  const [timeSelection, setTimeSelection] = React.useState<TimeSelection>({
+    type: 'relative',
+    relative: '1h',
+  });
 
   const namespace = resource?.metadata?.namespace || '';
   const name = resource?.metadata?.name || '';
@@ -51,8 +55,7 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
   const fetchAll = React.useCallback(() => {
     if (!namespace || !name) return;
 
-    const end = new Date();
-    const start = new Date(end.getTime() - TIME_RANGE_MS[timeRange]);
+    const { start, end } = resolveTimeSelection(timeSelection);
 
     const severityFilter = activeSeverities.size < 4
       ? Array.from(activeSeverities).join(',')
@@ -81,7 +84,7 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [namespace, name, kind, isPod, selectedContainer, debouncedSearch, activeSeverities, timeRange, appNamespace, appName, project]);
+  }, [namespace, name, kind, isPod, selectedContainer, debouncedSearch, activeSeverities, timeSelection, appNamespace, appName, project]);
 
   // Fetch containers for the dropdown
   React.useEffect(() => {
@@ -113,64 +116,42 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
     });
   }, []);
 
-  if (loading) {
-    return (
-      <div style={{
-        backgroundColor: '#0d0d14',
-        borderRadius: 4,
-        padding: '40px 0',
-        textAlign: 'center',
-        fontFamily: fonts.mono,
-        fontSize: '12px',
-        color: '#8e8e8e',
-      }}>
-        Loading logs...
-      </div>
-    );
-  }
+  if (loading) return <Loading />;
 
   if (error) {
     return (
-      <div style={{
-        backgroundColor: '#0d0d14',
-        borderRadius: 4,
-        padding: '24px',
-        textAlign: 'center',
-      }}>
+      <div style={panel}>
         <div style={{
+          padding: spacing[4],
+          color: colors.redText,
           fontFamily: fonts.mono,
-          fontSize: '12px',
-          color: '#ff5286',
+          fontSize: fontSize.sm,
+          textAlign: 'center',
         }}>
-          Failed to load logs: {error}
+          <div>Failed to load logs: {error}</div>
+          <button
+            onClick={() => { setLoading(true); fetchAll(); }}
+            style={{
+              marginTop: spacing[2],
+              padding: `${spacing[1]}px ${spacing[3]}px`,
+              border: `1px solid ${colors.gray200}`,
+              borderRadius: 4,
+              backgroundColor: colors.gray100,
+              cursor: 'pointer',
+              fontFamily: fonts.mono,
+              fontSize: fontSize.xs,
+              color: colors.gray800,
+            }}
+          >
+            Retry
+          </button>
         </div>
-        <button
-          onClick={() => { setLoading(true); fetchAll(); }}
-          style={{
-            marginTop: 8,
-            padding: '4px 12px',
-            border: '1px solid #2a2a3a',
-            borderRadius: 4,
-            backgroundColor: '#1a1a2e',
-            color: '#e0e0e0',
-            cursor: 'pointer',
-            fontFamily: fonts.mono,
-            fontSize: '11px',
-          }}
-        >
-          Retry
-        </button>
       </div>
     );
   }
 
   return (
-    <div style={{
-      backgroundColor: '#0d0d14',
-      borderRadius: 4,
-      border: '1px solid #1e1e1e',
-      overflow: 'hidden',
-    }}>
+    <div style={panel}>
       <LogToolbar
         containers={containers}
         selectedContainer={selectedContainer}
@@ -179,8 +160,8 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
         onSeverityToggle={handleSeverityToggle}
         searchText={searchText}
         onSearchChange={setSearchText}
-        timeRange={timeRange}
-        onTimeRangeChange={setTimeRange}
+        timeSelection={timeSelection}
+        onTimeSelectionChange={setTimeSelection}
         onRefresh={() => { setLoading(true); fetchAll(); }}
       />
 
@@ -188,15 +169,7 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
 
       <div style={{ maxHeight: 600, overflowY: 'auto' }}>
         {entries.length === 0 ? (
-          <div style={{
-            padding: '40px 0',
-            textAlign: 'center',
-            fontFamily: fonts.mono,
-            fontSize: '12px',
-            color: '#555',
-          }}>
-            No logs found for the selected filters
-          </div>
+          <EmptyState message="No logs found for the selected filters" />
         ) : (
           entries.map((entry, i) => (
             <LogLine key={`${entry.timestamp}-${i}`} entry={entry} showPod={showPod} />
@@ -206,12 +179,11 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
 
       {entries.length > 0 && (
         <div style={{
-          padding: '6px 12px',
-          borderTop: '1px solid #1e1e1e',
+          padding: `${spacing[2]}px ${spacing[3]}px`,
+          borderTop: `1px solid ${colors.gray200}`,
           fontFamily: fonts.mono,
-          fontSize: '11px',
-          color: '#555',
-          backgroundColor: '#111118',
+          fontSize: fontSize.xs,
+          color: colors.gray500,
         }}>
           Showing {entries.length}{totalEntries > entries.length ? ` of ${totalEntries}+` : ''} entries
         </div>

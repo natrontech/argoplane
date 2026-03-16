@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { fonts } from '@argoplane/shared';
+import { colors, fonts, fontSize, spacing } from '@argoplane/shared';
 import { VolumePoint } from '../types';
 
 interface VolumeChartProps {
@@ -22,16 +22,16 @@ export const VolumeChart: React.FC<VolumeChartProps> = ({ data }) => {
 
   return (
     <div style={{
-      height: 80,
-      padding: '8px 12px',
-      backgroundColor: '#111118',
-      borderBottom: '1px solid #1e1e1e',
+      height: 64,
+      padding: `${spacing[1]}px ${spacing[3]}px`,
+      borderBottom: `1px solid ${colors.gray200}`,
+      backgroundColor: colors.gray50,
     }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
           <XAxis
             dataKey="time"
-            tick={{ fontSize: 9, fill: '#6e6e6e', fontFamily: fonts.mono }}
+            tick={{ fontSize: 9, fill: colors.gray500, fontFamily: fonts.mono }}
             axisLine={false}
             tickLine={false}
             interval="preserveStartEnd"
@@ -40,18 +40,16 @@ export const VolumeChart: React.FC<VolumeChartProps> = ({ data }) => {
           <Tooltip
             contentStyle={{
               fontFamily: fonts.mono,
-              fontSize: '11px',
-              backgroundColor: '#1a1a2e',
-              border: '1px solid #2a2a3a',
+              fontSize: fontSize.xs,
+              border: `1px solid ${colors.gray200}`,
               borderRadius: 4,
-              padding: '4px 8px',
-              color: '#e0e0e0',
+              padding: `${spacing[1]}px ${spacing[2]}px`,
+              backgroundColor: colors.white,
             }}
-            cursor={{ fill: 'rgba(110, 159, 255, 0.08)' }}
+            cursor={{ fill: `${colors.gray200}44` }}
             formatter={(value: number) => [`${value} lines`, 'Volume']}
-            labelStyle={{ color: '#8e8e8e' }}
           />
-          <Bar dataKey="value" fill="#4dbd74" radius={[1, 1, 0, 0]} />
+          <Bar dataKey="value" fill={colors.greenSolid} radius={[1, 1, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
