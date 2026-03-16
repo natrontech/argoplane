@@ -167,7 +167,7 @@ func (h *Dashboard) HandleGraph(w http.ResponseWriter, r *http.Request) {
 		timestamps = append(timestamps, t)
 	}
 
-	resp := graphDataResponse{}
+	resp := graphDataResponse{Series: []graphSeries{}}
 	for _, s := range allSeries {
 		// Use the metricName label as the series label
 		label := s.Metric[graph.MetricName]
