@@ -10,13 +10,12 @@ import {
   fontSize,
   fontWeight,
   spacing,
-  radius,
   panel,
 } from '@argoplane/shared';
 import { fetchAppMetrics, fetchPodBreakdown, fetchPerPodSeries } from '../api';
-import { MetricData, TimeSeriesMetric, TimeRange, PodMetric, PerPodSeries } from '../types';
-import { MultiSeriesChart } from './MultiSeriesChart';
-import { TimeRangeSelector } from './TimeRangeSelector';
+import { MetricData, TimeRange, PodMetric, PerPodSeries } from '../types';
+import { MetricsChart } from './MetricsChart';
+import { DurationSelector } from './DurationSelector';
 import { QueryBuilder } from './QueryBuilder';
 
 interface AppViewProps {
@@ -25,8 +24,8 @@ interface AppViewProps {
 }
 
 const SERIES_COLORS = [
-  colors.orange500, colors.blueSolid, colors.greenSolid, colors.yellowSolid,
-  colors.red, colors.gray500, colors.orange300, colors.blue,
+  '#00A2B3', '#f5a337', '#0c568f', '#63b343', '#1abe93',
+  '#bd19c6', '#fb44be', '#999966', '#80B300', '#1AB399',
 ];
 
 const REFRESH_INTERVAL = 30_000;
@@ -44,7 +43,6 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
 
-  // Extract pod names from ArgoCD resource tree
   const treePodNames = React.useMemo(() => {
     if (!tree?.nodes) return [];
     return tree.nodes
@@ -52,7 +50,6 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
       .map((n: any) => n.name) as string[];
   }, [tree, namespace]);
 
-  // Extract deployment names from tree for pod breakdown
   const treeDeployments = React.useMemo(() => {
     if (!tree?.nodes) return [];
     return tree.nodes
@@ -65,14 +62,12 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
 
     const metricsP = fetchAppMetrics(namespace, timeRange, appNamespace, appName, project);
 
-    // Use tree pods if available, otherwise fall back to app name selector
     const podNames = treePodNames.length > 0 ? treePodNames : undefined;
     const perPodP = fetchPerPodSeries(
       namespace, appName, 'Deployment', timeRange,
       appNamespace, appName, project, podNames
     ).catch(() => [] as PerPodSeries[]);
 
-    // Pod breakdown: use all tree pods if available, otherwise fall back to first deployment
     const deployName = treeDeployments.length > 0 ? treeDeployments[0] : appName;
     const podsP = fetchPodBreakdown(namespace, deployName, 'Deployment', appNamespace, appName, project, podNames)
       .catch(() => [] as PodMetric[]);
@@ -115,6 +110,10 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
     return <div style={panel}><EmptyState message="No metrics available. Is Prometheus running?" /></div>;
   }
 
+  // Group charts into rows
+  const cpuMemory = perPod.filter((p) => p.metric === 'CPU Usage' || p.metric === 'Memory Usage');
+  const network = perPod.filter((p) => p.metric === 'Network RX' || p.metric === 'Network TX');
+
   return (
     <div style={panel}>
       {/* Query builder */}
@@ -128,7 +127,7 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
       {/* Overview */}
       <div style={headerRow}>
         <SectionHeader title="OVERVIEW" />
-        <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
+        <DurationSelector value={timeRange} onChange={setTimeRange} />
       </div>
 
       <div style={cardGrid}>
@@ -137,24 +136,52 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
         ))}
       </div>
 
-      {/* Per-pod multi-line charts */}
+      {/* Charts in horizontal flex rows */}
       {perPod.length > 0 && (
         <div style={{ marginTop: spacing[5] }}>
           <SectionHeader title="USAGE BY POD" />
-          <div style={chartGrid}>
-            {perPod.map((pps) => (
-              <MultiSeriesChart
-                key={pps.metric}
-                title={pps.metric}
-                unit={pps.unit}
-                timestamps={pps.timestamps}
-                series={(pps.pods || []).map((p) => ({ label: p.pod, values: (p.values || []).map((v) => v === null ? NaN : v) }))}
-                colors={SERIES_COLORS}
-                height={220}
-                timeRange={timeRange}
-              />
-            ))}
-          </div>
+
+          {cpuMemory.length > 0 && (
+            <div style={chartRow}>
+              {cpuMemory.map((pps) => (
+                <div key={pps.metric} style={chartCell}>
+                  <MetricsChart
+                    title={pps.metric}
+                    unit={pps.unit}
+                    timestamps={pps.timestamps}
+                    series={(pps.pods || []).map((p) => ({
+                      label: p.pod,
+                      values: (p.values || []).map((v) => v === null ? NaN : v),
+                    }))}
+                    colors={SERIES_COLORS}
+                    height={150}
+                    timeRange={timeRange}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {network.length > 0 && (
+            <div style={chartRow}>
+              {network.map((pps) => (
+                <div key={pps.metric} style={chartCell}>
+                  <MetricsChart
+                    title={pps.metric}
+                    unit={pps.unit}
+                    timestamps={pps.timestamps}
+                    series={(pps.pods || []).map((p) => ({
+                      label: p.pod,
+                      values: (p.values || []).map((v) => v === null ? NaN : v),
+                    }))}
+                    colors={SERIES_COLORS}
+                    height={150}
+                    timeRange={timeRange}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -217,10 +244,15 @@ const cardGrid: React.CSSProperties = {
   gap: spacing[3],
 };
 
-const chartGrid: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
+const chartRow: React.CSSProperties = {
+  display: 'flex',
   gap: spacing[3],
+  marginBottom: spacing[3],
+};
+
+const chartCell: React.CSSProperties = {
+  flex: 1,
+  minWidth: 0,
 };
 
 const podTableWrap: React.CSSProperties = {

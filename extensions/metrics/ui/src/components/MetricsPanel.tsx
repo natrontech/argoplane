@@ -12,16 +12,15 @@ import {
   fontWeight,
   panel,
   spacing,
-  radius,
 } from '@argoplane/shared';
 import { fetchMetrics, fetchPodBreakdown, fetchPerPodSeries } from '../api';
 import { ExtensionProps, MetricData, PodMetric, PerPodSeries, TimeRange } from '../types';
-import { MultiSeriesChart } from './MultiSeriesChart';
-import { TimeRangeSelector } from './TimeRangeSelector';
+import { MetricsChart } from './MetricsChart';
+import { DurationSelector } from './DurationSelector';
 
 const SERIES_COLORS = [
-  colors.orange500, colors.blueSolid, colors.greenSolid, colors.yellowSolid,
-  colors.red, colors.gray500, colors.orange300, colors.blue,
+  '#00A2B3', '#f5a337', '#0c568f', '#63b343', '#1abe93',
+  '#bd19c6', '#fb44be', '#999966', '#80B300', '#1AB399',
 ];
 
 const REFRESH_INTERVAL = 30_000;
@@ -56,7 +55,6 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
         fetchPerPodSeries(namespace, name, kind, timeRange, appNamespace, appName, project).catch(() => []),
       );
     } else {
-      // Pod: fetch per-pod series for just this pod
       promises.push(
         Promise.resolve([]),
         fetchPerPodSeries(namespace, name, 'Pod', timeRange, appNamespace, appName, project).catch(() => []),
@@ -99,6 +97,10 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
     return <EmptyState message={`No metrics available for ${kind} ${namespace}/${name}`} />;
   }
 
+  // Group charts into rows: CPU+Memory, Network RX+TX
+  const cpuMemory = perPod.filter((p) => p.metric === 'CPU Usage' || p.metric === 'Memory Usage');
+  const network = perPod.filter((p) => p.metric === 'Network RX' || p.metric === 'Network TX');
+
   return (
     <div style={panel}>
       {/* Header */}
@@ -109,38 +111,68 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
           { label: 'Resource', value: name },
           ...(isWorkload && pods.length > 0 ? [{ label: 'Pods', value: String(pods.length) }] : []),
         ]} />
-        <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
+        <DurationSelector value={timeRange} onChange={setTimeRange} />
       </div>
 
-      {/* Summary cards (aggregate) */}
+      {/* Summary cards */}
       <div style={cardGrid}>
         {metrics.map((m) => (
           <MetricCard key={m.name} label={m.name} value={m.value} unit={m.unit} />
         ))}
       </div>
 
-      {/* Per-pod multi-line charts (Grafana-style) */}
+      {/* Charts in horizontal flex rows */}
       {perPod.length > 0 && (
         <div style={{ marginTop: spacing[5] }}>
           <SectionHeader title={isWorkload ? 'USAGE BY POD' : 'USAGE OVER TIME'} />
-          <div style={chartGrid}>
-            {perPod.map((pps) => (
-              <MultiSeriesChart
-                key={pps.metric}
-                title={pps.metric}
-                unit={pps.unit}
-                timestamps={pps.timestamps}
-                series={(pps.pods || []).map((p) => ({ label: p.pod, values: (p.values || []).map((v) => v === null ? NaN : v) }))}
-                colors={SERIES_COLORS}
-                height={200}
-                timeRange={timeRange}
-              />
-            ))}
-          </div>
+
+          {/* Row 1: CPU + Memory */}
+          {cpuMemory.length > 0 && (
+            <div style={chartRow}>
+              {cpuMemory.map((pps) => (
+                <div key={pps.metric} style={chartCell}>
+                  <MetricsChart
+                    title={pps.metric}
+                    unit={pps.unit}
+                    timestamps={pps.timestamps}
+                    series={(pps.pods || []).map((p) => ({
+                      label: p.pod,
+                      values: (p.values || []).map((v) => v === null ? NaN : v),
+                    }))}
+                    colors={SERIES_COLORS}
+                    height={150}
+                    timeRange={timeRange}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Row 2: Network RX + TX */}
+          {network.length > 0 && (
+            <div style={chartRow}>
+              {network.map((pps) => (
+                <div key={pps.metric} style={chartCell}>
+                  <MetricsChart
+                    title={pps.metric}
+                    unit={pps.unit}
+                    timestamps={pps.timestamps}
+                    series={(pps.pods || []).map((p) => ({
+                      label: p.pod,
+                      values: (p.values || []).map((v) => v === null ? NaN : v),
+                    }))}
+                    colors={SERIES_COLORS}
+                    height={150}
+                    timeRange={timeRange}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Pod table (workloads only) */}
+      {/* Pod table */}
       {isWorkload && pods.length > 0 && (
         <div style={{ marginTop: spacing[5] }}>
           <SectionHeader title="POD DETAILS" />
@@ -201,10 +233,15 @@ const cardGrid: React.CSSProperties = {
   gap: spacing[3],
 };
 
-const chartGrid: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
+const chartRow: React.CSSProperties = {
+  display: 'flex',
   gap: spacing[3],
+  marginBottom: spacing[3],
+};
+
+const chartCell: React.CSSProperties = {
+  flex: 1,
+  minWidth: 0,
 };
 
 const podTableWrap: React.CSSProperties = {
