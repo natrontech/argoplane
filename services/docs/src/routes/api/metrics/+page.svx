@@ -7,76 +7,353 @@ description: Metrics extension backend API reference
 
 The metrics backend exposes a JSON HTTP API consumed by the UI extension via ArgoCD's proxy at `/extensions/metrics/`.
 
-## Endpoints
+All requests receive ArgoCD identity headers (`Argocd-Username`, `Argocd-User-Id`, `Argocd-User-Groups`, `Argocd-Target-Cluster-URL`).
 
-### Query metrics
+## Config-driven dashboard endpoints
+
+These are the primary endpoints used by the config-driven dashboard system.
+
+### Get dashboard config
 
 ```
-GET /api/v1/metrics?query={promql}&start={time}&end={time}&step={duration}
+GET /api/v1/dashboards?application={name}&groupKind={kind}
 ```
 
-Query Prometheus for time-series data.
+Returns the dashboard layout (tabs, rows, graphs metadata) for the UI to render.
 
 **Parameters:**
 
-| Name | Type | Required | Description |
-|------|------|----------|-------------|
-| `query` | string | Yes | PromQL query expression |
-| `start` | string | No | Start time (RFC3339 or Unix timestamp) |
-| `end` | string | No | End time (RFC3339 or Unix timestamp) |
-| `step` | string | No | Query resolution step (e.g., `15s`, `1m`) |
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `application` | string | No | `default` | ArgoCD application name. Falls back to the config entry with `"default": true`. |
+| `groupKind` | string | No | `deployment` | Kubernetes resource kind: `deployment`, `statefulset`, `pod` |
 
 **Response:**
 
 ```json
 {
-  "status": "success",
-  "data": {
-    "resultType": "matrix",
-    "result": [
+  "groupKind": "deployment",
+  "tabs": ["Resource Usage", "Container Breakdown"],
+  "intervals": ["1h", "6h", "24h", "7d"],
+  "rows": [
+    {
+      "name": "cpu-memory",
+      "title": "CPU & Memory",
+      "tab": "Resource Usage",
+      "graphs": [
+        {
+          "name": "cpu-by-pod",
+          "title": "CPU Usage by Pod",
+          "graphType": "line",
+          "metricName": "pod",
+          "queryExpression": "sum by (pod) (rate(...))",
+          "yAxisUnit": "millicores"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Get graph data
+
+```
+GET /api/v1/graph?application={name}&groupKind={kind}&row={row}&graph={graph}&namespace={ns}&name={name}&duration={dur}
+```
+
+Executes a PromQL template for a specific graph and returns time series data.
+
+**Parameters:**
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `application` | string | No | `default` | ArgoCD application name |
+| `groupKind` | string | No | `deployment` | Resource kind |
+| `row` | string | Yes | | Row identifier from dashboard config |
+| `graph` | string | Yes | | Graph identifier from dashboard config |
+| `namespace` | string | Yes | | Kubernetes namespace |
+| `name` | string | Yes | | Resource name (workloads: `name-.*` pattern, pods: exact name) |
+| `duration` | string | No | `1h` | Time range: `1h`, `6h`, `24h`, `7d` |
+
+All query parameters are available as Go `text/template` variables in PromQL expressions (e.g., `{{.namespace}}`, `{{.name}}`, `{{.duration}}`).
+
+**Response:**
+
+```json
+{
+  "series": [
+    {
+      "label": "guestbook-ui-abc123",
+      "values": [
+        { "time": "2025-03-16T10:00:00Z", "value": 12.5 },
+        { "time": "2025-03-16T10:00:30Z", "value": null }
+      ]
+    }
+  ]
+}
+```
+
+Values are converted based on `yAxisUnit`: `bytes` to MiB, `bytes/s` to KB/s, `millicores` and `count` passed through. `null` values indicate gaps in the data.
+
+## Legacy endpoints
+
+These endpoints are still used by the summary cards, pod breakdown table, and query builder.
+
+### Resource metrics
+
+```
+GET /api/v1/resource-metrics?namespace={ns}&name={name}&kind={kind}&range={range}
+```
+
+Returns instant summary or time series metrics for a specific workload or pod.
+
+**Parameters:**
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `namespace` | string | Yes | | Kubernetes namespace |
+| `name` | string | Yes | | Resource name |
+| `kind` | string | No | `Deployment` | Resource kind: `Deployment`, `StatefulSet`, `Pod` |
+| `range` | string | No | (instant) | Time range for series data: `1h`, `6h`, `24h`, `7d` |
+
+**Instant response** (no `range`):
+
+```json
+[
+  { "name": "CPU", "value": "12.5", "unit": "millicores" },
+  { "name": "Memory", "value": "45.2", "unit": "MiB" },
+  { "name": "Network RX", "value": "1.2", "unit": "KB/s" },
+  { "name": "Network TX", "value": "0.8", "unit": "KB/s" },
+  { "name": "Restarts", "value": "0", "unit": "" }
+]
+```
+
+**Range response** (with `range`):
+
+```json
+[
+  {
+    "name": "CPU",
+    "unit": "millicores",
+    "series": [
+      { "time": "2025-03-16T10:00:00Z", "value": 12.5 }
+    ]
+  }
+]
+```
+
+### App metrics
+
+```
+GET /api/v1/app-metrics?namespace={ns}&range={range}
+```
+
+Returns namespace-wide aggregate metrics (all pods in a namespace).
+
+**Parameters:**
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `namespace` | string | Yes | | Kubernetes namespace |
+| `range` | string | No | (instant only) | Time range: `1h`, `6h`, `24h`, `7d` |
+
+**Response:**
+
+```json
+{
+  "summary": [
+    { "name": "CPU", "value": "45.2", "unit": "millicores" },
+    { "name": "Memory", "value": "128.5", "unit": "MiB" }
+  ],
+  "timeSeries": [
+    {
+      "name": "CPU",
+      "unit": "millicores",
+      "series": [{ "time": "...", "value": 45.2 }]
+    }
+  ]
+}
+```
+
+### Pod breakdown
+
+```
+GET /api/v1/pod-breakdown?namespace={ns}&name={name}&kind={kind}&pods={pods}
+```
+
+Returns per-pod instant metrics for the pod details table.
+
+**Parameters:**
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `namespace` | string | Yes | | Kubernetes namespace |
+| `name` | string | No | | Resource name (required if `pods` not set) |
+| `kind` | string | No | `Deployment` | Resource kind |
+| `pods` | string | No | | Comma-separated pod names (alternative to name) |
+
+**Response:**
+
+```json
+[
+  {
+    "pod": "guestbook-ui-abc123",
+    "cpu": "12.5 m",
+    "memory": "45.2 MiB",
+    "netRx": "1.2 KB/s",
+    "netTx": "0.8 KB/s",
+    "restarts": "0"
+  }
+]
+```
+
+### Per-pod time series
+
+```
+GET /api/v1/per-pod-series?namespace={ns}&name={name}&kind={kind}&range={range}&pods={pods}
+```
+
+Returns per-pod time series for multi-line charts (CPU, Memory, Network RX, Network TX).
+
+**Parameters:**
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `namespace` | string | Yes | | Kubernetes namespace |
+| `name` | string | No | | Resource name |
+| `kind` | string | No | `Deployment` | Resource kind |
+| `range` | string | No | `1h` | Time range |
+| `pods` | string | No | | Comma-separated pod names |
+
+**Response:**
+
+```json
+[
+  {
+    "metric": "CPU Usage",
+    "unit": "millicores",
+    "timestamps": ["2025-03-16T10:00:00Z", "..."],
+    "pods": [
       {
-        "metric": { "pod": "guestbook-ui-abc123" },
-        "values": [[1710000000, "0.05"], [1710000015, "0.06"]]
+        "pod": "guestbook-ui-abc123",
+        "values": [12.5, null, 13.0]
       }
     ]
   }
-}
+]
 ```
 
-### List label values
+### Custom query
 
 ```
-GET /api/v1/metrics/labels?label={name}&match={selector}
+GET /api/v1/query?query={promql}&range={range}
 ```
 
-List available values for a Prometheus label.
+Executes an arbitrary PromQL query. Used by the interactive Query Builder.
 
 **Parameters:**
 
-| Name | Type | Required | Description |
-|------|------|----------|-------------|
-| `label` | string | Yes | Label name to query |
-| `match` | string | No | Series selector to filter results |
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `query` | string | Yes | | PromQL expression |
+| `range` | string | No | (instant) | Time range: `1h`, `6h`, `24h`, `7d` |
 
-**Response:**
+Queries containing `delete` or `drop` are rejected (403).
+
+**Instant response:**
 
 ```json
 {
-  "status": "success",
-  "data": ["guestbook-ui-abc123", "guestbook-ui-def456"]
+  "samples": [
+    { "labels": { "pod": "guestbook-ui-abc123" }, "value": 12.5 }
+  ]
 }
 ```
 
-## Headers
+**Range response:**
 
-All requests receive ArgoCD identity headers. The backend uses `Argocd-Target-Cluster-URL` to determine which Prometheus instance to query.
+```json
+{
+  "multiSeries": [
+    {
+      "label": "pod=guestbook-ui-abc123",
+      "series": [{ "time": "...", "value": 12.5 }]
+    }
+  ]
+}
+```
+
+### Discover metrics
+
+```
+GET /api/v1/discover?namespace={ns}&search={term}
+```
+
+Lists available Prometheus metric names, categorized and with auto-generated PromQL templates.
+
+**Parameters:**
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `namespace` | string | No | | Filter to metrics with this namespace label |
+| `search` | string | No | | Case-insensitive substring filter |
+
+**Response** (max 100 results):
+
+```json
+[
+  {
+    "name": "container_cpu_usage_seconds_total",
+    "category": "cpu",
+    "query": "sum(rate(container_cpu_usage_seconds_total{namespace=\"default\"}[5m]))"
+  }
+]
+```
+
+Categories: `cpu`, `memory`, `network`, `disk`, `pod`, `node`, `deployment`, `statefulset`, `namespace`, `other`.
+
+### Label discovery
+
+```
+GET /api/v1/labels?metric={name}&label={label}&namespace={ns}
+```
+
+Returns label names or values for a Prometheus metric.
+
+**Parameters:**
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `metric` | string | Yes | | Prometheus metric name |
+| `label` | string | No | | If set, returns values for this label. If omitted, returns label names. |
+| `namespace` | string | No | | Scope query to this namespace |
+
+**Label names response** (no `label` param):
+
+```json
+["pod", "container", "namespace", "node"]
+```
+
+**Label values response** (with `label` param):
+
+```json
+["guestbook-ui-abc123", "guestbook-ui-def456"]
+```
+
+## Health check
+
+```
+GET /healthz
+```
+
+Returns `200 OK`. No body.
 
 ## Error responses
 
+All endpoints return errors as JSON:
+
 ```json
-{
-  "status": "error",
-  "error": "bad_data",
-  "message": "invalid PromQL expression"
-}
+{ "error": "description of what went wrong" }
 ```
+
+HTTP status codes: `400` for missing parameters, `403` for disallowed queries, `404` for config lookups that fail, `500` for internal errors.
