@@ -163,7 +163,7 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
 
   return (
     <div style={{ ...panel, maxWidth: '100%' }}>
-      <SectionHeader title="LOGS" />
+      <SectionHeader title="LOG EXPLORER" />
 
       {/* Stats row */}
       <div style={{

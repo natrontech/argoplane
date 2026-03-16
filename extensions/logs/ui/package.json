@@ -2,7 +2,7 @@
   "name": "@argoplane/extension-logs",
   "version": "0.1.0",
   "private": true,
-  "description": "ArgoPlane Logs Extension - Loki log viewer in ArgoCD",
+  "description": "ArgoPlane Log Explorer - Loki-backed historical log search in ArgoCD",
   "scripts": {
     "build": "webpack --mode production",
     "dev": "webpack --mode development --watch"

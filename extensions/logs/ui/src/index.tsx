@@ -4,38 +4,38 @@ import { AppLogsView } from './components/AppLogsView';
 
 
 ((window: any) => {
-  // Resource tab: Pod logs (most common entry point)
+  // Resource tab: Pod log explorer (Loki-backed historical search)
   window.extensionsAPI.registerResourceExtension(
     LogsPanel,
     '',
     'Pod',
-    'Logs',
-    { icon: 'fa-file-alt' }
+    'Log Explorer',
+    { icon: 'fa-search' }
   );
 
-  // Resource tab: Deployment logs (aggregated across pods)
+  // Resource tab: Deployment log explorer (aggregated across pods)
   window.extensionsAPI.registerResourceExtension(
     LogsPanel,
     'apps',
     'Deployment',
-    'Logs',
-    { icon: 'fa-file-alt' }
+    'Log Explorer',
+    { icon: 'fa-search' }
   );
 
-  // Resource tab: StatefulSet logs
+  // Resource tab: StatefulSet log explorer
   window.extensionsAPI.registerResourceExtension(
     LogsPanel,
     'apps',
     'StatefulSet',
-    'Logs',
-    { icon: 'fa-file-alt' }
+    'Log Explorer',
+    { icon: 'fa-search' }
   );
 
   // App view: full-page log explorer for an application
   window.extensionsAPI.registerAppViewExtension(
     AppLogsView,
-    'Logs',
-    'fa-file-alt'
+    'Log Explorer',
+    'fa-search'
   );
 
 })(window);
