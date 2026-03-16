@@ -65,7 +65,7 @@ jobs:
           labels: ${{ steps.docker-meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.extension }}
           cache-to: type=gha,mode=max,scope=${{ matrix.extension }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
 
   # --- Build and push UI extensions init container ---
   ui-extensions-image:
@@ -124,7 +124,7 @@ jobs:
           labels: ${{ steps.docker-meta.outputs.labels }}
           cache-from: type=gha,scope=ui-extensions
           cache-to: type=gha,mode=max,scope=ui-extensions
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
 
   # --- Build and push docs image ---
   docs-image:
@@ -161,7 +161,7 @@ jobs:
           labels: ${{ steps.docker-meta.outputs.labels }}
           cache-from: type=gha,scope=docs
           cache-to: type=gha,mode=max,scope=docs
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
 
   # --- Package and push Helm chart ---
   helm-chart:
