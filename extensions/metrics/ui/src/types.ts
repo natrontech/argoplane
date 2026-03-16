@@ -55,3 +55,44 @@ export interface ExtensionProps {
   tree: any;
   application: any;
 }
+
+// --- Config-driven dashboard types ---
+
+export interface DashboardConfig {
+  groupKind: string;
+  tabs: string[];
+  intervals: string[];
+  rows: DashboardRow[];
+}
+
+export interface DashboardRow {
+  name: string;
+  title: string;
+  tab: string;
+  graphs: DashboardGraph[];
+}
+
+export interface DashboardGraph {
+  name: string;
+  title: string;
+  description: string;
+  graphType: string;
+  metricName: string;
+  queryExpression: string;
+  yAxisUnit: string;
+  thresholds?: Array<{
+    name: string;
+    color: string;
+    value: string;
+    queryExpression: string;
+  }>;
+}
+
+export interface GraphDataResponse {
+  series: GraphSeries[];
+}
+
+export interface GraphSeries {
+  label: string;
+  values: Array<{ time: string; value: number | null }>;
+}

@@ -1,18 +1,18 @@
 ---
 title: Metrics Extension
-description: Prometheus metrics integration for ArgoCD
+description: Prometheus metrics integration for ArgoCD with customizable dashboards
 ---
 
 # Metrics Extension
 
-The metrics extension surfaces Prometheus metrics directly inside ArgoCD's resource detail views. Developers can see CPU, memory, request rates, and custom metrics for their Deployments, StatefulSets, and Pods without leaving ArgoCD.
+The metrics extension surfaces Prometheus metrics directly inside ArgoCD's resource detail views. Developers can see CPU, memory, network, container-level breakdowns, and custom metrics for their Deployments, StatefulSets, and Pods without leaving ArgoCD.
 
 ## Registration
 
 The extension registers as:
 
 - **Resource tab** on `apps/Deployment`, `apps/StatefulSet`, and core `Pod` resources
-- **System-level page** in the ArgoCD sidebar for cluster-wide metric views
+- **App view** in the application detail for namespace-wide metrics and a query builder
 
 ## What it shows
 
@@ -20,31 +20,189 @@ The extension registers as:
 
 When viewing a Deployment, StatefulSet, or Pod, the Metrics tab shows:
 
-- CPU usage over time
-- Memory usage over time
-- Pod count and status (for Deployments/StatefulSets)
-- Custom metrics defined via annotations
+- Instant summary cards (CPU, Memory, Network RX/TX, Restarts)
+- Config-driven charts organized in tabs (e.g., "Resource Usage", "Container Breakdown")
+- Per-pod and per-container breakdowns via configurable PromQL
+- Pod details table with per-pod instant metrics
 
-### System-level page
+Charts are rendered with recharts: responsive width, synchronized hover across all charts, dark tooltip overlay, and clickable legend to toggle series.
 
-The sidebar page provides cluster-wide metric dashboards with namespace filtering.
+### App view
 
-## Backend
+The application-level view provides:
 
-The metrics backend is a Go HTTP server that queries Prometheus:
+- Namespace-wide summary metrics
+- Same config-driven dashboard with tabs
+- Interactive Query Builder for custom PromQL (visual builder and raw mode)
+- Pod details table
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/v1/metrics` | Query Prometheus metrics for a resource |
-| `GET /api/v1/metrics/labels` | List available label values |
+### Default dashboards
 
-### Configuration
+Without any custom config, the extension ships built-in dashboards:
+
+**Deployments and StatefulSets:**
+
+| Tab | Charts |
+|-----|--------|
+| Resource Usage | CPU by pod, Memory by pod, Network RX/TX by pod |
+| Container Breakdown | CPU by container, Memory by container, Restarts by container |
+
+**Pods:**
+
+| Tab | Charts |
+|-----|--------|
+| Resource Usage | CPU by container, Memory by container, Network RX/TX |
+
+For pods, metrics are always broken down by container (not summed) so you can see sidecar vs app container resource usage.
+
+## Custom dashboards
+
+Dashboards are fully customizable via a JSON config file mounted as a ConfigMap. This lets you add custom PromQL queries, organize metrics into tabs, define per-application dashboards, and add Golden Signal or SLO graphs.
+
+### Config format
+
+```json
+{
+  "applications": [
+    {
+      "name": "default",
+      "default": true,
+      "dashboards": [
+        {
+          "groupKind": "deployment",
+          "tabs": ["Resource Usage", "Golden Signal"],
+          "intervals": ["1h", "6h", "24h", "7d"],
+          "rows": [
+            {
+              "name": "cpu-memory",
+              "title": "CPU & Memory",
+              "tab": "Resource Usage",
+              "graphs": [
+                {
+                  "name": "cpu-by-pod",
+                  "title": "CPU Usage",
+                  "description": "CPU usage per pod",
+                  "graphType": "line",
+                  "metricName": "pod",
+                  "queryExpression": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"{{.namespace}}\",pod=~\"{{.name}}\",container!=\"\"}[5m])) * 1000",
+                  "yAxisUnit": "millicores"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Template variables
+
+PromQL query expressions support Go `text/template` syntax. All URL query parameters are available as variables:
+
+| Variable | Description | Example value |
+|----------|-------------|---------------|
+| `{{.namespace}}` | Kubernetes namespace of the resource | `default` |
+| `{{.name}}` | Resource name pattern (pods: exact, workloads: `name-.*`) | `guestbook-ui-.*` |
+| `{{.application}}` | ArgoCD application name | `guestbook` |
+| `{{.duration}}` | Selected time range | `1h` |
+
+### Config structure
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `applications[].name` | string | ArgoCD application name (or "default" for fallback) |
+| `applications[].default` | bool | Use as fallback when no app-specific config matches |
+| `dashboards[].groupKind` | string | Kubernetes resource kind: `deployment`, `statefulset`, `pod` |
+| `dashboards[].tabs` | string[] | Tab names for organizing rows |
+| `dashboards[].intervals` | string[] | Time range options (e.g., `["1h", "6h", "24h", "7d"]`) |
+| `rows[].name` | string | URL-safe row identifier |
+| `rows[].title` | string | Display title |
+| `rows[].tab` | string | Which tab this row appears under |
+| `graphs[].name` | string | URL-safe graph identifier |
+| `graphs[].title` | string | Display title |
+| `graphs[].graphType` | string | Chart type: `line` (default) |
+| `graphs[].metricName` | string | Prometheus label to group by (e.g., `pod`, `container`) |
+| `graphs[].queryExpression` | string | PromQL with template variables |
+| `graphs[].yAxisUnit` | string | Unit: `millicores`, `bytes`, `bytes/s`, `count`, or custom |
+
+### Deploying a custom config
+
+1. Create a ConfigMap with your config:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argoplane-metrics-config
+  namespace: argocd
+data:
+  config.json: |
+    {
+      "applications": [
+        {
+          "name": "default",
+          "default": true,
+          "dashboards": [ ... ]
+        }
+      ]
+    }
+```
+
+2. Mount the ConfigMap and set `CONFIG_PATH` in the metrics backend deployment:
+
+```yaml
+env:
+  - name: CONFIG_PATH
+    value: "/app/config.json"
+volumeMounts:
+  - name: dashboard-config
+    mountPath: /app/config.json
+    subPath: config.json
+    readOnly: true
+volumes:
+  - name: dashboard-config
+    configMap:
+      name: argoplane-metrics-config
+```
+
+3. The backend reads the config on startup. Restart the pod to pick up changes.
+
+### Per-application dashboards
+
+You can define different dashboards for different ArgoCD applications. The backend matches by application name and falls back to the entry with `"default": true`.
+
+```json
+{
+  "applications": [
+    {
+      "name": "my-api",
+      "dashboards": [
+        {
+          "groupKind": "deployment",
+          "tabs": ["Resource Usage", "HTTP Metrics"],
+          "rows": [ ... ]
+        }
+      ]
+    },
+    {
+      "name": "default",
+      "default": true,
+      "dashboards": [ ... ]
+    }
+  ]
+}
+```
+
+## Backend configuration
 
 | Environment Variable | Required | Default | Description |
 |---------------------|----------|---------|-------------|
-| `PROMETHEUS_URL` | Yes | - | Prometheus server URL |
+| `PROMETHEUS_URL` | No | `http://kube-prometheus-kube-prome-prometheus.monitoring.svc:9090` | Prometheus server URL |
 | `PORT` | No | `8080` | HTTP server port |
 | `LOG_LEVEL` | No | `info` | Log level (debug, info, warn, error) |
+| `CONFIG_PATH` | No | (empty) | Path to custom dashboard config JSON. Omit to use built-in defaults. |
 
 ## Proxy configuration
 

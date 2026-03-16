@@ -12,9 +12,9 @@ import {
   spacing,
   panel,
 } from '@argoplane/shared';
-import { fetchAppMetrics, fetchPodBreakdown, fetchPerPodSeries } from '../api';
-import { MetricData, TimeRange, PodMetric, PerPodSeries } from '../types';
-import { MetricsChart } from './MetricsChart';
+import { fetchAppMetrics, fetchPodBreakdown } from '../api';
+import { MetricData, TimeRange, PodMetric } from '../types';
+import { ConfigDashboard } from './ConfigDashboard';
 import { DurationSelector } from './DurationSelector';
 import { QueryBuilder } from './QueryBuilder';
 
@@ -33,8 +33,6 @@ const REFRESH_INTERVAL = 30_000;
 export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) => {
   const [summary, setSummary] = React.useState<MetricData[]>([]);
   const [pods, setPods] = React.useState<PodMetric[]>([]);
-  const [perPod, setPerPod] = React.useState<PerPodSeries[]>([]);
-  const [timeRange, setTimeRange] = React.useState<TimeRange>('1h');
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -43,13 +41,6 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
 
-  const treePodNames = React.useMemo(() => {
-    if (!tree?.nodes) return [];
-    return tree.nodes
-      .filter((n: any) => n.kind === 'Pod' && n.namespace === namespace)
-      .map((n: any) => n.name) as string[];
-  }, [tree, namespace]);
-
   const treeDeployments = React.useMemo(() => {
     if (!tree?.nodes) return [];
     return tree.nodes
@@ -57,31 +48,32 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
       .map((n: any) => n.name) as string[];
   }, [tree, namespace]);
 
+  const treePodNames = React.useMemo(() => {
+    if (!tree?.nodes) return [];
+    return tree.nodes
+      .filter((n: any) => n.kind === 'Pod' && n.namespace === namespace)
+      .map((n: any) => n.name) as string[];
+  }, [tree, namespace]);
+
   const fetchAll = React.useCallback(() => {
     if (!namespace) return;
 
-    const metricsP = fetchAppMetrics(namespace, timeRange, appNamespace, appName, project);
-
-    const podNames = treePodNames.length > 0 ? treePodNames : undefined;
-    const perPodP = fetchPerPodSeries(
-      namespace, appName, 'Deployment', timeRange,
-      appNamespace, appName, project, podNames
-    ).catch(() => [] as PerPodSeries[]);
+    const metricsP = fetchAppMetrics(namespace, undefined, appNamespace, appName, project);
 
     const deployName = treeDeployments.length > 0 ? treeDeployments[0] : appName;
+    const podNames = treePodNames.length > 0 ? treePodNames : undefined;
     const podsP = fetchPodBreakdown(namespace, deployName, 'Deployment', appNamespace, appName, project, podNames)
       .catch(() => [] as PodMetric[]);
 
-    Promise.all([metricsP, perPodP, podsP])
-      .then(([resp, podSeries, podList]) => {
+    Promise.all([metricsP, podsP])
+      .then(([resp, podList]) => {
         setSummary(resp.summary || []);
-        setPerPod(podSeries || []);
         setPods(podList || []);
         setError(null);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [namespace, timeRange, appNamespace, appName, project, treePodNames, treeDeployments]);
+  }, [namespace, appNamespace, appName, project, treePodNames, treeDeployments]);
 
   React.useEffect(() => {
     setLoading(true);
@@ -110,10 +102,6 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
     return <div style={panel}><EmptyState message="No metrics available. Is Prometheus running?" /></div>;
   }
 
-  // Group charts into rows
-  const cpuMemory = perPod.filter((p) => p.metric === 'CPU Usage' || p.metric === 'Memory Usage');
-  const network = perPod.filter((p) => p.metric === 'Network RX' || p.metric === 'Network TX');
-
   return (
     <div style={panel}>
       {/* Query builder */}
@@ -125,65 +113,25 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
       />
 
       {/* Overview */}
-      <div style={headerRow}>
-        <SectionHeader title="OVERVIEW" />
-        <DurationSelector value={timeRange} onChange={setTimeRange} />
-      </div>
-
+      <SectionHeader title="OVERVIEW" />
       <div style={cardGrid}>
         {summary.map((m) => (
           <MetricCard key={m.name} label={m.name} value={m.value} unit={m.unit} />
         ))}
       </div>
 
-      {/* Charts in horizontal flex rows */}
-      {perPod.length > 0 && (
-        <div style={{ marginTop: spacing[5] }}>
-          <SectionHeader title="USAGE BY POD" />
-
-          {cpuMemory.length > 0 && (
-            <div style={chartRow}>
-              {cpuMemory.map((pps) => (
-                <div key={pps.metric} style={chartCell}>
-                  <MetricsChart
-                    title={pps.metric}
-                    unit={pps.unit}
-                    timestamps={pps.timestamps}
-                    series={(pps.pods || []).map((p) => ({
-                      label: p.pod,
-                      values: (p.values || []).map((v) => v === null ? NaN : v),
-                    }))}
-                    colors={SERIES_COLORS}
-                    height={150}
-                    timeRange={timeRange}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {network.length > 0 && (
-            <div style={chartRow}>
-              {network.map((pps) => (
-                <div key={pps.metric} style={chartCell}>
-                  <MetricsChart
-                    title={pps.metric}
-                    unit={pps.unit}
-                    timestamps={pps.timestamps}
-                    series={(pps.pods || []).map((p) => ({
-                      label: p.pod,
-                      values: (p.values || []).map((v) => v === null ? NaN : v),
-                    }))}
-                    colors={SERIES_COLORS}
-                    height={150}
-                    timeRange={timeRange}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {/* Config-driven charts with tabs */}
+      <div style={{ marginTop: spacing[5] }}>
+        <ConfigDashboard
+          applicationName={appName}
+          groupKind="deployment"
+          namespace={namespace}
+          name={appName}
+          appNamespace={appNamespace}
+          appName={appName}
+          project={project}
+        />
+      </div>
 
       {/* Pod table */}
       {pods.length > 0 && (
@@ -231,28 +179,10 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
 
 // --- Styles ---
 
-const headerRow: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: spacing[3],
-};
-
 const cardGrid: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
   gap: spacing[3],
-};
-
-const chartRow: React.CSSProperties = {
-  display: 'flex',
-  gap: spacing[3],
-  marginBottom: spacing[3],
-};
-
-const chartCell: React.CSSProperties = {
-  flex: 1,
-  minWidth: 0,
 };
 
 const podTableWrap: React.CSSProperties = {

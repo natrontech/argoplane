@@ -11,6 +11,7 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 
+	"github.com/natrontech/argoplane/extensions/metrics/backend/internal/config"
 	"github.com/natrontech/argoplane/extensions/metrics/backend/internal/handler"
 	"github.com/natrontech/argoplane/extensions/metrics/backend/internal/prometheus"
 )
@@ -19,18 +20,36 @@ type Config struct {
 	Port          string `envconfig:"PORT" default:"8080"`
 	PrometheusURL string `envconfig:"PROMETHEUS_URL" default:"http://kube-prometheus-kube-prome-prometheus.monitoring.svc:9090"`
 	LogLevel      string `envconfig:"LOG_LEVEL" default:"info"`
+	ConfigPath    string `envconfig:"CONFIG_PATH" default:""`
 }
 
 func main() {
-	var config Config
-	if err := envconfig.Process("", &config); err != nil {
+	var cfg Config
+	if err := envconfig.Process("", &cfg); err != nil {
 		slog.Error("failed to load config", "error", err)
 		os.Exit(1)
 	}
 
-	setupLogging(config.LogLevel)
+	setupLogging(cfg.LogLevel)
 
-	promClient := prometheus.NewClient(config.PrometheusURL)
+	// Load dashboard config (custom file or built-in defaults)
+	var dashCfg *config.DashboardConfig
+	if cfg.ConfigPath != "" {
+		loaded, err := config.Load(cfg.ConfigPath)
+		if err != nil {
+			slog.Error("failed to load dashboard config", "path", cfg.ConfigPath, "error", err)
+			os.Exit(1)
+		}
+		slog.Info("loaded custom dashboard config", "path", cfg.ConfigPath, "applications", len(loaded.Applications))
+		dashCfg = loaded
+	} else {
+		slog.Info("using built-in default dashboard config")
+		dashCfg = config.DefaultConfig()
+	}
+
+	promClient := prometheus.NewClient(cfg.PrometheusURL)
+
+	// Existing handlers (backward compatible)
 	resourceHandler := handler.NewResource(promClient)
 	appHandler := handler.NewApp(promClient)
 	podsHandler := handler.NewPods(promClient)
@@ -39,7 +58,16 @@ func main() {
 	labelsHandler := handler.NewLabels(promClient)
 	perPodHandler := handler.NewPerPod(promClient)
 
+	// Config-driven dashboard handler
+	dashboardHandler := handler.NewDashboard(promClient, dashCfg)
+
 	mux := http.NewServeMux()
+
+	// Config-driven dashboard endpoints
+	mux.HandleFunc("GET /api/v1/dashboards", dashboardHandler.HandleConfig)
+	mux.HandleFunc("GET /api/v1/graph", dashboardHandler.HandleGraph)
+
+	// Legacy endpoints (still used by built-in views)
 	mux.HandleFunc("GET /api/v1/resource-metrics", resourceHandler.Handle)
 	mux.HandleFunc("GET /api/v1/app-metrics", appHandler.Handle)
 	mux.HandleFunc("GET /api/v1/pod-breakdown", podsHandler.Handle)
@@ -52,7 +80,7 @@ func main() {
 	})
 
 	server := &http.Server{
-		Addr:         fmt.Sprintf(":%s", config.Port),
+		Addr:         fmt.Sprintf(":%s", cfg.Port),
 		Handler:      mux,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,
@@ -62,7 +90,7 @@ func main() {
 	defer cancel()
 
 	go func() {
-		slog.Info("starting metrics backend", "port", config.Port, "prometheus", config.PrometheusURL)
+		slog.Info("starting metrics backend", "port", cfg.Port, "prometheus", cfg.PrometheusURL)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("server error", "error", err)
 			os.Exit(1)

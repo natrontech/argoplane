@@ -1,4 +1,4 @@
-import { MetricData, TimeSeriesMetric, TimeRange, PodMetric, CustomQueryResult, DiscoveredMetric, PerPodSeries } from './types';
+import { MetricData, TimeSeriesMetric, TimeRange, PodMetric, CustomQueryResult, DiscoveredMetric, PerPodSeries, DashboardConfig, GraphDataResponse } from './types';
 
 interface AppMetricsResponse {
   summary: MetricData[];
@@ -95,4 +95,32 @@ export function fetchLabelValues(
 ): Promise<string[]> {
   const params = new URLSearchParams({ metric, label, namespace });
   return jsonFetch(`/extensions/metrics/api/v1/labels?${params}`, argoHeaders(appNamespace, appName, project));
+}
+
+// --- Config-driven dashboard API ---
+
+export function fetchDashboardConfig(
+  applicationName: string, groupKind: string,
+  appNamespace: string, appName: string, project: string
+): Promise<DashboardConfig> {
+  const params = new URLSearchParams({ application: applicationName, groupKind });
+  return jsonFetch(`/extensions/metrics/api/v1/dashboards?${params}`, argoHeaders(appNamespace, appName, project));
+}
+
+export function fetchGraphData(
+  applicationName: string, groupKind: string,
+  row: string, graph: string,
+  namespace: string, name: string, duration: string,
+  appNamespace: string, appName: string, project: string
+): Promise<GraphDataResponse> {
+  const params = new URLSearchParams({
+    application: applicationName,
+    groupKind,
+    row,
+    graph,
+    namespace,
+    name,
+    duration,
+  });
+  return jsonFetch(`/extensions/metrics/api/v1/graph?${params}`, argoHeaders(appNamespace, appName, project));
 }

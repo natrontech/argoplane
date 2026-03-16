@@ -1,0 +1,174 @@
+{
+  "applications": [
+    {
+      "name": "default",
+      "default": true,
+      "dashboards": [
+        {
+          "groupKind": "deployment",
+          "tabs": ["Resource Usage", "Container Breakdown", "Golden Signal"],
+          "intervals": ["1h", "6h", "24h", "7d"],
+          "rows": [
+            {
+              "name": "cpu-memory",
+              "title": "CPU & Memory",
+              "tab": "Resource Usage",
+              "graphs": [
+                {
+                  "name": "cpu-by-pod",
+                  "title": "CPU Usage",
+                  "description": "CPU usage per pod in millicores",
+                  "graphType": "line",
+                  "metricName": "pod",
+                  "queryExpression": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"{{.namespace}}\",pod=~\"{{.name}}\",container!=\"\"}[5m])) * 1000",
+                  "yAxisUnit": "millicores"
+                },
+                {
+                  "name": "memory-by-pod",
+                  "title": "Memory Usage",
+                  "description": "Working set memory per pod",
+                  "graphType": "line",
+                  "metricName": "pod",
+                  "queryExpression": "sum by (pod) (container_memory_working_set_bytes{namespace=\"{{.namespace}}\",pod=~\"{{.name}}\",container!=\"\"})",
+                  "yAxisUnit": "bytes"
+                }
+              ]
+            },
+            {
+              "name": "network",
+              "title": "Network I/O",
+              "tab": "Resource Usage",
+              "graphs": [
+                {
+                  "name": "network-rx",
+                  "title": "Network Receive",
+                  "description": "Inbound network traffic per pod",
+                  "graphType": "line",
+                  "metricName": "pod",
+                  "queryExpression": "sum by (pod) (rate(container_network_receive_bytes_total{namespace=\"{{.namespace}}\",pod=~\"{{.name}}\"}[5m]))",
+                  "yAxisUnit": "bytes/s"
+                },
+                {
+                  "name": "network-tx",
+                  "title": "Network Transmit",
+                  "description": "Outbound network traffic per pod",
+                  "graphType": "line",
+                  "metricName": "pod",
+                  "queryExpression": "sum by (pod) (rate(container_network_transmit_bytes_total{namespace=\"{{.namespace}}\",pod=~\"{{.name}}\"}[5m]))",
+                  "yAxisUnit": "bytes/s"
+                }
+              ]
+            },
+            {
+              "name": "container-cpu",
+              "title": "CPU by Container",
+              "tab": "Container Breakdown",
+              "graphs": [
+                {
+                  "name": "cpu-by-container",
+                  "title": "CPU per Container",
+                  "description": "CPU usage broken down by container name",
+                  "graphType": "line",
+                  "metricName": "container",
+                  "queryExpression": "sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"{{.namespace}}\",pod=~\"{{.name}}\",container!=\"\"}[5m])) * 1000",
+                  "yAxisUnit": "millicores"
+                },
+                {
+                  "name": "memory-by-container",
+                  "title": "Memory per Container",
+                  "description": "Working set memory broken down by container name",
+                  "graphType": "line",
+                  "metricName": "container",
+                  "queryExpression": "sum by (container) (container_memory_working_set_bytes{namespace=\"{{.namespace}}\",pod=~\"{{.name}}\",container!=\"\"})",
+                  "yAxisUnit": "bytes"
+                }
+              ]
+            },
+            {
+              "name": "http-latency",
+              "title": "HTTP Latency",
+              "tab": "Golden Signal",
+              "graphs": [
+                {
+                  "name": "http-latency-p99",
+                  "title": "P99 Latency",
+                  "description": "99th percentile HTTP request latency",
+                  "graphType": "line",
+                  "metricName": "pod",
+                  "queryExpression": "histogram_quantile(0.99, sum by (le, pod) (rate(http_request_duration_seconds_bucket{namespace=\"{{.namespace}}\",pod=~\"{{.name}}\"}[5m])))",
+                  "yAxisUnit": "seconds"
+                },
+                {
+                  "name": "http-error-rate",
+                  "title": "Error Rate",
+                  "description": "HTTP 5xx error rate per second",
+                  "graphType": "line",
+                  "metricName": "pod",
+                  "queryExpression": "sum by (pod) (rate(http_requests_total{namespace=\"{{.namespace}}\",pod=~\"{{.name}}\",code=~\"5..\"}[5m]))",
+                  "yAxisUnit": "req/s"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "groupKind": "pod",
+          "tabs": ["Resource Usage"],
+          "intervals": ["1h", "6h", "24h", "7d"],
+          "rows": [
+            {
+              "name": "cpu-memory",
+              "title": "CPU & Memory",
+              "tab": "Resource Usage",
+              "graphs": [
+                {
+                  "name": "cpu-by-container",
+                  "title": "CPU Usage",
+                  "description": "CPU usage per container in this pod",
+                  "graphType": "line",
+                  "metricName": "container",
+                  "queryExpression": "sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"{{.namespace}}\",pod=\"{{.name}}\",container!=\"\"}[5m])) * 1000",
+                  "yAxisUnit": "millicores"
+                },
+                {
+                  "name": "memory-by-container",
+                  "title": "Memory Usage",
+                  "description": "Working set memory per container in this pod",
+                  "graphType": "line",
+                  "metricName": "container",
+                  "queryExpression": "sum by (container) (container_memory_working_set_bytes{namespace=\"{{.namespace}}\",pod=\"{{.name}}\",container!=\"\"})",
+                  "yAxisUnit": "bytes"
+                }
+              ]
+            },
+            {
+              "name": "network",
+              "title": "Network I/O",
+              "tab": "Resource Usage",
+              "graphs": [
+                {
+                  "name": "network-rx",
+                  "title": "Network Receive",
+                  "description": "Inbound network traffic",
+                  "graphType": "line",
+                  "metricName": "pod",
+                  "queryExpression": "sum(rate(container_network_receive_bytes_total{namespace=\"{{.namespace}}\",pod=\"{{.name}}\"}[5m]))",
+                  "yAxisUnit": "bytes/s"
+                },
+                {
+                  "name": "network-tx",
+                  "title": "Network Transmit",
+                  "description": "Outbound network traffic",
+                  "graphType": "line",
+                  "metricName": "pod",
+                  "queryExpression": "sum(rate(container_network_transmit_bytes_total{namespace=\"{{.namespace}}\",pod=\"{{.name}}\"}[5m]))",
+                  "yAxisUnit": "bytes/s"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

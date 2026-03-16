@@ -31,6 +31,15 @@ spec:
               value: "http://kube-prometheus-kube-prome-prometheus.monitoring.svc:9090"
             - name: LOG_LEVEL
               value: "info"
+            # Uncomment to use a custom dashboard config (ConfigMap-backed):
+            # - name: CONFIG_PATH
+            #   value: "/app/config.json"
+          # Uncomment to mount a custom dashboard config:
+          # volumeMounts:
+          #   - name: dashboard-config
+          #     mountPath: /app/config.json
+          #     subPath: config.json
+          #     readOnly: true
           livenessProbe:
             httpGet:
               path: /healthz

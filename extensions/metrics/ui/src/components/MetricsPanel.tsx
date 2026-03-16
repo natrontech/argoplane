@@ -13,10 +13,9 @@ import {
   panel,
   spacing,
 } from '@argoplane/shared';
-import { fetchMetrics, fetchPodBreakdown, fetchPerPodSeries } from '../api';
-import { ExtensionProps, MetricData, PodMetric, PerPodSeries, TimeRange } from '../types';
-import { MetricsChart } from './MetricsChart';
-import { DurationSelector } from './DurationSelector';
+import { fetchMetrics, fetchPodBreakdown } from '../api';
+import { ExtensionProps, MetricData, PodMetric } from '../types';
+import { ConfigDashboard } from './ConfigDashboard';
 
 const SERIES_COLORS = [
   '#00A2B3', '#f5a337', '#0c568f', '#63b343', '#1abe93',
@@ -28,8 +27,6 @@ const REFRESH_INTERVAL = 30_000;
 export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }) => {
   const [metrics, setMetrics] = React.useState<MetricData[]>([]);
   const [pods, setPods] = React.useState<PodMetric[]>([]);
-  const [perPod, setPerPod] = React.useState<PerPodSeries[]>([]);
-  const [timeRange, setTimeRange] = React.useState<TimeRange>('1h');
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -52,25 +49,20 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
     if (isWorkload) {
       promises.push(
         fetchPodBreakdown(namespace, name, kind, appNamespace, appName, project).catch(() => []),
-        fetchPerPodSeries(namespace, name, kind, timeRange, appNamespace, appName, project).catch(() => []),
       );
     } else {
-      promises.push(
-        Promise.resolve([]),
-        fetchPerPodSeries(namespace, name, 'Pod', timeRange, appNamespace, appName, project).catch(() => []),
-      );
+      promises.push(Promise.resolve([]));
     }
 
     Promise.all(promises)
-      .then(([instant, podList, podSeries]) => {
+      .then(([instant, podList]) => {
         setMetrics(instant);
         setPods(podList);
-        setPerPod(podSeries);
         setError(null);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [namespace, name, kind, isWorkload, timeRange, appNamespace, appName, project]);
+  }, [namespace, name, kind, isWorkload, appNamespace, appName, project]);
 
   React.useEffect(() => {
     setLoading(true);
@@ -93,13 +85,9 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
     );
   }
 
-  if (metrics.length === 0 && perPod.length === 0) {
+  if (metrics.length === 0) {
     return <EmptyState message={`No metrics available for ${kind} ${namespace}/${name}`} />;
   }
-
-  // Group charts into rows: CPU+Memory, Network RX+TX
-  const cpuMemory = perPod.filter((p) => p.metric === 'CPU Usage' || p.metric === 'Memory Usage');
-  const network = perPod.filter((p) => p.metric === 'Network RX' || p.metric === 'Network TX');
 
   return (
     <div style={panel}>
@@ -111,7 +99,6 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
           { label: 'Resource', value: name },
           ...(isWorkload && pods.length > 0 ? [{ label: 'Pods', value: String(pods.length) }] : []),
         ]} />
-        <DurationSelector value={timeRange} onChange={setTimeRange} />
       </div>
 
       {/* Summary cards */}
@@ -121,56 +108,18 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
         ))}
       </div>
 
-      {/* Charts in horizontal flex rows */}
-      {perPod.length > 0 && (
-        <div style={{ marginTop: spacing[5] }}>
-          <SectionHeader title={isWorkload ? 'USAGE BY POD' : 'USAGE OVER TIME'} />
-
-          {/* Row 1: CPU + Memory */}
-          {cpuMemory.length > 0 && (
-            <div style={chartRow}>
-              {cpuMemory.map((pps) => (
-                <div key={pps.metric} style={chartCell}>
-                  <MetricsChart
-                    title={pps.metric}
-                    unit={pps.unit}
-                    timestamps={pps.timestamps}
-                    series={(pps.pods || []).map((p) => ({
-                      label: p.pod,
-                      values: (p.values || []).map((v) => v === null ? NaN : v),
-                    }))}
-                    colors={SERIES_COLORS}
-                    height={150}
-                    timeRange={timeRange}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Row 2: Network RX + TX */}
-          {network.length > 0 && (
-            <div style={chartRow}>
-              {network.map((pps) => (
-                <div key={pps.metric} style={chartCell}>
-                  <MetricsChart
-                    title={pps.metric}
-                    unit={pps.unit}
-                    timestamps={pps.timestamps}
-                    series={(pps.pods || []).map((p) => ({
-                      label: p.pod,
-                      values: (p.values || []).map((v) => v === null ? NaN : v),
-                    }))}
-                    colors={SERIES_COLORS}
-                    height={150}
-                    timeRange={timeRange}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {/* Config-driven charts with tabs */}
+      <div style={{ marginTop: spacing[5] }}>
+        <ConfigDashboard
+          applicationName={appName}
+          groupKind={kind.toLowerCase()}
+          namespace={namespace}
+          name={name}
+          appNamespace={appNamespace}
+          appName={appName}
+          project={project}
+        />
+      </div>
 
       {/* Pod table */}
       {isWorkload && pods.length > 0 && (
@@ -231,17 +180,6 @@ const cardGrid: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
   gap: spacing[3],
-};
-
-const chartRow: React.CSSProperties = {
-  display: 'flex',
-  gap: spacing[3],
-  marginBottom: spacing[3],
-};
-
-const chartCell: React.CSSProperties = {
-  flex: 1,
-  minWidth: 0,
 };
 
 const podTableWrap: React.CSSProperties = {
