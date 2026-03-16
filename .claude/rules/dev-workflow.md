@@ -25,7 +25,8 @@ make build-extensions           # Build all UI extension bundles
 make build-backends             # Build all backend Docker images
 make build-ui-extensions-image  # Build the UI extensions init container image
 make load-extensions            # Load backend + UI extensions images into kind
-make deploy-extensions          # Deploy backends, UI bundles, and proxy config
+make setup-argocd               # Configure ArgoCD + deploy extensions (all-in-one)
+make reload-extensions          # Rebuild + redeploy all extensions
 ```
 
 Each extension's UI is built with webpack/vite and produces a single `extension.js` bundle. The backend is a Go binary built into a Docker image. The UI extensions init container (`deploy/docker/Dockerfile.ui-extensions`) packages all JS bundles for production use as an argocd-server init container.

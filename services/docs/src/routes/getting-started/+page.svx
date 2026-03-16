@@ -42,7 +42,7 @@ Each extension consists of three parts:
 
 ```bash
 # Deploy all extension backends and UI bundles
-make deploy-extensions
+make setup-argocd
 ```
 
 This applies Kubernetes Deployment and Service manifests for each extension backend, copies the built UI bundles into the argocd-server pod, and configures the proxy routing.

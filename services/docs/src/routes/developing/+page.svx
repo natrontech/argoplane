@@ -50,7 +50,7 @@ make dev-infra
 make build-extensions
 
 # Deploy to local cluster
-make deploy-extensions
+make setup-argocd
 
 # Deploy demo app for testing
 make deploy-example
@@ -80,7 +80,7 @@ make deploy-<name>
 3. Build the Go backend HTTP server
 4. Add deployment manifests in `deploy/extensions/<name>/`
 5. Add proxy config in `deploy/argocd/proxy-extensions.json`
-6. Add RBAC in `hack/configure-argocd.sh`
+6. Add RBAC in `hack/setup-argocd.sh`
 7. Add to `EXTENSIONS` list in the Makefile
 8. Update `examples/demo-app/` with test resources
 9. Update documentation in `services/docs/`

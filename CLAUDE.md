@@ -146,7 +146,8 @@ cd services/portal/backend && go run ./cmd/   # :8080
 - `make build-backends` builds all backend Docker images
 - `make build-ui-extensions-image` builds the UI extensions init container image
 - `make load-extensions` loads backend + UI extensions images into kind
-- `make deploy-extensions` deploys backends, UI bundles, and proxy config
+- `make setup-argocd` configures ArgoCD + deploys extensions + loads UI bundles (all-in-one)
+- `make reload-extensions` rebuilds + redeploys all extensions
 - `make test-integration` runs integration tests against the kind cluster
 
 ## Deployment

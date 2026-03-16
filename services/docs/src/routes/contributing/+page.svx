@@ -37,7 +37,7 @@ make dev-infra
 make build-extensions
 
 # Deploy to local cluster
-make deploy-extensions
+make setup-argocd
 
 # Deploy demo app
 make deploy-example

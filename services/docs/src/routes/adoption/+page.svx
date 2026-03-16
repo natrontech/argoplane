@@ -49,7 +49,7 @@ The key difference: ArgoPlane doesn't ask developers to learn a new UI or mainta
 Start with the **metrics** extension. Deploy it alongside your existing ArgoCD setup. Developers get CPU/memory charts on their Deployments without any workflow change.
 
 ```bash
-make deploy-extensions
+make setup-argocd
 ```
 
 This is the lowest-risk entry point. If it's useful, continue. If not, remove it with no side effects.

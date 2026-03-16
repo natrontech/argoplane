@@ -5,38 +5,37 @@
 #
 # For local dev (before pushing to remote), this script also applies manifests
 # directly so you don't have to wait for a git push + ArgoCD sync.
-set -euo pipefail
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(repo_root)"
 DEMO_DIR="$REPO_ROOT/examples/demo-app"
 
-echo "==> Creating namespaces (if needed)"
+log "Creating namespaces (if needed)"
 kubectl create namespace argoplane-demo 2>/dev/null || true
 kubectl create namespace velero 2>/dev/null || true
 
-echo "==> Applying demo manifests directly (local dev)"
+log "Applying demo manifests directly (local dev)"
 kubectl apply -f "$DEMO_DIR/manifests/" -n argoplane-demo
 
-echo "==> Applying platform-managed policies (clusterwide + namespace)"
+log "Applying platform-managed policies (clusterwide + namespace)"
 kubectl apply -f "$DEMO_DIR/platform-policies.yaml"
 
-echo "==> Applying platform-managed backup schedules"
+log "Applying platform-managed backup schedules"
 kubectl apply -f "$DEMO_DIR/platform-backups.yaml"
 
-echo "==> Applying cross-namespace traffic generator"
+log "Applying cross-namespace traffic generator"
 kubectl apply -f "$DEMO_DIR/cross-namespace-traffic.yaml"
 
-echo "==> Creating ArgoCD Application"
+log "Creating ArgoCD Application"
 kubectl apply -f "$DEMO_DIR/argocd-application.yaml"
 
-echo "==> Waiting for application to sync..."
+log "Waiting for application to sync..."
 kubectl -n argocd wait application/argoplane-demo \
   --for=jsonpath='{.status.sync.status}'=Synced --timeout=120s 2>/dev/null || \
   echo "    (sync in progress, check ArgoCD UI)"
 
 echo ""
-echo "==> Demo app deployed!"
+log "Demo app deployed!"
 echo "    Open ArgoCD UI -> click 'argoplane-demo' -> click 'guestbook-ui' Deployment"
 echo ""
 echo "    App-owned resources (in ArgoCD tree):"

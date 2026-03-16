@@ -36,7 +36,7 @@ Runs all tests including application sync/cleanup (takes ~30-60 seconds).
 
 - Check test output for failures
 - If cluster is not reachable, run `/dev-setup` first
-- If ArgoCD is not configured, run `make argocd-configure`
+- If ArgoCD is not configured, run `make setup-argocd`
 
 ## Adding New Tests
 

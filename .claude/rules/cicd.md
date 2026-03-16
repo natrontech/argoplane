@@ -58,7 +58,7 @@ When adding a new extension, update all of these (the consistency check will cat
 6. `deploy/helm/argoplane/values.yaml` (extension config block + image)
 7. `deploy/argocd/proxy-extensions.json` (proxy routing entry)
 8. `deploy/extensions/<name>/deployment.yaml` (K8s manifests)
-9. `hack/configure-argocd.sh` (RBAC entry)
+9. `hack/setup-argocd.sh` (RBAC entry)
 
 ## Rules
 

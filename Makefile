@@ -48,9 +48,9 @@ argocd: cilium ## Install ArgoCD (idempotent)
 	@kubectl -n $(ARGOCD_NS) rollout status deployment argocd-repo-server --timeout=120s
 	@kubectl -n $(ARGOCD_NS) rollout status deployment argocd-redis --timeout=120s
 
-.PHONY: argocd-configure
-argocd-configure: ## Configure ArgoCD for local dev (insecure, extensions enabled)
-	@bash hack/configure-argocd.sh
+.PHONY: setup-argocd
+setup-argocd: ## Configure ArgoCD + deploy extensions + UI bundles (all-in-one)
+	@bash hack/setup-argocd.sh
 
 .PHONY: argocd-password
 argocd-password: ## Print ArgoCD admin password
@@ -107,7 +107,7 @@ external-secrets: cluster ## Install External Secrets Operator (idempotent)
 # --- Dev environment ---
 
 .PHONY: dev-infra
-dev-infra: argocd argocd-configure prometheus velero loki ## Full local dev stack (kind + ArgoCD + operators)
+dev-infra: argocd prometheus velero loki setup-argocd ## Full local dev stack (kind + ArgoCD + operators)
 	@echo ""
 	@echo "==> Dev infrastructure ready!"
 	@echo "    Run 'make argocd-portforward' to access the UI"
@@ -143,37 +143,8 @@ load-extensions: build-backends ## Load extension images into kind cluster
 	@echo "==> Loading UI extensions init container image into kind"
 	@kind load docker-image argoplane-ui-extensions:dev --name $(CLUSTER_NAME) 2>/dev/null || true
 
-.PHONY: deploy-extensions
-deploy-extensions: ## Deploy extension backends, UI bundles, and proxy config to cluster
-	@echo "==> Deploying extension backends"
-	@for ext in $(EXTENSIONS); do \
-		echo "==> Deploying $$ext backend"; \
-		kubectl apply -f deploy/extensions/$$ext/deployment.yaml; \
-	done
-	@echo "==> Restarting extension backends to pick up new images"
-	@for ext in $(EXTENSIONS); do \
-		kubectl -n $(ARGOCD_NS) rollout restart deployment argoplane-$$ext-backend 2>/dev/null || true; \
-	done
-	@echo "==> Configuring ArgoCD proxy extensions"
-	@kubectl -n $(ARGOCD_NS) patch cm argocd-cm --type merge --patch-file deploy/argocd/proxy-extensions.json
-	@echo "==> Restarting argocd-server to pick up proxy config"
-	@kubectl -n $(ARGOCD_NS) rollout restart deployment argocd-server
-	@kubectl -n $(ARGOCD_NS) rollout status deployment argocd-server --timeout=120s
-	@echo "==> Waiting for argocd-server pod to be ready"
-	@sleep 3
-	@kubectl -n $(ARGOCD_NS) wait pod -l app.kubernetes.io/name=argocd-server \
-		--for=condition=Ready --timeout=120s
-	@echo "==> Loading UI extension bundles into argocd-server"
-	@ARGOCD_POD=$$(kubectl get pods -n $(ARGOCD_NS) -l app.kubernetes.io/name=argocd-server \
-		-o jsonpath='{range .items[?(@.status.phase=="Running")]}{.metadata.name}{end}' | head -1); \
-	echo "    Using pod: $$ARGOCD_POD"; \
-	if [ -z "$$ARGOCD_POD" ]; then echo "ERROR: No running argocd-server pod found" && exit 1; fi; \
-	kubectl exec -n $(ARGOCD_NS) $$ARGOCD_POD -- mkdir -p /tmp/extensions; \
-	for ext in $(EXTENSIONS); do \
-		echo "==> Loading $$ext UI bundle"; \
-		kubectl cp extensions/$$ext/ui/dist/extension-$$ext.js $(ARGOCD_NS)/$$ARGOCD_POD:/tmp/extensions/extension-$$ext.js; \
-	done
-	@echo "==> Extensions deployed"
+.PHONY: reload-extensions
+reload-extensions: build-extensions build-backends load-extensions setup-argocd ## Rebuild + redeploy all extensions
 
 # --- Example app ---
 

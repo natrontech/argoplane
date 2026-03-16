@@ -285,7 +285,7 @@ make dev-infra           # kind cluster + ArgoCD + operators
 make build-extensions    # build UI bundles
 make build-backends      # build Docker images
 make load-extensions     # load images into kind
-make deploy-extensions   # deploy to cluster
+make setup-argocd        # deploy to cluster
 ```
 
 The Helm chart is for production and staging environments. The Makefile handles the dev-specific concerns (kind cluster, image loading, kubectl cp for UI bundles).

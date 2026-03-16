@@ -71,8 +71,8 @@ for ext in "${EXTENSIONS[@]}"; do
   # Deploy manifests
   check "Deploy manifest" "deploy/extensions/$ext/deployment.yaml" "argoplane-$ext-backend" "$ext"
 
-  # RBAC in configure-argocd.sh
-  check "ArgoCD RBAC" "hack/configure-argocd.sh" "$ext" "$ext"
+  # RBAC in setup-argocd.sh
+  check "ArgoCD RBAC" "hack/setup-argocd.sh" "$ext" "$ext"
 
   echo ""
 done
@@ -98,7 +98,7 @@ if [ $ERRORS -gt 0 ]; then
   echo "  6. deploy/helm/argoplane/values.yaml (extension config)"
   echo "  7. deploy/argocd/proxy-extensions.json (proxy routing)"
   echo "  8. deploy/extensions/<name>/deployment.yaml (K8s manifests)"
-  echo "  9. hack/configure-argocd.sh (RBAC)"
+  echo "  9. hack/setup-argocd.sh (RBAC)"
   exit 1
 else
   echo -e "${GREEN}All extensions are consistently registered.${NC}"

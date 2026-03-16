@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
-set -euo pipefail
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
 CLUSTER_NAME="${CLUSTER_NAME:-argoplane-dev}"
-
-log() { echo "==> $*"; }
 
 # Clean up test resources gracefully
 if kubectl config use-context "kind-${CLUSTER_NAME}" 2>/dev/null; then
