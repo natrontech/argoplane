@@ -104,7 +104,10 @@ kubectl -n "${ARGOCD_NS}" rollout status deployment argocd-server --timeout=180s
 # Copy branding link extension into the new pod's /tmp/extensions/
 # (must happen after restart since /tmp/ is ephemeral)
 log "Installing ArgoPlane branding link extension into new pod"
+# Wait briefly for old pods to terminate, then select a Running pod
+sleep 3
 ARGOCD_POD=$(kubectl -n "${ARGOCD_NS}" get pods -l app.kubernetes.io/name=argocd-server \
+    --field-selector=status.phase=Running \
     -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
 if [ -n "${ARGOCD_POD}" ]; then
     kubectl exec -n "${ARGOCD_NS}" "${ARGOCD_POD}" -- mkdir -p /tmp/extensions 2>/dev/null || true
