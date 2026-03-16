@@ -161,12 +161,6 @@ func (h *Dashboard) HandleGraph(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build shared timestamp grid
-	var timestamps []time.Time
-	for t := start; !t.After(end); t = t.Add(step) {
-		timestamps = append(timestamps, t)
-	}
-
 	resp := graphDataResponse{Series: []graphSeries{}}
 	for _, s := range allSeries {
 		// Use the metricName label as the series label
@@ -176,22 +170,16 @@ func (h *Dashboard) HandleGraph(w http.ResponseWriter, r *http.Request) {
 			label = seriesLabel(s.Metric)
 		}
 
-		// Build value map for alignment
-		valMap := make(map[int64]float64)
-		for _, dp := range s.Values {
-			valMap[dp.Time.Unix()] = convertValueForUnit(dp.Value, graph.YAxisUnit)
-		}
-
-		// Align to timestamp grid
+		// Use Prometheus-returned timestamps directly instead of building a
+		// synthetic grid. Prometheus aligns query_range steps to UTC epoch
+		// boundaries, which may not match a grid built from time.Now().
 		gs := graphSeries{Label: label}
-		for _, t := range timestamps {
-			timeStr := t.UTC().Format(time.RFC3339)
-			if v, ok := valMap[t.Unix()]; ok {
-				val := v
-				gs.Values = append(gs.Values, graphPoint{Time: timeStr, Value: &val})
-			} else {
-				gs.Values = append(gs.Values, graphPoint{Time: timeStr, Value: nil})
-			}
+		for _, dp := range s.Values {
+			val := convertValueForUnit(dp.Value, graph.YAxisUnit)
+			gs.Values = append(gs.Values, graphPoint{
+				Time:  dp.Time.UTC().Format(time.RFC3339),
+				Value: &val,
+			})
 		}
 		resp.Series = append(resp.Series, gs)
 	}
