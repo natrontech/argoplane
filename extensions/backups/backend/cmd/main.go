@@ -20,6 +20,8 @@ type Config struct {
 	Port            string `envconfig:"PORT" default:"8081"`
 	LogLevel        string `envconfig:"LOG_LEVEL" default:"info"`
 	VeleroNamespace string `envconfig:"VELERO_NAMESPACE" default:"velero"`
+	CACertPath      string `envconfig:"CA_CERT_PATH"`
+	InsecureTLS     bool   `envconfig:"INSECURE_TLS" default:"false"`
 }
 
 func main() {
@@ -49,7 +51,10 @@ func main() {
 	backupsHandler := handler.NewBackupsHandler(dynClient, config.VeleroNamespace)
 	restoresHandler := handler.NewRestoresHandler(dynClient, config.VeleroNamespace)
 	overviewHandler := handler.NewOverviewHandler(dynClient, config.VeleroNamespace)
-	logsHandler := handler.NewLogsHandler(dynClient, config.VeleroNamespace)
+	logsHandler := handler.NewLogsHandler(dynClient, config.VeleroNamespace, &handler.TLSConfig{
+		CACertPath:  config.CACertPath,
+		InsecureTLS: config.InsecureTLS,
+	})
 	volumesHandler := handler.NewVolumesHandler(dynClient, config.VeleroNamespace)
 
 	mux := http.NewServeMux()

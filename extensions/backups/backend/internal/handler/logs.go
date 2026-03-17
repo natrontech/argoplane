@@ -5,10 +5,13 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -26,12 +29,41 @@ type LogsHandler struct {
 	httpClient      *http.Client
 }
 
-// NewLogsHandler creates a new LogsHandler.
-func NewLogsHandler(client dynamic.Interface, veleroNamespace string) *LogsHandler {
+// TLSConfig holds TLS settings for the HTTP client used to fetch pre-signed URLs.
+type TLSConfig struct {
+	CACertPath  string
+	InsecureTLS bool
+}
+
+// NewLogsHandler creates a new LogsHandler. If tlsCfg is non-nil, the HTTP client
+// is configured with a custom CA bundle or skips TLS verification.
+func NewLogsHandler(client dynamic.Interface, veleroNamespace string, tlsCfg *TLSConfig) *LogsHandler {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+
+	if tlsCfg != nil {
+		if tlsCfg.InsecureTLS {
+			transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402
+			slog.Warn("TLS verification disabled for log downloads")
+		} else if tlsCfg.CACertPath != "" {
+			caCert, err := os.ReadFile(tlsCfg.CACertPath)
+			if err != nil {
+				slog.Error("failed to read CA certificate", "path", tlsCfg.CACertPath, "error", err)
+			} else {
+				pool, _ := x509.SystemCertPool()
+				if pool == nil {
+					pool = x509.NewCertPool()
+				}
+				pool.AppendCertsFromPEM(caCert)
+				transport.TLSClientConfig = &tls.Config{RootCAs: pool}
+				slog.Info("loaded custom CA certificate for log downloads", "path", tlsCfg.CACertPath)
+			}
+		}
+	}
+
 	return &LogsHandler{
 		client:          client,
 		veleroNamespace: veleroNamespace,
-		httpClient:      &http.Client{Timeout: 30 * time.Second},
+		httpClient:      &http.Client{Timeout: 30 * time.Second, Transport: transport},
 	}
 }
 
