@@ -85,7 +85,7 @@ func main() {
 	defer cancel()
 
 	go func() {
-		slog.Info("starting backups backend", "port", config.Port, "veleroNamespace", config.VeleroNamespace)
+		slog.Info("starting backups backend", "port", config.Port, "veleroNamespace", config.VeleroNamespace, "insecureTLS", config.InsecureTLS, "caCertPath", config.CACertPath)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("server error", "error", err)
 			os.Exit(1)
