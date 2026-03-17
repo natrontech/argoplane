@@ -16,13 +16,17 @@ import (
 // Client queries a Loki HTTP API.
 type Client struct {
 	baseURL    string
+	tenantID   string
 	httpClient *http.Client
 }
 
 // NewClient creates a Loki client for the given base URL.
-func NewClient(baseURL string) *Client {
+// If tenantID is non-empty, it is sent as X-Scope-OrgID on every request
+// (required when Loki runs in multi-tenant mode).
+func NewClient(baseURL, tenantID string) *Client {
 	return &Client{
-		baseURL: baseURL,
+		baseURL:  baseURL,
+		tenantID: tenantID,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -179,6 +183,9 @@ func (c *Client) get(ctx context.Context, path string, params url.Values) ([]byt
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
+	}
+	if c.tenantID != "" {
+		req.Header.Set("X-Scope-OrgID", c.tenantID)
 	}
 
 	resp, err := c.httpClient.Do(req)

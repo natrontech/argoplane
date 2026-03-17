@@ -16,9 +16,10 @@ import (
 )
 
 type Config struct {
-	Port     string `envconfig:"PORT" default:"8083"`
-	LokiURL  string `envconfig:"LOKI_URL" default:"http://loki.monitoring.svc:3100"`
-	LogLevel string `envconfig:"LOG_LEVEL" default:"info"`
+	Port         string `envconfig:"PORT" default:"8083"`
+	LokiURL      string `envconfig:"LOKI_URL" default:"http://loki.monitoring.svc:3100"`
+	LokiTenantID string `envconfig:"LOKI_TENANT_ID" default:""`
+	LogLevel     string `envconfig:"LOG_LEVEL" default:"info"`
 }
 
 func main() {
@@ -30,7 +31,8 @@ func main() {
 
 	setupLogging(cfg.LogLevel)
 
-	lokiClient := loki.NewClient(cfg.LokiURL)
+	slog.Info("starting logs backend", "port", cfg.Port, "loki", cfg.LokiURL, "tenantID", cfg.LokiTenantID)
+	lokiClient := loki.NewClient(cfg.LokiURL, cfg.LokiTenantID)
 
 	logsHandler := handler.NewLogs(lokiClient)
 	labelsHandler := handler.NewLabels(lokiClient)

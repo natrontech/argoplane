@@ -41,14 +41,25 @@ wait_for_pod() {
             -o jsonpath='{.items[-1:].metadata.name}' 2>/dev/null) || true
 
         if [ -n "$pod" ]; then
-            # Check if this specific pod is Ready (all containers running).
-            local ready
+            # Check if this specific pod is Ready (all containers running)
+            # AND not in a terminating state (deletionTimestamp unset).
+            local ready deletion
             ready=$(kubectl -n "$ns" get pod "$pod" \
                 -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null) || true
-            if [ "$ready" = "True" ]; then
-                echo "==> Pod $pod is Ready" >&2
-                echo "$pod"
-                return 0
+            deletion=$(kubectl -n "$ns" get pod "$pod" \
+                -o jsonpath='{.metadata.deletionTimestamp}' 2>/dev/null) || true
+            if [ "$ready" = "True" ] && [ -z "$deletion" ]; then
+                # Double-check: wait a moment to ensure containers are fully up
+                # (avoids race where Ready=True but init container just finished).
+                sleep 2
+                local ready2
+                ready2=$(kubectl -n "$ns" get pod "$pod" \
+                    -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null) || true
+                if [ "$ready2" = "True" ]; then
+                    echo "==> Pod $pod is Ready" >&2
+                    echo "$pod"
+                    return 0
+                fi
             fi
         fi
 

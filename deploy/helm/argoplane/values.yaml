@@ -221,6 +221,7 @@ extensions:
     port: 8083
     env:
       LOKI_URL: "http://loki.monitoring.svc:3100"
+      LOKI_TENANT_ID: ""
       LOG_LEVEL: "info"
     extraEnv: []
     resources:
