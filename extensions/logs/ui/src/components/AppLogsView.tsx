@@ -88,10 +88,10 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
   React.useEffect(() => {
     if (!namespace) return;
     fetchLabelValues('container', namespace, appNamespace, appName, project)
-      .then(setContainers)
+      .then((vals) => setContainers(vals || []))
       .catch(() => setContainers([]));
     fetchLabelValues('pod', namespace, appNamespace, appName, project)
-      .then(setPods)
+      .then((vals) => setPods(vals || []))
       .catch(() => setPods([]));
   }, [namespace, appNamespace, appName, project]);
 

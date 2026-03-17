@@ -84,7 +84,7 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
   React.useEffect(() => {
     if (!namespace) return;
     fetchLabelValues('container', namespace, appNamespace, appName, project)
-      .then(setContainers)
+      .then((vals) => setContainers(vals || []))
       .catch(() => setContainers([]));
   }, [namespace, appNamespace, appName, project]);
 
