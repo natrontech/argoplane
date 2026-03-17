@@ -58,6 +58,9 @@ The backups backend queries Velero CRDs via the Kubernetes API:
 |---------------------|----------|---------|-------------|
 | `PORT` | No | `8081` | HTTP server port |
 | `LOG_LEVEL` | No | `info` | Log level |
+| `VELERO_NAMESPACE` | No | `velero` | Namespace where Velero is installed |
+| `INSECURE_TLS` | No | `false` | Skip TLS verification when fetching logs/results from object storage (for self-signed certificates) |
+| `CA_CERT_PATH` | No | | Path to a CA certificate file for object storage TLS verification |
 
 ## RBAC
 

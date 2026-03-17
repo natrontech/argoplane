@@ -120,6 +120,12 @@ extensions:
     env:
       VELERO_NAMESPACE: "velero"
       LOG_LEVEL: "info"
+      # -- Set to "true" to skip TLS verification when fetching backup/restore logs
+      # from object storage with self-signed certificates.
+      # INSECURE_TLS: "true"
+      # -- Path to a CA certificate file for object storage TLS verification.
+      # Mount via extraVolumes/extraVolumeMounts if using a custom CA.
+      # CA_CERT_PATH: "/etc/ssl/certs/ca.crt"
     extraEnv: []
     resources:
       requests:

@@ -82,6 +82,8 @@ extensions:
     enabled: true
     env:
       VELERO_NAMESPACE: "velero"
+      # Skip TLS verification for self-signed object storage certs
+      # INSECURE_TLS: "true"
   networking:
     enabled: false
     env:
