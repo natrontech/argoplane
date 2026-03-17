@@ -45,7 +45,7 @@ ArgoCD v3.x provides six registration methods. ArgoPlane uses all of them:
 
 | Category | Domain | Description | Backend | Extension Points |
 |----------|--------|-------------|---------|-----------------|
-| Observe | **logs** | Log search, label-based filtering, LogQL queries, live tail, log volume, severity detection | Loki | Resource tabs (Pod, Deployment) + App view |
+| Observe | **logs** (Log Explorer) | Historical log search, label-based filtering, severity detection, time range selection. No live tail: ArgoCD's built-in Logs tab handles real-time pod streaming via the Kubernetes API. Loki's tail API uses WebSocket which ArgoCD's proxy extension mechanism does not support. | Loki | Resource tabs (Pod, Deployment, StatefulSet) + App view |
 | Secure | **policies** | Policy violations, admission control results, policy reports per app | Kyverno | Resource tabs + App view + Status panel |
 | Observe | **alerts** | Firing/pending alerts, PrometheusRules and AlertmanagerConfigs per app, app vs platform ownership, smart links to Grafana/runbooks/Git | Prometheus Rules API, Alertmanager API | App view + Status panel |
 

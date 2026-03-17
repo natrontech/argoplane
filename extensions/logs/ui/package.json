@@ -8,8 +8,7 @@
     "dev": "webpack --mode development --watch"
   },
   "dependencies": {
-    "@argoplane/shared": "file:../../shared",
-    "recharts": "^2.15.3"
+    "@argoplane/shared": "file:../../shared"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",

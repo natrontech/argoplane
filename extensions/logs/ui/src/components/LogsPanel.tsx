@@ -8,18 +8,16 @@ import {
   panel,
   spacing,
 } from '@argoplane/shared';
-import { fetchLogs, fetchLabelValues, fetchVolume } from '../api';
-import { ExtensionProps, LogEntry, Severity, TimeSelection, VolumePoint, resolveTimeSelection } from '../types';
+import { fetchLogs, fetchLabelValues } from '../api';
+import { ExtensionProps, LogEntry, Severity, TimeSelection, resolveTimeSelection } from '../types';
 import { LogLine } from './LogLine';
 import { LogToolbar } from './LogToolbar';
-import { VolumeChart } from './VolumeChart';
 
 const REFRESH_INTERVAL = 30_000;
 const DEFAULT_LIMIT = 500;
 
 export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) => {
   const [entries, setEntries] = React.useState<LogEntry[]>([]);
-  const [volume, setVolume] = React.useState<VolumePoint[]>([]);
   const [containers, setContainers] = React.useState<string[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -72,14 +70,10 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
       limit: DEFAULT_LIMIT,
     };
 
-    const logsP = fetchLogs(queryParams, appNamespace, appName, project);
-    const volumeP = fetchVolume(queryParams, appNamespace, appName, project).catch(() => ({ series: [] }));
-
-    Promise.all([logsP, volumeP])
-      .then(([logsResp, volumeResp]) => {
+    fetchLogs(queryParams, appNamespace, appName, project)
+      .then((logsResp) => {
         setEntries(logsResp.entries || []);
         setTotalEntries(logsResp.stats?.totalEntries || logsResp.entries?.length || 0);
-        setVolume(volumeResp.series || []);
         setError(null);
       })
       .catch((err) => setError(err.message))
@@ -116,6 +110,10 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
     });
   }, []);
 
+  // Severity counts for footer
+  const errorCount = entries.filter((e) => e.severity === 'error').length;
+  const warnCount = entries.filter((e) => e.severity === 'warn').length;
+
   if (loading) return <Loading />;
 
   if (error) {
@@ -151,7 +149,7 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
   }
 
   return (
-    <div style={panel}>
+    <div style={{ ...panel, display: 'flex', flexDirection: 'column', height: 'calc(100vh - 240px)', minHeight: 400 }}>
       <LogToolbar
         containers={containers}
         selectedContainer={selectedContainer}
@@ -165,9 +163,7 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
         onRefresh={() => { setLoading(true); fetchAll(); }}
       />
 
-      <VolumeChart data={volume} />
-
-      <div style={{ maxHeight: 600, overflowY: 'auto' }}>
+      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
         {entries.length === 0 ? (
           <EmptyState message="No logs found for the selected filters" />
         ) : (
@@ -184,8 +180,23 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
           fontFamily: fonts.mono,
           fontSize: fontSize.xs,
           color: colors.gray500,
+          display: 'flex',
+          gap: spacing[3],
+          flexShrink: 0,
         }}>
-          Showing {entries.length}{totalEntries > entries.length ? ` of ${totalEntries}+` : ''} entries
+          <span>
+            {entries.length}{totalEntries > entries.length ? ` of ${totalEntries}+` : ''} entries
+          </span>
+          {errorCount > 0 && (
+            <span style={{ color: colors.redText }}>
+              {errorCount} error{errorCount !== 1 ? 's' : ''}
+            </span>
+          )}
+          {warnCount > 0 && (
+            <span style={{ color: colors.yellowText }}>
+              {warnCount} warning{warnCount !== 1 ? 's' : ''}
+            </span>
+          )}
         </div>
       )}
     </div>

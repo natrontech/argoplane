@@ -10,11 +10,10 @@ import {
   panel,
   spacing,
 } from '@argoplane/shared';
-import { fetchLogs, fetchLabelValues, fetchVolume } from '../api';
-import { LogEntry, Severity, TimeSelection, VolumePoint, resolveTimeSelection } from '../types';
+import { fetchLogs, fetchLabelValues } from '../api';
+import { LogEntry, Severity, TimeSelection, resolveTimeSelection } from '../types';
 import { LogLine } from './LogLine';
 import { LogToolbar } from './LogToolbar';
-import { VolumeChart } from './VolumeChart';
 
 interface AppViewProps {
   application: any;
@@ -26,7 +25,6 @@ const DEFAULT_LIMIT = 500;
 
 export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
   const [entries, setEntries] = React.useState<LogEntry[]>([]);
-  const [volume, setVolume] = React.useState<VolumePoint[]>([]);
   const [containers, setContainers] = React.useState<string[]>([]);
   const [pods, setPods] = React.useState<string[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -76,14 +74,10 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
       limit: DEFAULT_LIMIT,
     };
 
-    const logsP = fetchLogs(queryParams, appNamespace, appName, project);
-    const volumeP = fetchVolume(queryParams, appNamespace, appName, project).catch(() => ({ series: [] }));
-
-    Promise.all([logsP, volumeP])
-      .then(([logsResp, volumeResp]) => {
+    fetchLogs(queryParams, appNamespace, appName, project)
+      .then((logsResp) => {
         setEntries(logsResp.entries || []);
         setTotalEntries(logsResp.stats?.totalEntries || logsResp.entries?.length || 0);
-        setVolume(volumeResp.series || []);
         setError(null);
       })
       .catch((err) => setError(err.message))
@@ -162,7 +156,7 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
   }
 
   return (
-    <div style={{ ...panel, maxWidth: '100%' }}>
+    <div style={{ ...panel, maxWidth: '100%', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 200px)', minHeight: 500 }}>
       <SectionHeader title="LOG EXPLORER" />
 
       {/* Stats row */}
@@ -171,6 +165,7 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
         gap: spacing[3],
         padding: `${spacing[2]}px ${spacing[3]}px`,
         borderBottom: `1px solid ${colors.gray200}`,
+        flexShrink: 0,
       }}>
         <MetricCard label="Total Entries" value={String(totalEntries)} unit="lines" />
         <MetricCard label="Errors" value={String(errorCount)} unit="lines" />
@@ -185,6 +180,7 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
           display: 'flex',
           alignItems: 'center',
           gap: spacing[2],
+          flexShrink: 0,
         }}>
           <span style={{ fontFamily: fonts.mono, fontSize: fontSize.xs, color: colors.gray500 }}>Pod:</span>
           <select
@@ -221,9 +217,7 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
         onRefresh={() => { setLoading(true); fetchAll(); }}
       />
 
-      <VolumeChart data={volume} />
-
-      <div style={{ maxHeight: 600, overflowY: 'auto' }}>
+      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
         {entries.length === 0 ? (
           <EmptyState message="No logs found for the selected filters" />
         ) : (
@@ -241,9 +235,22 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
           fontSize: fontSize.xs,
           color: colors.gray500,
           display: 'flex',
-          justifyContent: 'space-between',
+          gap: spacing[3],
+          flexShrink: 0,
         }}>
-          <span>Showing {entries.length}{totalEntries > entries.length ? ` of ${totalEntries}+` : ''} entries</span>
+          <span>
+            {entries.length}{totalEntries > entries.length ? ` of ${totalEntries}+` : ''} entries
+          </span>
+          {errorCount > 0 && (
+            <span style={{ color: colors.redText }}>
+              {errorCount} error{errorCount !== 1 ? 's' : ''}
+            </span>
+          )}
+          {warnCount > 0 && (
+            <span style={{ color: colors.yellowText }}>
+              {warnCount} warning{warnCount !== 1 ? 's' : ''}
+            </span>
+          )}
         </div>
       )}
     </div>

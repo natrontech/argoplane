@@ -29,15 +29,6 @@ export interface LogsResponse {
   stats: QueryStats;
 }
 
-export interface VolumePoint {
-  time: string;
-  value: number;
-}
-
-export interface VolumeResponse {
-  series: VolumePoint[];
-}
-
 export interface ExtensionProps {
   resource: any;
   tree: any;
