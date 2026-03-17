@@ -2,11 +2,56 @@ import * as React from 'react';
 import { LogsPanel } from './components/LogsPanel';
 import { AppLogsView } from './components/AppLogsView';
 
+/** Error boundary that catches React render errors and shows a readable message. */
+class ExtensionErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[ArgoPlane Log Explorer] render error:', error, info.componentStack);
+  }
+  render() {
+    if (this.state.error) {
+      return React.createElement('div', {
+        style: {
+          padding: 20,
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 12,
+          color: '#B91C1C',
+        },
+      },
+        React.createElement('div', { style: { fontWeight: 600, marginBottom: 8 } },
+          'Log Explorer: render error'),
+        React.createElement('pre', {
+          style: { whiteSpace: 'pre-wrap', color: '#78716C', fontSize: 11 },
+        }, this.state.error.message + '\n' + this.state.error.stack),
+      );
+    }
+    return this.props.children;
+  }
+}
+
+/** Wrap a component in our error boundary. */
+function withErrorBoundary<P extends object>(Component: React.ComponentType<P>): React.FC<P> {
+  return (props: P) =>
+    React.createElement(ExtensionErrorBoundary, null,
+      React.createElement(Component, props));
+}
+
+const SafeLogsPanel = withErrorBoundary(LogsPanel);
+const SafeAppLogsView = withErrorBoundary(AppLogsView);
 
 ((window: any) => {
   // Resource tab: Pod log explorer (Loki-backed historical search)
   window.extensionsAPI.registerResourceExtension(
-    LogsPanel,
+    SafeLogsPanel,
     '',
     'Pod',
     'Log Explorer',
@@ -15,7 +60,7 @@ import { AppLogsView } from './components/AppLogsView';
 
   // Resource tab: Deployment log explorer (aggregated across pods)
   window.extensionsAPI.registerResourceExtension(
-    LogsPanel,
+    SafeLogsPanel,
     'apps',
     'Deployment',
     'Log Explorer',
@@ -24,7 +69,7 @@ import { AppLogsView } from './components/AppLogsView';
 
   // Resource tab: StatefulSet log explorer
   window.extensionsAPI.registerResourceExtension(
-    LogsPanel,
+    SafeLogsPanel,
     'apps',
     'StatefulSet',
     'Log Explorer',
@@ -33,7 +78,7 @@ import { AppLogsView } from './components/AppLogsView';
 
   // App view: full-page log explorer for an application
   window.extensionsAPI.registerAppViewExtension(
-    AppLogsView,
+    SafeAppLogsView,
     'Log Explorer',
     'fa-search'
   );
