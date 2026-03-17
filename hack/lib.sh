@@ -23,33 +23,40 @@ wait_for_rollout() {
 
 # wait_for_pod NAMESPACE LABEL_SELECTOR [TIMEOUT_SECONDS]
 # Waits for a Running+Ready pod matching the selector, then prints its name.
-# Handles the rollout restart race condition: uses kubectl wait for readiness
-# then selects a Running pod (avoids Completed/Terminating pods).
+# Uses polling instead of `kubectl wait` to avoid matching stale pods during
+# rollout restarts. Only returns the newest pod by creation timestamp.
 wait_for_pod() {
     local ns="$1" selector="$2" timeout="${3:-120}"
+    local deadline=$((SECONDS + timeout))
 
     # All status output goes to stderr so stdout only contains the pod name.
     echo "==> Waiting for pod ($selector) in $ns to be Ready..." >&2
 
-    # Wait for at least one Running+Ready pod.
-    # Use --field-selector to skip Completed/Terminating pods from previous rollouts.
-    if ! kubectl -n "$ns" wait pod -l "$selector" \
-        --field-selector=status.phase=Running \
-        --for=condition=Ready --timeout="${timeout}s" >&2 2>&1; then
-        die "Timed out waiting for pod ($selector) in $ns"
-    fi
+    while [ $SECONDS -lt $deadline ]; do
+        # Get the newest Running pod sorted by creation timestamp (newest last).
+        local pod
+        pod=$(kubectl -n "$ns" get pods -l "$selector" \
+            --field-selector=status.phase=Running \
+            --sort-by=.metadata.creationTimestamp \
+            -o jsonpath='{.items[-1:].metadata.name}' 2>/dev/null) || true
 
-    # Select the first Running pod name (stdout only, no noise).
-    local pod
-    pod=$(kubectl -n "$ns" get pods -l "$selector" \
-        --field-selector=status.phase=Running \
-        -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+        if [ -n "$pod" ]; then
+            # Check if this specific pod is Ready (all containers running).
+            local ready
+            ready=$(kubectl -n "$ns" get pod "$pod" \
+                -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null) || true
+            if [ "$ready" = "True" ]; then
+                echo "==> Pod $pod is Ready" >&2
+                echo "$pod"
+                return 0
+            fi
+        fi
 
-    if [ -z "$pod" ]; then
-        die "No Running pod found for ($selector) in $ns"
-    fi
+        echo "==> Still waiting..." >&2
+        sleep 3
+    done
 
-    echo "$pod"
+    die "Timed out waiting for pod ($selector) in $ns"
 }
 
 # --- Path helpers ---

@@ -165,14 +165,15 @@ log "argocd-server pod ready: ${ARGOCD_POD}"
 # ---------------------------------------------------------------------------
 
 log "Loading UI extension bundles into argocd-server"
-kubectl exec -n "${ARGOCD_NS}" "${ARGOCD_POD}" -- mkdir -p /tmp/extensions
+kubectl exec -n "${ARGOCD_NS}" "${ARGOCD_POD}" -c argocd-server -- mkdir -p /tmp/extensions
 
 for ext in ${EXTENSIONS}; do
     local_bundle="${PROJECT_ROOT}/extensions/${ext}/ui/dist/extension-${ext}.js"
     if [ -f "$local_bundle" ]; then
         log "  Loading ${ext} UI bundle"
         kubectl cp "$local_bundle" \
-            "${ARGOCD_NS}/${ARGOCD_POD}:/tmp/extensions/extension-${ext}.js"
+            "${ARGOCD_NS}/${ARGOCD_POD}:/tmp/extensions/extension-${ext}.js" \
+            -c argocd-server
     else
         warn "UI bundle not found for ${ext} at ${local_bundle} (run 'make build-extensions' first)"
     fi
@@ -183,7 +184,8 @@ BRANDING_JS="${PROJECT_ROOT}/deploy/argocd/argoplane-links.js"
 if [ -f "$BRANDING_JS" ]; then
     log "  Loading branding link extension"
     kubectl cp "$BRANDING_JS" \
-        "${ARGOCD_NS}/${ARGOCD_POD}:/tmp/extensions/extension-argoplane-links.js"
+        "${ARGOCD_NS}/${ARGOCD_POD}:/tmp/extensions/extension-argoplane-links.js" \
+        -c argocd-server
 fi
 
 # ---------------------------------------------------------------------------
