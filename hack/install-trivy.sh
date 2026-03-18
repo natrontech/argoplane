@@ -27,7 +27,7 @@ trivy:
 trivyOperator:
   scanJobsConcurrentLimit: 1
   vulnerabilityScannerEnabled: true
-  configAuditScannerEnabled: false
+  configAuditScannerEnabled: true
   sbomGenerationEnabled: false
   exposedSecretScannerEnabled: false
   scanJobsInSameNamespace: true

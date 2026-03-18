@@ -46,11 +46,15 @@ func main() {
 	reportsHandler := handler.NewReportsHandler(dynClient)
 	overviewHandler := handler.NewOverviewHandler(dynClient)
 	rescanHandler := handler.NewRescanHandler(dynClient)
+	auditHandler := handler.NewAuditHandler(dynClient)
+	exportHandler := handler.NewExportHandler(dynClient)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/reports", reportsHandler.Handle)
 	mux.HandleFunc("POST /api/v1/overview", overviewHandler.Handle)
 	mux.HandleFunc("POST /api/v1/rescan", rescanHandler.Handle)
+	mux.HandleFunc("POST /api/v1/audit/overview", auditHandler.HandleOverview)
+	mux.HandleFunc("GET /api/v1/export", exportHandler.Handle)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})

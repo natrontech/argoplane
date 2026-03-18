@@ -1,4 +1,4 @@
-import { ImageReport, OverviewResponse } from './types';
+import { ImageReport, OverviewResponse, AuditOverviewResponse } from './types';
 
 function proxyHeaders(appNamespace: string, appName: string, project: string) {
   return {
@@ -14,6 +14,26 @@ export async function fetchOverview(
   project: string
 ): Promise<OverviewResponse> {
   const response = await fetch('/extensions/vulnerabilities/api/v1/overview', {
+    method: 'POST',
+    headers: {
+      ...proxyHeaders(appNamespace, appName, project),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ namespace }),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchAuditOverview(
+  namespace: string,
+  appNamespace: string,
+  appName: string,
+  project: string
+): Promise<AuditOverviewResponse> {
+  const response = await fetch('/extensions/vulnerabilities/api/v1/audit/overview', {
     method: 'POST',
     headers: {
       ...proxyHeaders(appNamespace, appName, project),
@@ -63,4 +83,8 @@ export async function triggerRescan(
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
   }
+}
+
+export function exportUrl(namespace: string, type: 'vulnerabilities' | 'audit'): string {
+  return `/extensions/vulnerabilities/api/v1/export?namespace=${encodeURIComponent(namespace)}&type=${type}`;
 }

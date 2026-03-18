@@ -8,7 +8,48 @@ var (
 		Version:  "v1alpha1",
 		Resource: "vulnerabilityreports",
 	}
+	ConfigAuditReportGVR = schema.GroupVersionResource{
+		Group:    "aquasecurity.github.io",
+		Version:  "v1alpha1",
+		Resource: "configauditreports",
+	}
 )
+
+// AuditCheck represents a single configuration audit finding.
+type AuditCheck struct {
+	CheckID     string   `json:"checkID"`
+	Title       string   `json:"title"`
+	Severity    string   `json:"severity"`
+	Category    string   `json:"category"`
+	Description string   `json:"description"`
+	Messages    []string `json:"messages"`
+	Remediation string   `json:"remediation"`
+	Success     bool     `json:"success"`
+	Scope       string   `json:"scope,omitempty"`
+}
+
+// AuditReport represents the config audit state of a single workload.
+type AuditReport struct {
+	ResourceKind      string               `json:"resourceKind"`
+	ResourceName      string               `json:"resourceName"`
+	ResourceNamespace string               `json:"resourceNamespace"`
+	Summary           VulnerabilitySummary `json:"summary"`
+	Checks            []AuditCheck         `json:"checks"`
+	LastScanned       string               `json:"lastScanned"`
+	ReportName        string               `json:"reportName"`
+}
+
+// AuditOverviewRequest is the body for the audit overview endpoint.
+type AuditOverviewRequest struct {
+	Namespace string `json:"namespace"`
+}
+
+// AuditOverviewResponse is the combined config audit summary.
+type AuditOverviewResponse struct {
+	Summary   VulnerabilitySummary `json:"summary"`
+	Reports   []AuditReport        `json:"reports"`
+	Namespace string               `json:"namespace"`
+}
 
 // VulnerabilitySummary holds counts per severity level.
 type VulnerabilitySummary struct {

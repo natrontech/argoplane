@@ -36,6 +36,7 @@ const TAB_ORDER: Record<string, number> = {
   backups: 3,
   networking: 4,
   vulnerabilities: 5,
+  'config-audit': 6,
 };
 
 function sortViews(views: ArgoPlaneViewEntry[]): ArgoPlaneViewEntry[] {
