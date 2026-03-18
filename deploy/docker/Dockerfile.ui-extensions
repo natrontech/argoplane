@@ -18,7 +18,7 @@
 #         - name: extensions
 #           mountPath: /tmp/extensions
 
-FROM busybox:1.36
+FROM busybox:1.37
 RUN mkdir -p /extensions
 COPY extensions/metrics/ui/dist/extension-metrics.js /extensions/
 COPY extensions/backups/ui/dist/extension-backups.js /extensions/
