@@ -85,6 +85,26 @@ export async function triggerRescan(
   }
 }
 
-export function exportUrl(namespace: string, type: 'vulnerabilities' | 'audit'): string {
-  return `/extensions/vulnerabilities/api/v1/export?namespace=${encodeURIComponent(namespace)}&type=${type}`;
+export async function downloadExport(
+  namespace: string,
+  type: 'vulnerabilities' | 'audit',
+  appNamespace: string,
+  appName: string,
+  project: string
+): Promise<void> {
+  const params = new URLSearchParams({ namespace, type });
+  const response = await fetch(`/extensions/vulnerabilities/api/v1/export?${params}`, {
+    headers: proxyHeaders(appNamespace, appName, project),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  const blob = await response.blob();
+  const filename = type === 'audit' ? `config-audit-${namespace}.csv` : `vulnerabilities-${namespace}.csv`;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }

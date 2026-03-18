@@ -13,7 +13,7 @@ import {
   spacing,
   panel,
 } from '@argoplane/shared';
-import { fetchOverview, triggerRescan, exportUrl } from '../api';
+import { fetchOverview, triggerRescan, downloadExport } from '../api';
 import { ImageReport, OverviewResponse, Vulnerability } from '../types';
 import { PieChart } from './PieChart';
 
@@ -189,7 +189,7 @@ export const AppVulnerabilitiesView: React.FC<{ application: any; tree?: any }> 
             <MetricCard label="Fixable" value={String(overview.fixable)} />
           </div>
         </div>
-        <Button onClick={() => window.open(exportUrl(destNamespace, 'vulnerabilities'))}>
+        <Button onClick={() => downloadExport(destNamespace, 'vulnerabilities', appNamespace, appName, project)}>
           Export CSV
         </Button>
       </div>

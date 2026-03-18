@@ -13,7 +13,7 @@ import {
   spacing,
   panel,
 } from '@argoplane/shared';
-import { fetchAuditOverview, exportUrl } from '../api';
+import { fetchAuditOverview, downloadExport } from '../api';
 import { AuditOverviewResponse, AuditCheck, AuditReport } from '../types';
 import { PieChart } from './PieChart';
 
@@ -187,7 +187,7 @@ export const AppConfigAuditView: React.FC<{ application: any; tree?: any }> = ({
             <MetricCard label="Total Failed" value={String(total)} />
           </div>
         </div>
-        <Button onClick={() => window.open(exportUrl(destNamespace, 'audit'))}>
+        <Button onClick={() => downloadExport(destNamespace, 'audit', appNamespace, appName, project)}>
           Export CSV
         </Button>
       </div>
