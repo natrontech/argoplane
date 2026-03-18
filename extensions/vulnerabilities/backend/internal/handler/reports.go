@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"log/slog"
 	"net/http"
 	"sort"
 
@@ -25,20 +24,22 @@ func NewReportsHandler(client dynamic.Interface) *ReportsHandler {
 // Handle returns vulnerability reports filtered by namespace.
 // Optional query params: resource (e.g. "guestbook-ui-84774bdc6f"), kind (e.g. "ReplicaSet").
 func (h *ReportsHandler) Handle(w http.ResponseWriter, r *http.Request) {
+	if !requireAppHeader(w, r) {
+		return
+	}
+
 	namespace := r.URL.Query().Get("namespace")
-	if namespace == "" {
-		WriteError(w, http.StatusBadRequest, "namespace is required")
+	if !validateNamespace(w, namespace) {
 		return
 	}
 
 	resourceFilter := r.URL.Query().Get("resource")
 	kindFilter := r.URL.Query().Get("kind")
 
-	slog.Debug("listing vulnerability reports", "namespace", namespace, "resource", resourceFilter, "kind", kindFilter)
+	auditLog(r, "vulnerability.reports", namespace, "resource", resourceFilter, "kind", kindFilter)
 
 	list, err := h.client.Resource(types.VulnerabilityReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{})
 	if err != nil {
-		slog.Error("failed to list vulnerability reports", "error", err, "namespace", namespace)
 		WriteError(w, http.StatusInternalServerError, "failed to list vulnerability reports")
 		return
 	}
@@ -157,6 +158,9 @@ func parseVulnerability(v map[string]interface{}) types.Vulnerability {
 // Helper functions for unstructured access.
 
 func nestedMap(obj map[string]interface{}, key string) (map[string]interface{}, bool) {
+	if obj == nil {
+		return nil, false
+	}
 	v, ok := obj[key]
 	if !ok {
 		return nil, false

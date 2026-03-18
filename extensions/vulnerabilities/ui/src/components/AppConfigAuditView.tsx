@@ -116,12 +116,14 @@ export const AppConfigAuditView: React.FC<{ application: any; tree?: any }> = ({
   const destNamespace = application?.spec?.destination?.namespace || 'default';
 
   React.useEffect(() => {
+    const controller = new AbortController();
     setLoading(true);
     setError(null);
-    fetchAuditOverview(destNamespace, appNamespace, appName, project)
-      .then(d => setData(d))
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
+    fetchAuditOverview(destNamespace, appNamespace, appName, project, controller.signal)
+      .then(d => { if (!controller.signal.aborted) setData(d); })
+      .catch(err => { if (!controller.signal.aborted) setError(err.message); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, [destNamespace, appNamespace, appName, project]);
 
   const handleSort = (key: SortKey) => {

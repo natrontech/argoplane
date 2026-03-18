@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"log/slog"
 	"net/http"
 	"sort"
 
@@ -25,6 +24,10 @@ func NewAuditHandler(client dynamic.Interface) *AuditHandler {
 
 // HandleOverview returns an aggregated config audit overview for a namespace.
 func (h *AuditHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
+	if !requireAppHeader(w, r) {
+		return
+	}
+
 	var req types.AuditOverviewRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request body")
@@ -32,16 +35,14 @@ func (h *AuditHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	if req.Namespace == "" {
-		WriteError(w, http.StatusBadRequest, "namespace is required")
+	if !validateNamespace(w, req.Namespace) {
 		return
 	}
 
-	slog.Debug("audit overview request", "namespace", req.Namespace)
+	auditLog(r, "audit.overview", req.Namespace)
 
 	list, err := h.client.Resource(types.ConfigAuditReportGVR).Namespace(req.Namespace).List(r.Context(), metav1.ListOptions{})
 	if err != nil {
-		slog.Error("failed to list config audit reports", "error", err, "namespace", req.Namespace)
 		WriteError(w, http.StatusInternalServerError, "failed to list config audit reports")
 		return
 	}

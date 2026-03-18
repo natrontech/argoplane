@@ -125,16 +125,16 @@ export const AppVulnerabilitiesView: React.FC<{ application: any; tree?: any }> 
   const project = application?.spec?.project || 'default';
   const destNamespace = application?.spec?.destination?.namespace || 'default';
 
-  const loadData = React.useCallback(() => {
+  React.useEffect(() => {
+    const controller = new AbortController();
     setLoading(true);
     setError(null);
-    fetchOverview(destNamespace, appNamespace, appName, project)
-      .then(data => setOverview(data))
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
+    fetchOverview(destNamespace, appNamespace, appName, project, controller.signal)
+      .then(data => { if (!controller.signal.aborted) setOverview(data); })
+      .catch(err => { if (!controller.signal.aborted) setError(err.message); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, [destNamespace, appNamespace, appName, project]);
-
-  React.useEffect(() => { loadData(); }, [loadData]);
 
   const handleSort = (key: SortKey) => {
     if (key === sortKey) setSortDir(d => d === 'asc' ? 'desc' : 'asc');

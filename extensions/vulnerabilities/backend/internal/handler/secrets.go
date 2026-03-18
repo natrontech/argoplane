@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"log/slog"
 	"net/http"
 	"sort"
 
@@ -25,6 +24,10 @@ func NewSecretsHandler(client dynamic.Interface) *SecretsHandler {
 
 // HandleOverview returns an aggregated exposed secret overview for a namespace.
 func (h *SecretsHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
+	if !requireAppHeader(w, r) {
+		return
+	}
+
 	var req struct {
 		Namespace string `json:"namespace"`
 	}
@@ -34,14 +37,14 @@ func (h *SecretsHandler) HandleOverview(w http.ResponseWriter, r *http.Request) 
 	}
 	defer r.Body.Close()
 
-	if req.Namespace == "" {
-		WriteError(w, http.StatusBadRequest, "namespace is required")
+	if !validateNamespace(w, req.Namespace) {
 		return
 	}
 
+	auditLog(r, "secrets.overview", req.Namespace)
+
 	list, err := h.client.Resource(types.ExposedSecretReportGVR).Namespace(req.Namespace).List(r.Context(), metav1.ListOptions{})
 	if err != nil {
-		slog.Error("failed to list exposed secret reports", "error", err, "namespace", req.Namespace)
 		WriteError(w, http.StatusInternalServerError, "failed to list exposed secret reports")
 		return
 	}

@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/csv"
 	"fmt"
-	"log/slog"
 	"net/http"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,13 +23,19 @@ func NewExportHandler(client dynamic.Interface) *ExportHandler {
 
 // Handle exports reports as CSV based on the type query parameter.
 func (h *ExportHandler) Handle(w http.ResponseWriter, r *http.Request) {
+	if !requireAppHeader(w, r) {
+		return
+	}
+
 	namespace := r.URL.Query().Get("namespace")
-	if namespace == "" {
-		WriteError(w, http.StatusBadRequest, "namespace is required")
+	if !validateNamespace(w, namespace) {
 		return
 	}
 
 	exportType := r.URL.Query().Get("type")
+
+	auditLog(r, "export.csv", namespace, "type", exportType)
+
 	switch exportType {
 	case "vulnerabilities":
 		h.exportVulnerabilities(w, r, namespace)
@@ -48,13 +53,13 @@ func (h *ExportHandler) Handle(w http.ResponseWriter, r *http.Request) {
 func (h *ExportHandler) exportVulnerabilities(w http.ResponseWriter, r *http.Request, namespace string) {
 	list, err := h.client.Resource(types.VulnerabilityReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{})
 	if err != nil {
-		slog.Error("failed to list vulnerability reports for export", "error", err)
 		WriteError(w, http.StatusInternalServerError, "failed to list vulnerability reports")
 		return
 	}
 
+	safeName := sanitizeFilename(namespace)
 	w.Header().Set("Content-Type", "text/csv")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=vulnerabilities-%s.csv", namespace))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=vulnerabilities-%s.csv", safeName))
 
 	writer := csv.NewWriter(w)
 	writer.Write([]string{"Image", "Tag", "Container", "CVE", "Severity", "Score", "Package", "Installed", "Fixed", "Title", "Link"})
@@ -90,13 +95,13 @@ func (h *ExportHandler) exportVulnerabilities(w http.ResponseWriter, r *http.Req
 func (h *ExportHandler) exportSecrets(w http.ResponseWriter, r *http.Request, namespace string) {
 	list, err := h.client.Resource(types.ExposedSecretReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{})
 	if err != nil {
-		slog.Error("failed to list exposed secret reports for export", "error", err)
 		WriteError(w, http.StatusInternalServerError, "failed to list exposed secret reports")
 		return
 	}
 
+	safeName := sanitizeFilename(namespace)
 	w.Header().Set("Content-Type", "text/csv")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=exposed-secrets-%s.csv", namespace))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=exposed-secrets-%s.csv", safeName))
 
 	writer := csv.NewWriter(w)
 	writer.Write([]string{"Image", "Tag", "Container", "RuleID", "Severity", "Category", "Title", "Target", "Match"})
@@ -130,13 +135,13 @@ func (h *ExportHandler) exportSecrets(w http.ResponseWriter, r *http.Request, na
 func (h *ExportHandler) exportSbom(w http.ResponseWriter, r *http.Request, namespace string) {
 	list, err := h.client.Resource(types.SbomReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{})
 	if err != nil {
-		slog.Error("failed to list sbom reports for export", "error", err)
 		WriteError(w, http.StatusInternalServerError, "failed to list sbom reports")
 		return
 	}
 
+	safeName := sanitizeFilename(namespace)
 	w.Header().Set("Content-Type", "text/csv")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=sbom-%s.csv", namespace))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=sbom-%s.csv", safeName))
 
 	writer := csv.NewWriter(w)
 	writer.Write([]string{"Image", "Tag", "Component", "Version", "Type", "PURL"})
@@ -167,13 +172,13 @@ func (h *ExportHandler) exportSbom(w http.ResponseWriter, r *http.Request, names
 func (h *ExportHandler) exportAudit(w http.ResponseWriter, r *http.Request, namespace string) {
 	list, err := h.client.Resource(types.ConfigAuditReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{})
 	if err != nil {
-		slog.Error("failed to list config audit reports for export", "error", err)
 		WriteError(w, http.StatusInternalServerError, "failed to list config audit reports")
 		return
 	}
 
+	safeName := sanitizeFilename(namespace)
 	w.Header().Set("Content-Type", "text/csv")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=config-audit-%s.csv", namespace))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=config-audit-%s.csv", safeName))
 
 	writer := csv.NewWriter(w)
 	writer.Write([]string{"Resource", "Kind", "CheckID", "Severity", "Title", "Description", "Remediation"})

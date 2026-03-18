@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"log/slog"
 	"net/http"
 	"sort"
 
@@ -26,6 +25,10 @@ func NewOverviewHandler(client dynamic.Interface) *OverviewHandler {
 // Trivy Operator creates reports per ReplicaSet/DaemonSet/StatefulSet, not per Pod,
 // so we simply list all reports in the namespace and deduplicate by image.
 func (h *OverviewHandler) Handle(w http.ResponseWriter, r *http.Request) {
+	if !requireAppHeader(w, r) {
+		return
+	}
+
 	var req types.OverviewRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request body")
@@ -33,17 +36,14 @@ func (h *OverviewHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	if req.Namespace == "" {
-		WriteError(w, http.StatusBadRequest, "namespace is required")
+	if !validateNamespace(w, req.Namespace) {
 		return
 	}
 
-	username := r.Header.Get("Argocd-Username")
-	slog.Debug("overview request", "namespace", req.Namespace, "user", username)
+	auditLog(r, "vulnerability.overview", req.Namespace)
 
 	list, err := h.client.Resource(types.VulnerabilityReportGVR).Namespace(req.Namespace).List(r.Context(), metav1.ListOptions{})
 	if err != nil {
-		slog.Error("failed to list vulnerability reports", "error", err, "namespace", req.Namespace)
 		WriteError(w, http.StatusInternalServerError, "failed to list vulnerability reports")
 		return
 	}

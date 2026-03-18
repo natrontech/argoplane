@@ -7,11 +7,21 @@ function proxyHeaders(appNamespace: string, appName: string, project: string) {
   };
 }
 
+// Validate that the response has the expected shape (runtime type guard).
+function validateSummary(data: any): data is { critical: number; high: number; medium: number; low: number } {
+  return data && typeof data.critical === 'number' && typeof data.high === 'number';
+}
+
+function validateOverview(data: any): data is OverviewResponse {
+  return data && validateSummary(data.summary) && Array.isArray(data.images);
+}
+
 export async function fetchOverview(
   namespace: string,
   appNamespace: string,
   appName: string,
-  project: string
+  project: string,
+  signal?: AbortSignal
 ): Promise<OverviewResponse> {
   const response = await fetch('/extensions/vulnerabilities/api/v1/overview', {
     method: 'POST',
@@ -20,18 +30,25 @@ export async function fetchOverview(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ namespace }),
+    signal,
   });
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    const text = await response.text().catch(() => response.statusText);
+    throw new Error(`HTTP ${response.status}: ${text}`);
   }
-  return response.json();
+  const data = await response.json();
+  if (!validateOverview(data)) {
+    throw new Error('Invalid response format from vulnerability overview');
+  }
+  return data;
 }
 
 export async function fetchAuditOverview(
   namespace: string,
   appNamespace: string,
   appName: string,
-  project: string
+  project: string,
+  signal?: AbortSignal
 ): Promise<AuditOverviewResponse> {
   const response = await fetch('/extensions/vulnerabilities/api/v1/audit/overview', {
     method: 'POST',
@@ -40,18 +57,25 @@ export async function fetchAuditOverview(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ namespace }),
+    signal,
   });
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    const text = await response.text().catch(() => response.statusText);
+    throw new Error(`HTTP ${response.status}: ${text}`);
   }
-  return response.json();
+  const data = await response.json();
+  if (!data || !validateSummary(data.summary) || !Array.isArray(data.reports)) {
+    throw new Error('Invalid response format from audit overview');
+  }
+  return data;
 }
 
 export async function fetchSecretsOverview(
   namespace: string,
   appNamespace: string,
   appName: string,
-  project: string
+  project: string,
+  signal?: AbortSignal
 ): Promise<SecretOverviewResponse> {
   const response = await fetch('/extensions/vulnerabilities/api/v1/secrets/overview', {
     method: 'POST',
@@ -60,9 +84,11 @@ export async function fetchSecretsOverview(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ namespace }),
+    signal,
   });
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    const text = await response.text().catch(() => response.statusText);
+    throw new Error(`HTTP ${response.status}: ${text}`);
   }
   return response.json();
 }
@@ -71,7 +97,8 @@ export async function fetchSbomOverview(
   namespace: string,
   appNamespace: string,
   appName: string,
-  project: string
+  project: string,
+  signal?: AbortSignal
 ): Promise<SbomOverviewResponse> {
   const response = await fetch('/extensions/vulnerabilities/api/v1/sbom/overview', {
     method: 'POST',
@@ -80,9 +107,11 @@ export async function fetchSbomOverview(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ namespace }),
+    signal,
   });
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    const text = await response.text().catch(() => response.statusText);
+    throw new Error(`HTTP ${response.status}: ${text}`);
   }
   return response.json();
 }
@@ -93,7 +122,8 @@ export async function fetchReports(
   appName: string,
   project: string,
   resource?: string,
-  kind?: string
+  kind?: string,
+  signal?: AbortSignal
 ): Promise<ImageReport[]> {
   const params = new URLSearchParams({ namespace });
   if (resource) params.set('resource', resource);
@@ -101,11 +131,17 @@ export async function fetchReports(
 
   const response = await fetch(`/extensions/vulnerabilities/api/v1/reports?${params}`, {
     headers: proxyHeaders(appNamespace, appName, project),
+    signal,
   });
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    const text = await response.text().catch(() => response.statusText);
+    throw new Error(`HTTP ${response.status}: ${text}`);
   }
-  return response.json();
+  const data = await response.json();
+  if (!Array.isArray(data)) {
+    throw new Error('Invalid response format from vulnerability reports');
+  }
+  return data;
 }
 
 export async function downloadExport(
@@ -120,10 +156,14 @@ export async function downloadExport(
     headers: proxyHeaders(appNamespace, appName, project),
   });
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    const text = await response.text().catch(() => response.statusText);
+    throw new Error(`HTTP ${response.status}: ${text}`);
   }
   const blob = await response.blob();
-  const filename = type === 'audit' ? `config-audit-${namespace}.csv` : `vulnerabilities-${namespace}.csv`;
+  // Extract filename from Content-Disposition or generate a safe default.
+  const disposition = response.headers.get('Content-Disposition') || '';
+  const filenameMatch = disposition.match(/filename=([^\s;]+)/);
+  const filename = filenameMatch ? filenameMatch[1] : `${type}-${namespace}.csv`;
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

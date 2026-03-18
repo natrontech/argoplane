@@ -29,12 +29,14 @@ export const AppSbomView: React.FC<{ application: any; tree?: any }> = ({ applic
   const destNamespace = application?.spec?.destination?.namespace || 'default';
 
   React.useEffect(() => {
+    const controller = new AbortController();
     setLoading(true);
     setError(null);
-    fetchSbomOverview(destNamespace, appNamespace, appName, project)
-      .then(d => setData(d))
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
+    fetchSbomOverview(destNamespace, appNamespace, appName, project, controller.signal)
+      .then(d => { if (!controller.signal.aborted) setData(d); })
+      .catch(err => { if (!controller.signal.aborted) setError(err.message); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, [destNamespace, appNamespace, appName, project]);
 
   const handleSort = (key: SortKey) => { if (key === sortKey) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc'); } };

@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"log/slog"
 	"net/http"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,6 +23,10 @@ func NewSbomHandler(client dynamic.Interface) *SbomHandler {
 
 // HandleOverview returns SBOM data for all images in a namespace.
 func (h *SbomHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
+	if !requireAppHeader(w, r) {
+		return
+	}
+
 	var req struct {
 		Namespace string `json:"namespace"`
 	}
@@ -33,14 +36,14 @@ func (h *SbomHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	if req.Namespace == "" {
-		WriteError(w, http.StatusBadRequest, "namespace is required")
+	if !validateNamespace(w, req.Namespace) {
 		return
 	}
 
+	auditLog(r, "sbom.overview", req.Namespace)
+
 	list, err := h.client.Resource(types.SbomReportGVR).Namespace(req.Namespace).List(r.Context(), metav1.ListOptions{})
 	if err != nil {
-		slog.Error("failed to list sbom reports", "error", err, "namespace", req.Namespace)
 		WriteError(w, http.StatusInternalServerError, "failed to list sbom reports")
 		return
 	}
