@@ -72,6 +72,22 @@ Run these commands to wire up ArgoCD with your extensions:
   ]'
 {{- end }}
 
+  # Load UI extension bundles (init container on argocd-server)
+  # The ENABLED_EXTENSIONS env var controls which UI bundles are loaded.
+  # If omitted, all bundles are copied.
+  #
+  # Example init container spec for argocd-server:
+  #
+  #   initContainers:
+  #     - name: argoplane-extensions
+  #       image: ghcr.io/natrontech/argoplane-ui-extensions:{{ .Chart.AppVersion }}
+  #       env:
+  #         - name: ENABLED_EXTENSIONS
+  #           value: "{{ join "," $enabledExtensions }}{{- if .Values.argocd.branding.enabled }},argoplane-links{{ end }},argoplane"
+  #       volumeMounts:
+  #         - name: extensions
+  #           mountPath: /tmp/extensions
+
   # Restart argocd-server
   kubectl -n {{ $ns }} rollout restart deployment argocd-server
 

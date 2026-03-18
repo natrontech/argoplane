@@ -11,6 +11,9 @@
 #   initContainers:
 #     - name: argoplane-extensions
 #       image: ghcr.io/natrontech/argoplane-ui-extensions:v0.1.0
+#       env:
+#         - name: ENABLED_EXTENSIONS
+#           value: "metrics,backups,argoplane"  # omit to load all
 #       volumeMounts:
 #         - name: extensions
 #           mountPath: /tmp/extensions
@@ -24,4 +27,6 @@ COPY extensions/logs/ui/dist/extension-logs.js /extensions/
 COPY extensions/vulnerabilities/ui/dist/extension-vulnerabilities.js /extensions/
 COPY extensions/argoplane/ui/dist/extension-argoplane.js /extensions/
 COPY deploy/argocd/argoplane-links.js /extensions/extension-argoplane-links.js
-ENTRYPOINT ["cp", "-r", "/extensions/.", "/tmp/extensions/"]
+COPY deploy/docker/copy-extensions.sh /copy-extensions.sh
+RUN chmod +x /copy-extensions.sh
+ENTRYPOINT ["/copy-extensions.sh"]
