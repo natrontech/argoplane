@@ -188,6 +188,25 @@ func (h *Dashboard) HandleGraph(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
+// seriesLabel builds a human-readable label from metric labels.
+func seriesLabel(labels map[string]string) string {
+	for _, key := range []string{"pod", "container", "namespace", "node", "instance"} {
+		if v, ok := labels[key]; ok && v != "" {
+			return fmt.Sprintf("%s=%s", key, v)
+		}
+	}
+	var parts []string
+	for k, v := range labels {
+		if k != "__name__" {
+			parts = append(parts, fmt.Sprintf("%s=%s", k, v))
+		}
+	}
+	if len(parts) > 0 {
+		return strings.Join(parts, ", ")
+	}
+	return "series"
+}
+
 // renderTemplate executes a Go text/template with the given variables.
 func renderTemplate(expression string, vars map[string]string) (string, error) {
 	tmpl, err := template.New("query").Parse(expression)

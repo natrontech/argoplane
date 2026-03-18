@@ -53,9 +53,6 @@ func main() {
 	resourceHandler := handler.NewResource(promClient)
 	appHandler := handler.NewApp(promClient)
 	podsHandler := handler.NewPods(promClient)
-	customHandler := handler.NewCustom(promClient)
-	discoverHandler := handler.NewDiscover(promClient)
-	labelsHandler := handler.NewLabels(promClient)
 	perPodHandler := handler.NewPerPod(promClient)
 
 	// Config-driven dashboard handler
@@ -72,9 +69,6 @@ func main() {
 	mux.HandleFunc("GET /api/v1/app-metrics", appHandler.Handle)
 	mux.HandleFunc("GET /api/v1/pod-breakdown", podsHandler.Handle)
 	mux.HandleFunc("GET /api/v1/per-pod-series", perPodHandler.Handle)
-	mux.HandleFunc("GET /api/v1/query", customHandler.Handle)
-	mux.HandleFunc("GET /api/v1/discover", discoverHandler.Handle)
-	mux.HandleFunc("GET /api/v1/labels", labelsHandler.Handle)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})

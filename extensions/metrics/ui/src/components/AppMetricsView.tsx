@@ -13,10 +13,8 @@ import {
   panel,
 } from '@argoplane/shared';
 import { fetchAppMetrics, fetchPodBreakdown } from '../api';
-import { MetricData, TimeRange, PodMetric } from '../types';
+import { MetricData, PodMetric } from '../types';
 import { ConfigDashboard } from './ConfigDashboard';
-import { DurationSelector } from './DurationSelector';
-import { QueryBuilder } from './QueryBuilder';
 
 interface AppViewProps {
   application: any;
@@ -104,14 +102,6 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
 
   return (
     <div style={panel}>
-      {/* Query builder */}
-      <QueryBuilder
-        namespace={namespace}
-        appNamespace={appNamespace}
-        appName={appName}
-        project={project}
-      />
-
       {/* Overview */}
       <SectionHeader title="OVERVIEW" />
       <div style={cardGrid}>

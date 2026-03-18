@@ -17,11 +17,6 @@ export interface TimeSeriesMetric {
   series: DataPoint[];
 }
 
-export interface NamedSeries {
-  label: string;
-  series: DataPoint[];
-}
-
 export interface PodMetric {
   pod: string;
   cpu: string;
@@ -29,18 +24,6 @@ export interface PodMetric {
   netRx: string;
   netTx: string;
   restarts: string;
-}
-
-export interface CustomQueryResult {
-  multiSeries?: NamedSeries[];
-  samples?: Array<{ labels: Record<string, string>; value: number }>;
-  error?: string;
-}
-
-export interface DiscoveredMetric {
-  name: string;
-  category: string;
-  query: string;
 }
 
 export interface PerPodSeries {
