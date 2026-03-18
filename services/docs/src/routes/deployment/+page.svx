@@ -90,6 +90,8 @@ extensions:
       HUBBLE_RELAY_URL: "hubble-relay.kube-system.svc:80"
 ```
 
+Setting `enabled: false` skips the backend Deployment, Service, proxy routing, and RBAC for that extension. To also prevent the UI bundle from loading in ArgoCD, set the `ENABLED_EXTENSIONS` env var on the UI extensions init container. See [Loading only enabled UI bundles](/deployment/argocd-configuration#loading-only-enabled-ui-bundles) for details.
+
 Enable networking:
 
 ```bash

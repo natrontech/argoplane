@@ -137,22 +137,7 @@ kubectl -n argocd patch deployment argocd-server --type json -p '[
 
 ### Option B: Init container with OCI image
 
-For production, package UI bundles into a lightweight OCI image and use it as an init container:
-
-```dockerfile
-# Dockerfile.ui-extensions
-FROM scratch
-COPY extensions/metrics/ui/dist/extension-metrics.js /extensions/
-COPY extensions/backups/ui/dist/extension-backups.js /extensions/
-COPY extensions/networking/ui/dist/extension-networking.js /extensions/
-```
-
-```bash
-docker build -t ghcr.io/natrontech/argoplane-ui-extensions:v0.1.0 \
-  -f Dockerfile.ui-extensions .
-```
-
-Then in ArgoCD's deployment (or via Kustomize/Helm values):
+For production, use the pre-built ArgoPlane UI extensions image as an init container. The image contains all UI bundles and a script that selectively copies only the ones you enable.
 
 ```yaml
 spec:
@@ -161,7 +146,9 @@ spec:
       initContainers:
         - name: argoplane-extensions
           image: ghcr.io/natrontech/argoplane-ui-extensions:v0.1.0
-          command: ["cp", "-r", "/extensions/.", "/tmp/extensions/"]
+          env:
+            - name: ENABLED_EXTENSIONS
+              value: "metrics,backups,argoplane"
           volumeMounts:
             - name: extensions
               mountPath: /tmp/extensions
@@ -175,7 +162,45 @@ spec:
           emptyDir: {}
 ```
 
+The `ENABLED_EXTENSIONS` env var is a comma-separated list of extension names. Only matching UI bundles (`extension-<name>.js`) are copied to `/tmp/extensions/`. If you omit the env var entirely, all bundles are copied (backwards compatible).
+
 This approach is cleaner for CI/CD pipelines: build once, tag with version, deploy via image reference.
+
+### Loading only enabled UI bundles
+
+When you disable an extension backend via `extensions.<name>.enabled: false` in the Helm chart, the proxy routing, RBAC, and backend Deployment are all skipped. However, the UI bundle is separate: it lives in the init container image and gets loaded into ArgoCD independently.
+
+Without the `ENABLED_EXTENSIONS` filter, disabled extensions still show tabs and panels in ArgoCD. They appear broken (empty or error state) because there's no backend to serve data. To prevent this, set `ENABLED_EXTENSIONS` on the init container to match your enabled backends.
+
+For example, if you only enable metrics and backups:
+
+```yaml
+extensions:
+  metrics:
+    enabled: true
+  backups:
+    enabled: true
+  networking:
+    enabled: false
+  logs:
+    enabled: false
+  vulnerabilities:
+    enabled: false
+```
+
+Set the init container env to:
+
+```yaml
+env:
+  - name: ENABLED_EXTENSIONS
+    value: "metrics,backups,argoplane"
+```
+
+Always include `argoplane` in the list. It's the consolidation extension that combines all enabled extension tabs into a single unified "ArgoPlane" tab. If you use branding, also add `argoplane-links`.
+
+<Callout type="info">
+  The Helm chart's `helm install` output shows the exact `ENABLED_EXTENSIONS` value to use based on your `values.yaml` configuration.
+</Callout>
 
 ### Option C: kubectl cp (development only)
 
@@ -346,16 +371,12 @@ patches:
         template:
           spec:
             initContainers:
-              - name: copy-argoplane-extensions
-                image: busybox:1.36
-                command:
-                  - sh
-                  - -c
-                  - cp /extensions-src/*.js /tmp/extensions/
+              - name: argoplane-extensions
+                image: ghcr.io/natrontech/argoplane-ui-extensions:v0.1.0
+                env:
+                  - name: ENABLED_EXTENSIONS
+                    value: "metrics,backups,networking,argoplane"
                 volumeMounts:
-                  - name: argoplane-extensions
-                    mountPath: /extensions-src
-                    readOnly: true
                   - name: extensions
                     mountPath: /tmp/extensions
             containers:
@@ -367,9 +388,6 @@ patches:
                     mountPath: /tmp/extensions/branding
                     readOnly: true
             volumes:
-              - name: argoplane-extensions
-                configMap:
-                  name: argoplane-ui-extensions
               - name: argoplane-styles
                 configMap:
                   name: argoplane-styles
