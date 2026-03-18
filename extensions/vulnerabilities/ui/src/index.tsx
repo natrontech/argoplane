@@ -1,5 +1,4 @@
-import * as React from 'react';
-import { registerArgoPlaneView } from '@argoplane/shared';
+import { registerArgoPlaneView, registerArgoPlaneResourceTab } from '@argoplane/shared';
 import { AppVulnerabilitiesView } from './components/AppVulnerabilitiesView';
 import { DeploymentVulnerabilitiesTab } from './components/DeploymentVulnerabilitiesTab';
 import { PodVulnerabilitiesTab } from './components/PodVulnerabilitiesTab';
@@ -12,31 +11,20 @@ registerArgoPlaneView({
   component: AppVulnerabilitiesView,
 });
 
-((window: any) => {
-  // Deployment resource tab: vulnerability overview for all pods in the deployment
-  window.extensionsAPI.registerResourceExtension(
-    DeploymentVulnerabilitiesTab,
-    'apps',
-    'Deployment',
-    'Vulnerabilities',
-    { icon: 'fa-shield-alt' }
-  );
+// Register resource tabs via ArgoPlane consolidated resource tab
+const deploymentEntry = {
+  id: 'vulnerabilities',
+  title: 'Vulnerabilities',
+  icon: 'fa-shield-alt',
+  component: DeploymentVulnerabilitiesTab,
+};
 
-  // StatefulSet resource tab
-  window.extensionsAPI.registerResourceExtension(
-    DeploymentVulnerabilitiesTab,
-    'apps',
-    'StatefulSet',
-    'Vulnerabilities',
-    { icon: 'fa-shield-alt' }
-  );
+registerArgoPlaneResourceTab('apps', 'Deployment', deploymentEntry);
+registerArgoPlaneResourceTab('apps', 'StatefulSet', deploymentEntry);
 
-  // Pod resource tab: per-container vulnerability detail
-  window.extensionsAPI.registerResourceExtension(
-    PodVulnerabilitiesTab,
-    '',
-    'Pod',
-    'Vulnerabilities',
-    { icon: 'fa-shield-alt' }
-  );
-})(window);
+registerArgoPlaneResourceTab('', 'Pod', {
+  id: 'vulnerabilities',
+  title: 'Vulnerabilities',
+  icon: 'fa-shield-alt',
+  component: PodVulnerabilitiesTab,
+});
