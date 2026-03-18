@@ -38,7 +38,9 @@ operator:
 
 # Scan job behavior lives under trivyOperator.* (ConfigMap entries).
 trivyOperator:
-  scanJobsInSameNamespace: true
+  # Run scan jobs in trivy-system (not workload namespace) to avoid Cilium
+  # network policies blocking egress to container registries and Trivy DB mirrors.
+  scanJobsInSameNamespace: false
   scanJobCompressLogs: false
 EOF
 
