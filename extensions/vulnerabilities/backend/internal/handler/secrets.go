@@ -49,8 +49,16 @@ func (h *SecretsHandler) HandleOverview(w http.ResponseWriter, r *http.Request) 
 	totalSummary := types.VulnerabilitySummary{}
 	reports := make([]types.SecretReport, 0, len(list.Items))
 
+	// Deduplicate by image:tag (same image in old/new ReplicaSets).
+	seen := make(map[string]bool)
 	for _, item := range list.Items {
 		report := parseSecretReport(item)
+		imageKey := report.Registry + "/" + report.Image + ":" + report.Tag
+		if seen[imageKey] {
+			continue
+		}
+		seen[imageKey] = true
+
 		totalSummary.Critical += report.Summary.Critical
 		totalSummary.High += report.Summary.High
 		totalSummary.Medium += report.Summary.Medium

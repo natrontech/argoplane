@@ -59,8 +59,14 @@ func (h *ExportHandler) exportVulnerabilities(w http.ResponseWriter, r *http.Req
 	writer := csv.NewWriter(w)
 	writer.Write([]string{"Image", "Tag", "Container", "CVE", "Severity", "Score", "Package", "Installed", "Fixed", "Title", "Link"})
 
+	seen := make(map[string]bool)
 	for _, item := range list.Items {
 		report := parseReport(item)
+		imageKey := report.Registry + "/" + report.Image + ":" + report.Tag
+		if seen[imageKey] {
+			continue
+		}
+		seen[imageKey] = true
 		for _, v := range report.Vulnerabilities {
 			writer.Write([]string{
 				report.Image,
@@ -95,8 +101,14 @@ func (h *ExportHandler) exportSecrets(w http.ResponseWriter, r *http.Request, na
 	writer := csv.NewWriter(w)
 	writer.Write([]string{"Image", "Tag", "Container", "RuleID", "Severity", "Category", "Title", "Target", "Match"})
 
+	seen := make(map[string]bool)
 	for _, item := range list.Items {
 		report := parseSecretReport(item)
+		imageKey := report.Registry + "/" + report.Image + ":" + report.Tag
+		if seen[imageKey] {
+			continue
+		}
+		seen[imageKey] = true
 		for _, s := range report.Secrets {
 			writer.Write([]string{
 				report.Image,
@@ -129,8 +141,14 @@ func (h *ExportHandler) exportSbom(w http.ResponseWriter, r *http.Request, names
 	writer := csv.NewWriter(w)
 	writer.Write([]string{"Image", "Tag", "Component", "Version", "Type", "PURL"})
 
+	seen := make(map[string]bool)
 	for _, item := range list.Items {
 		report := parseSbomReport(item)
+		imageKey := report.Registry + "/" + report.Image + ":" + report.Tag
+		if seen[imageKey] {
+			continue
+		}
+		seen[imageKey] = true
 		for _, c := range report.Components {
 			writer.Write([]string{
 				report.Image,
@@ -160,8 +178,15 @@ func (h *ExportHandler) exportAudit(w http.ResponseWriter, r *http.Request, name
 	writer := csv.NewWriter(w)
 	writer.Write([]string{"Resource", "Kind", "CheckID", "Severity", "Title", "Description", "Remediation"})
 
+	// Deduplicate by resource kind+name (old ReplicaSets from rollouts).
+	seen := make(map[string]bool)
 	for _, item := range list.Items {
 		report := parseAuditReport(item)
+		key := report.ResourceKind + "/" + report.ResourceName
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
 		for _, c := range report.Checks {
 			writer.Write([]string{
 				report.ResourceName,

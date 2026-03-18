@@ -49,15 +49,28 @@ func (h *AuditHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
 	totalSummary := types.VulnerabilitySummary{}
 	reports := make([]types.AuditReport, 0, len(list.Items))
 
+	// Deduplicate: keep the newest report per resource kind+name (handles old ReplicaSets from rollouts).
+	newest := make(map[string]int) // key -> index in reports
 	for _, item := range list.Items {
 		report := parseAuditReport(item)
+		key := report.ResourceKind + "/" + report.ResourceName
 
-		totalSummary.Critical += report.Summary.Critical
-		totalSummary.High += report.Summary.High
-		totalSummary.Medium += report.Summary.Medium
-		totalSummary.Low += report.Summary.Low
-
+		if idx, exists := newest[key]; exists {
+			// Keep whichever was scanned more recently.
+			if report.LastScanned > reports[idx].LastScanned {
+				reports[idx] = report
+			}
+			continue
+		}
+		newest[key] = len(reports)
 		reports = append(reports, report)
+	}
+
+	for _, r := range reports {
+		totalSummary.Critical += r.Summary.Critical
+		totalSummary.High += r.Summary.High
+		totalSummary.Medium += r.Summary.Medium
+		totalSummary.Low += r.Summary.Low
 	}
 
 	// Sort by severity.

@@ -48,8 +48,16 @@ func (h *SbomHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
 	totalComponents := 0
 	reports := make([]types.SbomReport, 0, len(list.Items))
 
+	// Deduplicate by image:tag (same image in old/new ReplicaSets).
+	seen := make(map[string]bool)
 	for _, item := range list.Items {
 		report := parseSbomReport(item)
+		imageKey := report.Registry + "/" + report.Image + ":" + report.Tag
+		if seen[imageKey] {
+			continue
+		}
+		seen[imageKey] = true
+
 		totalComponents += report.ComponentsCount
 		reports = append(reports, report)
 	}
