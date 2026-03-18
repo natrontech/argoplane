@@ -22,7 +22,8 @@ func NewReportsHandler(client dynamic.Interface) *ReportsHandler {
 	return &ReportsHandler{client: client}
 }
 
-// Handle returns vulnerability reports filtered by namespace and optionally by pod.
+// Handle returns vulnerability reports filtered by namespace.
+// Optional query params: resource (e.g. "guestbook-ui-84774bdc6f"), kind (e.g. "ReplicaSet").
 func (h *ReportsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
 	if namespace == "" {
@@ -30,9 +31,10 @@ func (h *ReportsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	podFilter := r.URL.Query().Get("pod")
+	resourceFilter := r.URL.Query().Get("resource")
+	kindFilter := r.URL.Query().Get("kind")
 
-	slog.Debug("listing vulnerability reports", "namespace", namespace, "pod", podFilter)
+	slog.Debug("listing vulnerability reports", "namespace", namespace, "resource", resourceFilter, "kind", kindFilter)
 
 	list, err := h.client.Resource(types.VulnerabilityReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{})
 	if err != nil {
@@ -45,7 +47,10 @@ func (h *ReportsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	for _, item := range list.Items {
 		report := parseReport(item)
 
-		if podFilter != "" && report.PodName != podFilter {
+		if resourceFilter != "" && report.ResourceName != resourceFilter {
+			continue
+		}
+		if kindFilter != "" && report.ResourceKind != kindFilter {
 			continue
 		}
 
@@ -110,17 +115,18 @@ func parseReport(item unstructured.Unstructured) types.ImageReport {
 	updateTimestamp, _ := nestedString(report, "updateTimestamp")
 
 	return types.ImageReport{
-		Image:           image,
-		Tag:             tag,
-		Registry:        registryServer,
-		Summary:         vulnSummary,
-		Fixable:         fixable,
-		LastScanned:     updateTimestamp,
-		ContainerName:   labels["trivy-operator.container.name"],
-		PodName:         labels["trivy-operator.resource.name"],
-		PodNamespace:    labels["trivy-operator.resource.namespace"],
-		ReportName:      item.GetName(),
-		Vulnerabilities: vulns,
+		Image:             image,
+		Tag:               tag,
+		Registry:          registryServer,
+		Summary:           vulnSummary,
+		Fixable:           fixable,
+		LastScanned:       updateTimestamp,
+		ContainerName:     labels["trivy-operator.container.name"],
+		ResourceKind:      labels["trivy-operator.resource.kind"],
+		ResourceName:      labels["trivy-operator.resource.name"],
+		ResourceNamespace: labels["trivy-operator.resource.namespace"],
+		ReportName:        item.GetName(),
+		Vulnerabilities:   vulns,
 	}
 }
 

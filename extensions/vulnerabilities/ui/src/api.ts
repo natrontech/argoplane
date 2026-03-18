@@ -9,7 +9,6 @@ function proxyHeaders(appNamespace: string, appName: string, project: string) {
 
 export async function fetchOverview(
   namespace: string,
-  pods: string[],
   appNamespace: string,
   appName: string,
   project: string
@@ -20,7 +19,7 @@ export async function fetchOverview(
       ...proxyHeaders(appNamespace, appName, project),
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ namespace, pods }),
+    body: JSON.stringify({ namespace }),
   });
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -33,10 +32,12 @@ export async function fetchReports(
   appNamespace: string,
   appName: string,
   project: string,
-  pod?: string
+  resource?: string,
+  kind?: string
 ): Promise<ImageReport[]> {
   const params = new URLSearchParams({ namespace });
-  if (pod) params.set('pod', pod);
+  if (resource) params.set('resource', resource);
+  if (kind) params.set('kind', kind);
 
   const response = await fetch(`/extensions/vulnerabilities/api/v1/reports?${params}`, {
     headers: proxyHeaders(appNamespace, appName, project),

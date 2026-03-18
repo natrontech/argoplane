@@ -39,23 +39,23 @@ type Vulnerability struct {
 
 // ImageReport represents the vulnerability state of a single container image.
 type ImageReport struct {
-	Image           string               `json:"image"`
-	Tag             string               `json:"tag"`
-	Registry        string               `json:"registry"`
-	Summary         VulnerabilitySummary `json:"summary"`
-	Fixable         int                  `json:"fixable"`
-	LastScanned     string               `json:"lastScanned"`
-	ContainerName   string               `json:"containerName"`
-	PodName         string               `json:"podName"`
-	PodNamespace    string               `json:"podNamespace"`
-	ReportName      string               `json:"reportName"`
-	Vulnerabilities []Vulnerability      `json:"vulnerabilities,omitempty"`
+	Image             string               `json:"image"`
+	Tag               string               `json:"tag"`
+	Registry          string               `json:"registry"`
+	Summary           VulnerabilitySummary `json:"summary"`
+	Fixable           int                  `json:"fixable"`
+	LastScanned       string               `json:"lastScanned"`
+	ContainerName     string               `json:"containerName"`
+	ResourceKind      string               `json:"resourceKind"`
+	ResourceName      string               `json:"resourceName"`
+	ResourceNamespace string               `json:"resourceNamespace"`
+	ReportName        string               `json:"reportName"`
+	Vulnerabilities   []Vulnerability      `json:"vulnerabilities,omitempty"`
 }
 
 // OverviewRequest is the body for the overview endpoint.
 type OverviewRequest struct {
-	Namespace string   `json:"namespace"`
-	Pods      []string `json:"pods"`
+	Namespace string `json:"namespace"`
 }
 
 // OverviewResponse is the combined app-level vulnerability summary.

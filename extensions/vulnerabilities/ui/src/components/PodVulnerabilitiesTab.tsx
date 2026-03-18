@@ -110,22 +110,31 @@ export const PodVulnerabilitiesTab: React.FC<{ resource: any; application: any }
   const [rescanning, setRescanning] = React.useState<string | null>(null);
   const [severityFilter, setSeverityFilter] = React.useState<Set<string>>(new Set(SEVERITIES));
 
-  const podName = resource?.metadata?.name || '';
   const podNamespace = resource?.metadata?.namespace || 'default';
   const appName = application?.metadata?.name || '';
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
 
+  // Trivy reports are keyed by the pod's owner (ReplicaSet, DaemonSet, etc), not the pod itself.
+  const ownerRef = resource?.metadata?.ownerReferences?.[0];
+  const ownerName = ownerRef?.name || '';
+  const ownerKind = ownerRef?.kind || '';
+
   React.useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetchReports(podNamespace, appNamespace, appName, project, podName)
+
+    // If we know the owner, filter by it. Otherwise fetch all reports in the namespace.
+    const resourceFilter = ownerName || undefined;
+    const kindFilter = ownerKind || undefined;
+
+    fetchReports(podNamespace, appNamespace, appName, project, resourceFilter, kindFilter)
       .then(data => { if (!cancelled) setReports(data); })
       .catch(err => { if (!cancelled) setError(err.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [podNamespace, appNamespace, appName, project, podName]);
+  }, [podNamespace, appNamespace, appName, project, ownerName, ownerKind]);
 
   const handleRescan = (report: ImageReport) => {
     setRescanning(report.reportName);

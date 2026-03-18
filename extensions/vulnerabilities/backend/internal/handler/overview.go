@@ -22,7 +22,9 @@ func NewOverviewHandler(client dynamic.Interface) *OverviewHandler {
 	return &OverviewHandler{client: client}
 }
 
-// Handle returns an aggregated vulnerability overview for an application's pods.
+// Handle returns an aggregated vulnerability overview for an application's namespace.
+// Trivy Operator creates reports per ReplicaSet/DaemonSet/StatefulSet, not per Pod,
+// so we simply list all reports in the namespace and deduplicate by image.
 func (h *OverviewHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	var req types.OverviewRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -37,13 +39,7 @@ func (h *OverviewHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	username := r.Header.Get("Argocd-Username")
-	slog.Debug("overview request", "namespace", req.Namespace, "user", username, "pods", len(req.Pods))
-
-	// Build pod lookup set.
-	podSet := make(map[string]bool, len(req.Pods))
-	for _, p := range req.Pods {
-		podSet[p] = true
-	}
+	slog.Debug("overview request", "namespace", req.Namespace, "user", username)
 
 	list, err := h.client.Resource(types.VulnerabilityReportGVR).Namespace(req.Namespace).List(r.Context(), metav1.ListOptions{})
 	if err != nil {
@@ -55,17 +51,12 @@ func (h *OverviewHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	totalSummary := types.VulnerabilitySummary{}
 	totalFixable := 0
 
-	// Deduplicate by image (same image scanned in multiple pods).
+	// Deduplicate by image (same image used in multiple workloads).
 	seen := make(map[string]bool)
 	images := make([]types.ImageReport, 0)
 
 	for _, item := range list.Items {
 		report := parseReport(item)
-
-		// Filter to pods belonging to this app (if pod list provided).
-		if len(podSet) > 0 && !podSet[report.PodName] {
-			continue
-		}
 
 		// Deduplicate by image:tag.
 		imageKey := report.Registry + "/" + report.Image + ":" + report.Tag

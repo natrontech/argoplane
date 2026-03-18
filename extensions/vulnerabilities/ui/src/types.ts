@@ -26,8 +26,9 @@ export interface ImageReport {
   fixable: number;
   lastScanned: string;
   containerName: string;
-  podName: string;
-  podNamespace: string;
+  resourceKind: string;
+  resourceName: string;
+  resourceNamespace: string;
   reportName: string;
   vulnerabilities?: Vulnerability[];
 }

@@ -13,7 +13,7 @@ import {
   panel,
 } from '@argoplane/shared';
 import { fetchOverview, triggerRescan } from '../api';
-import { ImageReport, OverviewResponse, Vulnerability } from '../types';
+import { ImageReport, OverviewResponse } from '../types';
 
 // ============================================================
 // Helpers
@@ -265,29 +265,21 @@ export const AppVulnerabilitiesView: React.FC<{ application: any; tree?: any }> 
   const project = application?.spec?.project || 'default';
   const destNamespace = application?.spec?.destination?.namespace || 'default';
 
-  // Collect pod names from tree.
-  const podNames = React.useMemo(() => {
-    if (!tree?.nodes) return [];
-    return tree.nodes
-      .filter((n: any) => n.kind === 'Pod')
-      .map((n: any) => n.name);
-  }, [tree]);
-
   const loadData = React.useCallback(() => {
     setLoading(true);
     setError(null);
-    fetchOverview(destNamespace, podNames, appNamespace, appName, project)
+    fetchOverview(destNamespace, appNamespace, appName, project)
       .then(data => setOverview(data))
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
-  }, [destNamespace, podNames.join(','), appNamespace, appName, project]);
+  }, [destNamespace, appNamespace, appName, project]);
 
   React.useEffect(() => { loadData(); }, [loadData]);
 
   const handleRescan = (image: ImageReport) => {
     const key = `${image.registry}/${image.image}:${image.tag}`;
     setRescanning(key);
-    triggerRescan(image.podNamespace || destNamespace, image.reportName, appNamespace, appName, project)
+    triggerRescan(image.resourceNamespace || destNamespace, image.reportName, appNamespace, appName, project)
       .then(() => {
         // Reload after a short delay to let the operator recreate the report.
         setTimeout(loadData, 3000);
