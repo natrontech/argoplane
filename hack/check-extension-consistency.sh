@@ -77,6 +77,27 @@ for ext in "${EXTENSIONS[@]}"; do
   echo ""
 done
 
+# Check UI-only extensions (no backend, just a UI bundle)
+UI_ONLY_EXTENSIONS=()
+for dir in extensions/*/ui/package.json; do
+  ext=$(echo "$dir" | cut -d'/' -f2)
+  # Skip extensions that have a backend (already checked above)
+  if [ ! -f "extensions/$ext/backend/Dockerfile" ]; then
+    UI_ONLY_EXTENSIONS+=("$ext")
+  fi
+done
+
+if [ ${#UI_ONLY_EXTENSIONS[@]} -gt 0 ]; then
+  echo "UI-only extensions found: ${UI_ONLY_EXTENSIONS[*]}"
+  echo ""
+  for ext in "${UI_ONLY_EXTENSIONS[@]}"; do
+    echo "Checking $ext (UI-only)..."
+    check "UI Dockerfile COPY" "deploy/docker/Dockerfile.ui-extensions" "extension-$ext.js" "$ext"
+    check "Dependabot npm" ".github/dependabot.yml" "/extensions/$ext/ui" "$ext"
+    echo ""
+  done
+fi
+
 # Check services with Dockerfiles
 echo "Checking services..."
 for dockerfile in services/*/Dockerfile; do

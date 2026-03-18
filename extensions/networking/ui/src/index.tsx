@@ -1,17 +1,18 @@
 import * as React from 'react';
+import { registerArgoPlaneView } from '@argoplane/shared';
 import { AppNetworkingView } from './components/AppNetworkingView';
 import { PodFlowsTab } from './components/PodFlowsTab';
 import { PolicyFlowsTab } from './components/PolicyFlowsTab';
 
+// Register app view via ArgoPlane consolidated tab
+registerArgoPlaneView({
+  id: 'networking',
+  title: 'Networking',
+  icon: 'fa-shield-alt',
+  component: AppNetworkingView,
+});
 
 ((window: any) => {
-  // App-level networking view (flows + policies + allowed traffic)
-  window.extensionsAPI.registerAppViewExtension(
-    AppNetworkingView,
-    'Networking',
-    'fa-shield-alt'
-  );
-
   // Pod-level flows tab (flows affecting a specific pod)
   window.extensionsAPI.registerResourceExtension(
     PodFlowsTab,

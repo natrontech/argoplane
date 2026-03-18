@@ -14,6 +14,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 ARGOCD_NS="${ARGOCD_NS:-argocd}"
 PROJECT_ROOT="$(repo_root)"
 EXTENSIONS="${EXTENSIONS:-metrics backups networking logs}"
+UI_ONLY_EXTENSIONS="${UI_ONLY_EXTENSIONS:-argoplane}"
 
 log "Setting up ArgoCD for local development"
 
@@ -167,7 +168,7 @@ log "argocd-server pod ready: ${ARGOCD_POD}"
 log "Loading UI extension bundles into argocd-server"
 kubectl exec -n "${ARGOCD_NS}" "${ARGOCD_POD}" -c argocd-server -- mkdir -p /tmp/extensions
 
-for ext in ${EXTENSIONS}; do
+for ext in ${EXTENSIONS} ${UI_ONLY_EXTENSIONS}; do
     local_bundle="${PROJECT_ROOT}/extensions/${ext}/ui/dist/extension-${ext}.js"
     if [ -f "$local_bundle" ]; then
         log "  Loading ${ext} UI bundle"

@@ -7,6 +7,8 @@ ARGOCD_VERSION  ?= v3.3.3
 ARGOCD_NS       := argocd
 KIND_CONFIG     := hack/kind-config.yaml
 EXTENSIONS      := metrics backups networking logs
+UI_ONLY_EXTENSIONS := argoplane
+ALL_UI_EXTENSIONS  := $(EXTENSIONS) $(UI_ONLY_EXTENSIONS)
 
 # --- Cluster lifecycle ---
 
@@ -117,7 +119,7 @@ dev-infra: argocd prometheus velero loki setup-argocd ## Full local dev stack (k
 
 .PHONY: build-extensions
 build-extensions: ## Build all UI extension bundles
-	@for ext in $(EXTENSIONS); do \
+	@for ext in $(ALL_UI_EXTENSIONS); do \
 		echo "==> Building $$ext extension UI"; \
 		(cd extensions/$$ext/ui && npm install && npm run build); \
 	done

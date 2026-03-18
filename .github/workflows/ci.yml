@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        extension: [metrics, backups, networking, logs]
+        extension: [metrics, backups, networking, logs, argoplane]
     steps:
       - uses: actions/checkout@v4
 

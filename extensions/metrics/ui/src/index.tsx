@@ -1,7 +1,15 @@
 import * as React from 'react';
+import { registerArgoPlaneView } from '@argoplane/shared';
 import { MetricsPanel } from './components/MetricsPanel';
 import { AppMetricsView } from './components/AppMetricsView';
 
+// Register app view via ArgoPlane consolidated tab
+registerArgoPlaneView({
+  id: 'metrics',
+  title: 'Metrics',
+  icon: 'fa-chart-line',
+  component: AppMetricsView,
+});
 
 ((window: any) => {
   // Resource tab: Deployments
@@ -30,12 +38,4 @@ import { AppMetricsView } from './components/AppMetricsView';
     'Metrics',
     { icon: 'fa-chart-line' }
   );
-
-  // App view: application-level metrics with query builder
-  window.extensionsAPI.registerAppViewExtension(
-    AppMetricsView,
-    'Metrics',
-    'fa-chart-line'
-  );
-
 })(window);

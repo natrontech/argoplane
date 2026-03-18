@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { registerArgoPlaneView } from '@argoplane/shared';
 import { LogsPanel } from './components/LogsPanel';
 import { AppLogsView } from './components/AppLogsView';
 
@@ -48,6 +49,14 @@ function withErrorBoundary<P extends object>(Component: React.ComponentType<P>):
 const SafeLogsPanel = withErrorBoundary(LogsPanel);
 const SafeAppLogsView = withErrorBoundary(AppLogsView);
 
+// Register app view via ArgoPlane consolidated tab
+registerArgoPlaneView({
+  id: 'logs',
+  title: 'Log Explorer',
+  icon: 'fa-search',
+  component: SafeAppLogsView,
+});
+
 ((window: any) => {
   // Resource tab: Pod log explorer (Loki-backed historical search)
   window.extensionsAPI.registerResourceExtension(
@@ -75,12 +84,4 @@ const SafeAppLogsView = withErrorBoundary(AppLogsView);
     'Log Explorer',
     { icon: 'fa-search' }
   );
-
-  // App view: full-page log explorer for an application
-  window.extensionsAPI.registerAppViewExtension(
-    SafeAppLogsView,
-    'Log Explorer',
-    'fa-search'
-  );
-
 })(window);

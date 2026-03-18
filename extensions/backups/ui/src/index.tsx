@@ -1,17 +1,18 @@
 import * as React from 'react';
+import { registerArgoPlaneView } from '@argoplane/shared';
 import { AppBackupsView } from './components/AppBackupsView';
-
 import { ScheduleBackupsTab } from './components/ScheduleBackupsTab';
 import { BackupDetailTab } from './components/BackupDetailTab';
 
-((window: any) => {
-  // App-level backup management view
-  window.extensionsAPI.registerAppViewExtension(
-    AppBackupsView,
-    'Backups',
-    'fa-archive'
-  );
+// Register app view via ArgoPlane consolidated tab
+registerArgoPlaneView({
+  id: 'backups',
+  title: 'Backups',
+  icon: 'fa-archive',
+  component: AppBackupsView,
+});
 
+((window: any) => {
   // Schedule resource tab: backups from a specific schedule
   window.extensionsAPI.registerResourceExtension(
     ScheduleBackupsTab,

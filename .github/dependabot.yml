@@ -90,6 +90,16 @@ updates:
         patterns:
           - "*"
 
+  # npm - argoplane coordinator UI
+  - package-ecosystem: npm
+    directory: /extensions/argoplane/ui
+    schedule:
+      interval: monthly
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+
   # npm - docs site
   - package-ecosystem: npm
     directory: /services/docs

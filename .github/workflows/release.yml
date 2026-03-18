@@ -85,6 +85,7 @@ jobs:
             extensions/backups/ui/package-lock.json
             extensions/networking/ui/package-lock.json
             extensions/logs/ui/package-lock.json
+            extensions/argoplane/ui/package-lock.json
 
       - name: Install shared dependencies
         working-directory: extensions/shared
@@ -92,7 +93,7 @@ jobs:
 
       - name: Build all UI extensions
         run: |
-          for ext in metrics backups networking logs; do
+          for ext in metrics backups networking logs argoplane; do
             echo "==> Building $ext UI"
             (cd extensions/$ext/ui && npm ci && npm run build)
           done
