@@ -18,7 +18,7 @@ jobs:
   # --- Extension consistency check ---
   consistency:
     name: Extension Consistency
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     steps:
       - uses: actions/checkout@v4
 
@@ -28,7 +28,7 @@ jobs:
   # --- Go backend linting and vetting ---
   go-lint:
     name: Go Lint
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     strategy:
       matrix:
         extension: [metrics, backups, networking, logs, vulnerabilities, events]
@@ -51,7 +51,7 @@ jobs:
   # --- Go integration tests module ---
   go-test-lint:
     name: Go Test Lint
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     steps:
       - uses: actions/checkout@v4
 
@@ -67,7 +67,7 @@ jobs:
   # --- UI extension builds ---
   ui-build:
     name: Build UI Extensions
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     strategy:
       matrix:
         extension: [metrics, backups, networking, logs, vulnerabilities, events, argoplane]
@@ -100,7 +100,7 @@ jobs:
   # --- Docs site build ---
   docs-build:
     name: Build Docs
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     steps:
       - uses: actions/checkout@v4
 
@@ -121,7 +121,7 @@ jobs:
   # --- Helm chart lint ---
   helm-lint:
     name: Helm Lint
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     steps:
       - uses: actions/checkout@v4
 
@@ -136,7 +136,7 @@ jobs:
   # --- Docker build test (no push) ---
   docker-build:
     name: Docker Build
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     needs: [ui-build]
     strategy:
       matrix:
