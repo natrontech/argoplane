@@ -67,6 +67,7 @@ const TAB_ORDER: Record<string, number> = {
   backups: 3,
   networking: 4,
   vulnerabilities: 5,
+  events: 6,
 };
 
 function sortTabs(tabs: ArgoPlaneResourceTabEntry[]): ArgoPlaneResourceTabEntry[] {

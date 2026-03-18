@@ -39,6 +39,7 @@ const TAB_ORDER: Record<string, number> = {
   'config-audit': 6,
   'exposed-secrets': 7,
   sbom: 8,
+  events: 9,
 };
 
 function sortViews(views: ArgoPlaneViewEntry[]): ArgoPlaneViewEntry[] {

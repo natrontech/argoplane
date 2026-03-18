@@ -297,6 +297,53 @@ extensions:
           resources: ["vulnerabilityreports", "configauditreports", "exposedsecretreports", "sbomreports"]
           verbs: ["get", "list", "watch"]
 
+  events:
+    enabled: false
+    image:
+      repository: ghcr.io/natrontech/argoplane-events-backend
+      tag: ""
+      pullPolicy: IfNotPresent
+    replicas: 1
+    revisionHistoryLimit: 3
+    port: 8085
+    env:
+      LOG_LEVEL: "info"
+    extraEnv: []
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+    podLabels: {}
+    podAnnotations: {}
+    priorityClassName: ""
+    podSecurityContext:
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 65534
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop: ["ALL"]
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    serviceAccount:
+      create: true
+      annotations: {}
+    rbac:
+      rules:
+        - apiGroups: [""]
+          resources: ["events"]
+          verbs: ["list", "watch"]
+        - apiGroups: ["events.k8s.io"]
+          resources: ["events"]
+          verbs: ["list", "watch"]
+
 # -- Optional ArgoPlane services (docs site, portal)
 services:
   docs:

@@ -4,6 +4,7 @@
     "extension.config.backups": "services:\n- url: http://argoplane-backups-backend.argocd.svc:8081\n",
     "extension.config.networking": "services:\n- url: http://argoplane-networking-backend.argocd.svc:8082\n",
     "extension.config.logs": "services:\n- url: http://argoplane-logs-backend.argocd.svc:8083\n",
-    "extension.config.vulnerabilities": "services:\n- url: http://argoplane-vulnerabilities-backend.argocd.svc:8084\n"
+    "extension.config.vulnerabilities": "services:\n- url: http://argoplane-vulnerabilities-backend.argocd.svc:8084\n",
+    "extension.config.events": "services:\n- url: http://argoplane-events-backend.argocd.svc:8085\n"
   }
 }

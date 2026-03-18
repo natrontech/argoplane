@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        extension: [metrics, backups, networking, logs, vulnerabilities]
+        extension: [metrics, backups, networking, logs, vulnerabilities, events]
     steps:
       - uses: actions/checkout@v4
 
@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        extension: [metrics, backups, networking, logs, vulnerabilities, argoplane]
+        extension: [metrics, backups, networking, logs, vulnerabilities, events, argoplane]
     steps:
       - uses: actions/checkout@v4
 
@@ -140,7 +140,7 @@ jobs:
     needs: [ui-build]
     strategy:
       matrix:
-        extension: [metrics, backups, networking, logs, vulnerabilities]
+        extension: [metrics, backups, networking, logs, vulnerabilities, events]
     steps:
       - uses: actions/checkout@v4
 

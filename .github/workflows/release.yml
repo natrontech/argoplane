@@ -34,7 +34,7 @@ jobs:
     needs: [meta]
     strategy:
       matrix:
-        extension: [metrics, backups, networking, logs, vulnerabilities]
+        extension: [metrics, backups, networking, logs, vulnerabilities, events]
     steps:
       - uses: actions/checkout@v4
 
@@ -86,6 +86,7 @@ jobs:
             extensions/networking/ui/package-lock.json
             extensions/logs/ui/package-lock.json
             extensions/vulnerabilities/ui/package-lock.json
+            extensions/events/ui/package-lock.json
             extensions/argoplane/ui/package-lock.json
 
       - name: Install shared dependencies
@@ -94,7 +95,7 @@ jobs:
 
       - name: Build all UI extensions
         run: |
-          for ext in metrics backups networking logs vulnerabilities argoplane; do
+          for ext in metrics backups networking logs vulnerabilities events argoplane; do
             echo "==> Building $ext UI"
             (cd extensions/$ext/ui && npm ci && npm run build)
           done

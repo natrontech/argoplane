@@ -6,7 +6,7 @@ CLUSTER_NAME    ?= argoplane-dev
 ARGOCD_VERSION  ?= v3.3.3
 ARGOCD_NS       := argocd
 KIND_CONFIG     := hack/kind-config.yaml
-EXTENSIONS      := metrics backups networking logs vulnerabilities
+EXTENSIONS      := metrics backups networking logs vulnerabilities events
 UI_ONLY_EXTENSIONS := argoplane
 ALL_UI_EXTENSIONS  := $(EXTENSIONS) $(UI_ONLY_EXTENSIONS)
 
