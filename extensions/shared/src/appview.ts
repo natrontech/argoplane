@@ -48,11 +48,16 @@ function sortViews(views: ArgoPlaneViewEntry[]): ArgoPlaneViewEntry[] {
 
 // --- Error boundary for individual tabs ---
 
+interface TabErrorBoundaryProps {
+  tabId: string;
+  children?: React.ReactNode;
+}
+
 class TabErrorBoundary extends React.Component<
-  { tabId: string; children: React.ReactNode },
+  TabErrorBoundaryProps,
   { error: Error | null }
 > {
-  constructor(props: { tabId: string; children: React.ReactNode }) {
+  constructor(props: TabErrorBoundaryProps) {
     super(props);
     this.state = { error: null };
   }
