@@ -295,7 +295,7 @@ extensions:
       rules:
         - apiGroups: ["aquasecurity.github.io"]
           resources: ["vulnerabilityreports", "configauditreports", "exposedsecretreports", "sbomreports"]
-          verbs: ["get", "list", "watch", "delete"]
+          verbs: ["get", "list", "watch"]
 
 # -- Optional ArgoPlane services (docs site, portal)
 services:

@@ -13,7 +13,7 @@ import {
   spacing,
   panel,
 } from '@argoplane/shared';
-import { fetchOverview, triggerRescan, triggerRescanAll, downloadExport } from '../api';
+import { fetchOverview, downloadExport } from '../api';
 import { ImageReport, OverviewResponse, Vulnerability } from '../types';
 import { PieChart } from './PieChart';
 
@@ -115,8 +115,6 @@ export const AppVulnerabilitiesView: React.FC<{ application: any; tree?: any }> 
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [expandedImage, setExpandedImage] = React.useState<string | null>(null);
-  const [rescanning, setRescanning] = React.useState<string | null>(null);
-  const [scanningAll, setScanningAll] = React.useState(false);
   const [severityFilter, setSeverityFilter] = React.useState<Set<string>>(new Set(SEVERITIES));
   const [search, setSearch] = React.useState('');
   const [sortKey, setSortKey] = React.useState<SortKey>('severity');
@@ -145,15 +143,6 @@ export const AppVulnerabilitiesView: React.FC<{ application: any; tree?: any }> 
 
   const toggleSeverity = (sev: string) => {
     setSeverityFilter(prev => { const next = new Set(prev); if (next.has(sev)) next.delete(sev); else next.add(sev); return next; });
-  };
-
-  const handleRescan = (image: ImageReport) => {
-    const key = `${image.registry}/${image.image}:${image.tag}`;
-    setRescanning(key);
-    triggerRescan(image.resourceNamespace || destNamespace, image.reportName, appNamespace, appName, project)
-      .then(() => setTimeout(loadData, 3000))
-      .catch(err => setError(err.message))
-      .finally(() => setRescanning(null));
   };
 
   if (loading) return <div style={panel}><Loading /></div>;
@@ -190,16 +179,10 @@ export const AppVulnerabilitiesView: React.FC<{ application: any; tree?: any }> 
             <MetricCard label="Fixable" value={String(overview.fixable)} />
           </div>
         </div>
-        <div style={{ display: 'flex', gap: spacing[2] }}>
-          <Button primary onClick={() => {
-            setScanningAll(true);
-            triggerRescanAll(destNamespace, appNamespace, appName, project)
-              .then(() => setTimeout(loadData, 5000))
-              .catch(err => setError(err.message))
-              .finally(() => setScanningAll(false));
-          }} disabled={scanningAll}>
-            {scanningAll ? 'Scanning...' : 'Scan All'}
-          </Button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing[3] }}>
+          <span style={{ fontSize: fontSize.xs, color: colors.gray500, fontFamily: fonts.mono }}>
+            Scans run automatically by the Trivy Operator
+          </span>
           <Button onClick={() => downloadExport(destNamespace, 'vulnerabilities', appNamespace, appName, project)}>
             Export CSV
           </Button>
@@ -253,11 +236,6 @@ export const AppVulnerabilitiesView: React.FC<{ application: any; tree?: any }> 
                 {image.summary.high > 0 && <span><SeverityBadge severity="HIGH" /> {image.summary.high}</span>}
                 {image.summary.medium > 0 && <span style={{ fontFamily: fonts.mono, fontSize: fontSize.xs, color: colors.gray500 }}>{image.summary.medium} med</span>}
                 <span style={{ fontSize: fontSize.xs, color: colors.gray500 }}>{timeAgo(image.lastScanned)}</span>
-                <span onClick={e => e.stopPropagation()}>
-                  <Button onClick={() => handleRescan(image)} disabled={rescanning === key}>
-                    {rescanning === key ? 'Scanning...' : 'Rescan'}
-                  </Button>
-                </span>
               </div>
             </div>
             {expanded && (

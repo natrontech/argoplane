@@ -45,7 +45,6 @@ func main() {
 	// Create handlers.
 	reportsHandler := handler.NewReportsHandler(dynClient)
 	overviewHandler := handler.NewOverviewHandler(dynClient)
-	rescanHandler := handler.NewRescanHandler(dynClient)
 	auditHandler := handler.NewAuditHandler(dynClient)
 	secretsHandler := handler.NewSecretsHandler(dynClient)
 	sbomHandler := handler.NewSbomHandler(dynClient)
@@ -54,8 +53,6 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/reports", reportsHandler.Handle)
 	mux.HandleFunc("POST /api/v1/overview", overviewHandler.Handle)
-	mux.HandleFunc("POST /api/v1/rescan", rescanHandler.Handle)
-	mux.HandleFunc("POST /api/v1/rescan/all", rescanHandler.HandleAll)
 	mux.HandleFunc("POST /api/v1/audit/overview", auditHandler.HandleOverview)
 	mux.HandleFunc("POST /api/v1/secrets/overview", secretsHandler.HandleOverview)
 	mux.HandleFunc("POST /api/v1/sbom/overview", sbomHandler.HandleOverview)
