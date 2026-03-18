@@ -81,8 +81,6 @@ func (h *OverviewHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		totalSummary.Unknown += report.Summary.Unknown
 		totalFixable += report.Fixable
 
-		// Strip individual vulnerabilities for the overview (keep it lightweight).
-		report.Vulnerabilities = nil
 		images = append(images, report)
 	}
 

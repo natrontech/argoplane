@@ -12,7 +12,7 @@ import {
   spacing,
   panel,
 } from '@argoplane/shared';
-import { fetchOverview, fetchReports, triggerRescan } from '../api';
+import { fetchOverview, triggerRescan } from '../api';
 import { ImageReport, OverviewResponse, Vulnerability } from '../types';
 
 // ============================================================
@@ -52,6 +52,14 @@ const severityBg: Record<string, string> = {
   UNKNOWN: colors.gray100,
 };
 
+const SEVERITY_ORDER: Record<string, number> = {
+  CRITICAL: 0,
+  HIGH: 1,
+  MEDIUM: 2,
+  LOW: 3,
+  UNKNOWN: 4,
+};
+
 // ============================================================
 // Severity Badge
 // ============================================================
@@ -75,6 +83,39 @@ const SeverityBadge: React.FC<{ severity: string }> = ({ severity }) => (
 );
 
 // ============================================================
+// Severity Filter
+// ============================================================
+
+const SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'UNKNOWN'] as const;
+
+const SeverityFilter: React.FC<{
+  selected: Set<string>;
+  onToggle: (sev: string) => void;
+}> = ({ selected, onToggle }) => (
+  <div style={{ display: 'flex', gap: spacing[2] }}>
+    {SEVERITIES.map(sev => (
+      <button
+        key={sev}
+        onClick={() => onToggle(sev)}
+        style={{
+          padding: '2px 8px',
+          fontSize: fontSize.xs,
+          fontWeight: fontWeight.medium,
+          fontFamily: fonts.mono,
+          border: `1px solid ${selected.has(sev) ? (severityColor[sev] || colors.gray400) : colors.gray200}`,
+          borderRadius: 2,
+          background: selected.has(sev) ? (severityBg[sev] || colors.gray100) : 'transparent',
+          color: selected.has(sev) ? (severityColor[sev] || colors.gray600) : colors.gray500,
+          cursor: 'pointer',
+        }}
+      >
+        {sev}
+      </button>
+    ))}
+  </div>
+);
+
+// ============================================================
 // Summary Cards
 // ============================================================
 
@@ -86,60 +127,6 @@ const SummaryCards: React.FC<{ summary: OverviewResponse['summary']; fixable: nu
     <MetricCard label="Low" value={String(summary.low)} />
     <MetricCard label="Fixable" value={String(fixable)} />
     <MetricCard label="Total" value={String(totalVulns(summary))} />
-  </div>
-);
-
-// ============================================================
-// Image Row
-// ============================================================
-
-const ImageRow: React.FC<{
-  image: ImageReport;
-  expanded: boolean;
-  onToggle: () => void;
-  onRescan: () => void;
-  rescanning: boolean;
-  vulns: Vulnerability[] | null;
-  loadingVulns: boolean;
-}> = ({ image, expanded, onToggle, onRescan, rescanning, vulns, loadingVulns }) => (
-  <div style={{ border: `1px solid ${colors.gray200}`, borderRadius: 4, marginBottom: spacing[2] }}>
-    <div
-      onClick={onToggle}
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr auto auto auto auto auto auto',
-        alignItems: 'center',
-        gap: spacing[3],
-        padding: `${spacing[3]}px ${spacing[4]}px`,
-        cursor: 'pointer',
-        background: expanded ? colors.gray50 : 'transparent',
-      }}
-    >
-      <div style={{ fontFamily: fonts.mono, fontSize: fontSize.sm, fontWeight: fontWeight.medium }}>
-        {image.registry ? `${image.registry}/` : ''}{image.image}:{image.tag || 'latest'}
-      </div>
-      <SeverityBadge severity="CRITICAL" />
-      <span style={{ fontFamily: fonts.mono, fontSize: fontSize.sm }}>{image.summary.critical}</span>
-      <SeverityBadge severity="HIGH" />
-      <span style={{ fontFamily: fonts.mono, fontSize: fontSize.sm }}>{image.summary.high}</span>
-      <span style={{ fontSize: fontSize.xs, color: colors.gray500 }}>{timeAgo(image.lastScanned)}</span>
-      <span onClick={(e) => e.stopPropagation()}>
-      <Button onClick={() => onRescan()} disabled={rescanning}>
-        {rescanning ? 'Scanning...' : 'Rescan'}
-      </Button>
-      </span>
-    </div>
-    {expanded && (
-      <div style={{ borderTop: `1px solid ${colors.gray200}`, padding: spacing[4] }}>
-        {loadingVulns ? (
-          <Loading />
-        ) : vulns && vulns.length > 0 ? (
-          <VulnerabilityTable vulns={vulns} />
-        ) : (
-          <div style={{ color: colors.gray500, fontSize: fontSize.sm }}>No vulnerabilities found.</div>
-        )}
-      </div>
-    )}
   </div>
 );
 
@@ -164,47 +151,102 @@ const bodyCell: React.CSSProperties = {
   borderBottom: `1px solid ${colors.gray100}`,
 };
 
-const VulnerabilityTable: React.FC<{ vulns: Vulnerability[] }> = ({ vulns }) => (
-  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-    <thead>
-      <tr>
-        <th style={headerCell}>CVE</th>
-        <th style={headerCell}>Severity</th>
-        <th style={headerCell}>Score</th>
-        <th style={headerCell}>Package</th>
-        <th style={headerCell}>Installed</th>
-        <th style={headerCell}>Fixed</th>
-      </tr>
-    </thead>
-    <tbody>
-      {vulns.map((v, i) => (
-        <tr key={`${v.id}-${i}`}>
-          <td style={bodyCell}>
-            {v.primaryLink ? (
-              <a
-                href={v.primaryLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: colors.blueText, textDecoration: 'none' }}
-              >
-                {v.id}
-              </a>
-            ) : (
-              v.id
-            )}
-          </td>
-          <td style={bodyCell}><SeverityBadge severity={v.severity} /></td>
-          <td style={bodyCell}>{v.score > 0 ? v.score.toFixed(1) : '-'}</td>
-          <td style={bodyCell}>{v.package}</td>
-          <td style={bodyCell}>{v.installedVersion}</td>
-          <td style={{ ...bodyCell, color: v.fixedVersion ? colors.greenText : colors.gray400 }}>
-            {v.fixedVersion || '-'}
-          </td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
-);
+// ============================================================
+// Image Section (expandable with inline vulns)
+// ============================================================
+
+const ImageSection: React.FC<{
+  image: ImageReport;
+  expanded: boolean;
+  onToggle: () => void;
+  onRescan: () => void;
+  rescanning: boolean;
+  severityFilter: Set<string>;
+}> = ({ image, expanded, onToggle, onRescan, rescanning, severityFilter }) => {
+  const vulns = (image.vulnerabilities || [])
+    .filter(v => severityFilter.has(v.severity))
+    .sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 99) - (SEVERITY_ORDER[b.severity] ?? 99) || b.score - a.score);
+
+  return (
+    <div style={{ border: `1px solid ${colors.gray200}`, borderRadius: 4, marginBottom: spacing[3] }}>
+      {/* Image header row */}
+      <div
+        onClick={onToggle}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: `${spacing[3]}px ${spacing[4]}px`,
+          cursor: 'pointer',
+          background: expanded ? colors.gray50 : 'transparent',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing[3], flex: 1, minWidth: 0 }}>
+          <span style={{ fontFamily: fonts.mono, fontSize: fontSize.sm, fontWeight: fontWeight.medium }}>
+            {expanded ? '\u25BE' : '\u25B8'}{' '}
+            {image.registry ? `${image.registry}/` : ''}{image.image}:{image.tag || 'latest'}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing[3], flexShrink: 0 }}>
+          {image.summary.critical > 0 && <span><SeverityBadge severity="CRITICAL" /> <span style={{ fontFamily: fonts.mono, fontSize: fontSize.sm }}>{image.summary.critical}</span></span>}
+          {image.summary.high > 0 && <span><SeverityBadge severity="HIGH" /> <span style={{ fontFamily: fonts.mono, fontSize: fontSize.sm }}>{image.summary.high}</span></span>}
+          {image.summary.medium > 0 && <span style={{ fontFamily: fonts.mono, fontSize: fontSize.xs, color: colors.gray500 }}>{image.summary.medium} med</span>}
+          {image.summary.low > 0 && <span style={{ fontFamily: fonts.mono, fontSize: fontSize.xs, color: colors.gray500 }}>{image.summary.low} low</span>}
+          <span style={{ fontSize: fontSize.xs, color: colors.gray500 }}>{timeAgo(image.lastScanned)}</span>
+          <span onClick={(e) => e.stopPropagation()}>
+            <Button onClick={() => onRescan()} disabled={rescanning}>
+              {rescanning ? 'Scanning...' : 'Rescan'}
+            </Button>
+          </span>
+        </div>
+      </div>
+
+      {/* Expanded vulnerability table */}
+      {expanded && (
+        <div style={{ borderTop: `1px solid ${colors.gray200}`, padding: spacing[4] }}>
+          {vulns.length > 0 ? (
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={headerCell}>CVE</th>
+                  <th style={headerCell}>Severity</th>
+                  <th style={headerCell}>Score</th>
+                  <th style={headerCell}>Package</th>
+                  <th style={headerCell}>Installed</th>
+                  <th style={headerCell}>Fixed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {vulns.map((v, i) => (
+                  <tr key={`${v.id}-${i}`}>
+                    <td style={bodyCell}>
+                      {v.primaryLink ? (
+                        <a href={v.primaryLink} target="_blank" rel="noopener noreferrer" style={{ color: colors.blueText, textDecoration: 'none' }}>
+                          {v.id}
+                        </a>
+                      ) : v.id}
+                    </td>
+                    <td style={bodyCell}><SeverityBadge severity={v.severity} /></td>
+                    <td style={bodyCell}>{v.score > 0 ? v.score.toFixed(1) : '-'}</td>
+                    <td style={bodyCell}>{v.package}</td>
+                    <td style={bodyCell}>{v.installedVersion}</td>
+                    <td style={{ ...bodyCell, color: v.fixedVersion ? colors.greenText : colors.gray400 }}>
+                      {v.fixedVersion || '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div style={{ color: colors.gray500, fontSize: fontSize.sm }}>
+              No vulnerabilities match the current filter.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // ============================================================
 // Main App View
@@ -215,9 +257,8 @@ export const AppVulnerabilitiesView: React.FC<{ application: any; tree?: any }> 
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [expandedImage, setExpandedImage] = React.useState<string | null>(null);
-  const [imageVulns, setImageVulns] = React.useState<Record<string, Vulnerability[]>>({});
-  const [loadingVulns, setLoadingVulns] = React.useState<string | null>(null);
   const [rescanning, setRescanning] = React.useState<string | null>(null);
+  const [severityFilter, setSeverityFilter] = React.useState<Set<string>>(new Set(SEVERITIES));
 
   const appName = application?.metadata?.name || '';
   const appNamespace = application?.metadata?.namespace || 'argocd';
@@ -232,55 +273,36 @@ export const AppVulnerabilitiesView: React.FC<{ application: any; tree?: any }> 
       .map((n: any) => n.name);
   }, [tree]);
 
-  React.useEffect(() => {
-    let cancelled = false;
+  const loadData = React.useCallback(() => {
     setLoading(true);
     setError(null);
     fetchOverview(destNamespace, podNames, appNamespace, appName, project)
-      .then(data => { if (!cancelled) setOverview(data); })
-      .catch(err => { if (!cancelled) setError(err.message); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .then(data => setOverview(data))
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false));
   }, [destNamespace, podNames.join(','), appNamespace, appName, project]);
 
-  const handleToggle = (image: ImageReport) => {
-    const key = `${image.registry}/${image.image}:${image.tag}`;
-    if (expandedImage === key) {
-      setExpandedImage(null);
-      return;
-    }
-    setExpandedImage(key);
-
-    if (!imageVulns[key]) {
-      setLoadingVulns(key);
-      fetchReports(image.podNamespace || destNamespace, appNamespace, appName, project, image.podName)
-        .then(reports => {
-          const match = reports.find(r => r.reportName === image.reportName);
-          if (match?.vulnerabilities) {
-            setImageVulns(prev => ({ ...prev, [key]: match.vulnerabilities! }));
-          } else {
-            setImageVulns(prev => ({ ...prev, [key]: [] }));
-          }
-        })
-        .catch(() => setImageVulns(prev => ({ ...prev, [key]: [] })))
-        .finally(() => setLoadingVulns(null));
-    }
-  };
+  React.useEffect(() => { loadData(); }, [loadData]);
 
   const handleRescan = (image: ImageReport) => {
     const key = `${image.registry}/${image.image}:${image.tag}`;
     setRescanning(key);
     triggerRescan(image.podNamespace || destNamespace, image.reportName, appNamespace, appName, project)
       .then(() => {
-        // Remove cached vulns so they reload.
-        setImageVulns(prev => {
-          const next = { ...prev };
-          delete next[key];
-          return next;
-        });
+        // Reload after a short delay to let the operator recreate the report.
+        setTimeout(loadData, 3000);
       })
       .catch(err => setError(err.message))
       .finally(() => setRescanning(null));
+  };
+
+  const toggleSeverity = (sev: string) => {
+    setSeverityFilter(prev => {
+      const next = new Set(prev);
+      if (next.has(sev)) next.delete(sev);
+      else next.add(sev);
+      return next;
+    });
   };
 
   if (loading) return <div style={panel}><Loading /></div>;
@@ -298,19 +320,22 @@ export const AppVulnerabilitiesView: React.FC<{ application: any; tree?: any }> 
       <SectionHeader title="Vulnerability Summary" />
       <SummaryCards summary={overview.summary} fixable={overview.fixable} />
 
-      <SectionHeader title="Container Images" />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing[4] }}>
+        <SectionHeader title="Container Images" />
+        <SeverityFilter selected={severityFilter} onToggle={toggleSeverity} />
+      </div>
+
       {overview.images.map(image => {
         const key = `${image.registry}/${image.image}:${image.tag}`;
         return (
-          <ImageRow
+          <ImageSection
             key={key}
             image={image}
             expanded={expandedImage === key}
-            onToggle={() => handleToggle(image)}
+            onToggle={() => setExpandedImage(prev => prev === key ? null : key)}
             onRescan={() => handleRescan(image)}
             rescanning={rescanning === key}
-            vulns={imageVulns[key] || null}
-            loadingVulns={loadingVulns === key}
+            severityFilter={severityFilter}
           />
         );
       })}
