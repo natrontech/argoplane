@@ -36,8 +36,12 @@ func (h *ExportHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		h.exportVulnerabilities(w, r, namespace)
 	case "audit":
 		h.exportAudit(w, r, namespace)
+	case "secrets":
+		h.exportSecrets(w, r, namespace)
+	case "sbom":
+		h.exportSbom(w, r, namespace)
 	default:
-		WriteError(w, http.StatusBadRequest, "type must be 'vulnerabilities' or 'audit'")
+		WriteError(w, http.StatusBadRequest, "type must be 'vulnerabilities', 'audit', 'secrets', or 'sbom'")
 	}
 }
 
@@ -70,6 +74,71 @@ func (h *ExportHandler) exportVulnerabilities(w http.ResponseWriter, r *http.Req
 				v.FixedVersion,
 				v.Title,
 				v.PrimaryLink,
+			})
+		}
+	}
+
+	writer.Flush()
+}
+
+func (h *ExportHandler) exportSecrets(w http.ResponseWriter, r *http.Request, namespace string) {
+	list, err := h.client.Resource(types.ExposedSecretReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{})
+	if err != nil {
+		slog.Error("failed to list exposed secret reports for export", "error", err)
+		WriteError(w, http.StatusInternalServerError, "failed to list exposed secret reports")
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=exposed-secrets-%s.csv", namespace))
+
+	writer := csv.NewWriter(w)
+	writer.Write([]string{"Image", "Tag", "Container", "RuleID", "Severity", "Category", "Title", "Target", "Match"})
+
+	for _, item := range list.Items {
+		report := parseSecretReport(item)
+		for _, s := range report.Secrets {
+			writer.Write([]string{
+				report.Image,
+				report.Tag,
+				report.ContainerName,
+				s.RuleID,
+				s.Severity,
+				s.Category,
+				s.Title,
+				s.Target,
+				s.Match,
+			})
+		}
+	}
+
+	writer.Flush()
+}
+
+func (h *ExportHandler) exportSbom(w http.ResponseWriter, r *http.Request, namespace string) {
+	list, err := h.client.Resource(types.SbomReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{})
+	if err != nil {
+		slog.Error("failed to list sbom reports for export", "error", err)
+		WriteError(w, http.StatusInternalServerError, "failed to list sbom reports")
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=sbom-%s.csv", namespace))
+
+	writer := csv.NewWriter(w)
+	writer.Write([]string{"Image", "Tag", "Component", "Version", "Type", "PURL"})
+
+	for _, item := range list.Items {
+		report := parseSbomReport(item)
+		for _, c := range report.Components {
+			writer.Write([]string{
+				report.Image,
+				report.Tag,
+				c.Name,
+				c.Version,
+				c.Type,
+				c.Purl,
 			})
 		}
 	}

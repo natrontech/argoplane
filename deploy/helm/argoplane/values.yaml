@@ -294,7 +294,7 @@ extensions:
     rbac:
       rules:
         - apiGroups: ["aquasecurity.github.io"]
-          resources: ["vulnerabilityreports", "configauditreports"]
+          resources: ["vulnerabilityreports", "configauditreports", "exposedsecretreports", "sbomreports"]
           verbs: ["get", "list", "watch", "delete"]
 
 # -- Optional ArgoPlane services (docs site, portal)

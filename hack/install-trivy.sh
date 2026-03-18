@@ -29,8 +29,8 @@ operator:
   scanJobsConcurrentLimit: 1
   vulnerabilityScannerEnabled: true
   configAuditScannerEnabled: true
-  sbomGenerationEnabled: false
-  exposedSecretScannerEnabled: false
+  sbomGenerationEnabled: true
+  exposedSecretScannerEnabled: true
   # Disable infra assessment and compliance (triggers node-collector pods that
   # can't schedule on tainted control-plane nodes in kind clusters).
   infraAssessmentScannerEnabled: false

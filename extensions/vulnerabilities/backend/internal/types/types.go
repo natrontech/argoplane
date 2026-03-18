@@ -13,7 +13,79 @@ var (
 		Version:  "v1alpha1",
 		Resource: "configauditreports",
 	}
+	ExposedSecretReportGVR = schema.GroupVersionResource{
+		Group:    "aquasecurity.github.io",
+		Version:  "v1alpha1",
+		Resource: "exposedsecretreports",
+	}
+	SbomReportGVR = schema.GroupVersionResource{
+		Group:    "aquasecurity.github.io",
+		Version:  "v1alpha1",
+		Resource: "sbomreports",
+	}
 )
+
+// ExposedSecret represents a single secret finding.
+type ExposedSecret struct {
+	RuleID   string `json:"ruleID"`
+	Title    string `json:"title"`
+	Severity string `json:"severity"`
+	Category string `json:"category"`
+	Match    string `json:"match"`
+	Target   string `json:"target"`
+}
+
+// SecretReport represents the exposed secret state of a single container image.
+type SecretReport struct {
+	Image             string               `json:"image"`
+	Tag               string               `json:"tag"`
+	Registry          string               `json:"registry"`
+	ContainerName     string               `json:"containerName"`
+	ResourceKind      string               `json:"resourceKind"`
+	ResourceName      string               `json:"resourceName"`
+	ResourceNamespace string               `json:"resourceNamespace"`
+	ReportName        string               `json:"reportName"`
+	Summary           VulnerabilitySummary `json:"summary"`
+	Secrets           []ExposedSecret      `json:"secrets"`
+	LastScanned       string               `json:"lastScanned"`
+}
+
+// SecretOverviewResponse is the combined exposed secret summary.
+type SecretOverviewResponse struct {
+	Summary   VulnerabilitySummary `json:"summary"`
+	Reports   []SecretReport       `json:"reports"`
+	Namespace string               `json:"namespace"`
+}
+
+// SbomComponent represents a software component from the SBOM.
+type SbomComponent struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	Type    string `json:"type"`
+	Purl    string `json:"purl"`
+}
+
+// SbomReport represents the SBOM of a single container image.
+type SbomReport struct {
+	Image             string          `json:"image"`
+	Tag               string          `json:"tag"`
+	Registry          string          `json:"registry"`
+	ContainerName     string          `json:"containerName"`
+	ResourceKind      string          `json:"resourceKind"`
+	ResourceName      string          `json:"resourceName"`
+	ResourceNamespace string          `json:"resourceNamespace"`
+	ReportName        string          `json:"reportName"`
+	Components        []SbomComponent `json:"components"`
+	ComponentsCount   int             `json:"componentsCount"`
+	LastScanned       string          `json:"lastScanned"`
+}
+
+// SbomOverviewResponse is the combined SBOM summary.
+type SbomOverviewResponse struct {
+	Reports         []SbomReport `json:"reports"`
+	TotalComponents int          `json:"totalComponents"`
+	Namespace       string       `json:"namespace"`
+}
 
 // AuditCheck represents a single configuration audit finding.
 type AuditCheck struct {

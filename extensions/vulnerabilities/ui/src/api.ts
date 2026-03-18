@@ -1,4 +1,4 @@
-import { ImageReport, OverviewResponse, AuditOverviewResponse } from './types';
+import { ImageReport, OverviewResponse, AuditOverviewResponse, SecretOverviewResponse, SbomOverviewResponse } from './types';
 
 function proxyHeaders(appNamespace: string, appName: string, project: string) {
   return {
@@ -34,6 +34,46 @@ export async function fetchAuditOverview(
   project: string
 ): Promise<AuditOverviewResponse> {
   const response = await fetch('/extensions/vulnerabilities/api/v1/audit/overview', {
+    method: 'POST',
+    headers: {
+      ...proxyHeaders(appNamespace, appName, project),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ namespace }),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchSecretsOverview(
+  namespace: string,
+  appNamespace: string,
+  appName: string,
+  project: string
+): Promise<SecretOverviewResponse> {
+  const response = await fetch('/extensions/vulnerabilities/api/v1/secrets/overview', {
+    method: 'POST',
+    headers: {
+      ...proxyHeaders(appNamespace, appName, project),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ namespace }),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchSbomOverview(
+  namespace: string,
+  appNamespace: string,
+  appName: string,
+  project: string
+): Promise<SbomOverviewResponse> {
+  const response = await fetch('/extensions/vulnerabilities/api/v1/sbom/overview', {
     method: 'POST',
     headers: {
       ...proxyHeaders(appNamespace, appName, project),
@@ -103,7 +143,7 @@ export async function triggerRescanAll(
 
 export async function downloadExport(
   namespace: string,
-  type: 'vulnerabilities' | 'audit',
+  type: 'vulnerabilities' | 'audit' | 'secrets' | 'sbom',
   appNamespace: string,
   appName: string,
   project: string

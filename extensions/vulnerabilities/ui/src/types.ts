@@ -67,3 +67,59 @@ export interface AuditOverviewResponse {
   reports: AuditReport[];
   namespace: string;
 }
+
+export interface ExposedSecret {
+  ruleID: string;
+  title: string;
+  severity: string;
+  category: string;
+  match: string;
+  target: string;
+}
+
+export interface SecretReport {
+  image: string;
+  tag: string;
+  registry: string;
+  containerName: string;
+  resourceKind: string;
+  resourceName: string;
+  resourceNamespace: string;
+  reportName: string;
+  summary: VulnerabilitySummary;
+  secrets: ExposedSecret[];
+  lastScanned: string;
+}
+
+export interface SecretOverviewResponse {
+  summary: VulnerabilitySummary;
+  reports: SecretReport[];
+  namespace: string;
+}
+
+export interface SbomComponent {
+  name: string;
+  version: string;
+  type: string;
+  purl: string;
+}
+
+export interface SbomReport {
+  image: string;
+  tag: string;
+  registry: string;
+  containerName: string;
+  resourceKind: string;
+  resourceName: string;
+  resourceNamespace: string;
+  reportName: string;
+  components: SbomComponent[];
+  componentsCount: number;
+  lastScanned: string;
+}
+
+export interface SbomOverviewResponse {
+  reports: SbomReport[];
+  totalComponents: number;
+  namespace: string;
+}
