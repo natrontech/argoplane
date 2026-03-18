@@ -20,8 +20,9 @@ func NewLabels(prom *prometheus.Client) *Labels {
 }
 
 // Handle serves GET /api/v1/labels.
-// ?metric=container_cpu_usage_seconds_total returns label names for that metric.
-// ?metric=...&label=namespace returns values for that label.
+// ?metric=container_cpu_usage_seconds_total&namespace=X returns label names for that metric.
+// ?metric=...&label=namespace&namespace=X returns values for that label.
+// Security: namespace is required to prevent cross-namespace enumeration.
 func (h *Labels) Handle(w http.ResponseWriter, r *http.Request) {
 	metric := r.URL.Query().Get("metric")
 	label := r.URL.Query().Get("label")
@@ -29,6 +30,10 @@ func (h *Labels) Handle(w http.ResponseWriter, r *http.Request) {
 
 	if metric == "" {
 		http.Error(w, `{"error":"metric is required"}`, http.StatusBadRequest)
+		return
+	}
+	if namespace == "" {
+		http.Error(w, `{"error":"namespace is required"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -45,9 +50,6 @@ func (h *Labels) Handle(w http.ResponseWriter, r *http.Request) {
 
 func (h *Labels) handleLabelNames(w http.ResponseWriter, r *http.Request, metric, namespace string) {
 	query := fmt.Sprintf(`%s{namespace="%s"}`, metric, namespace)
-	if namespace == "" {
-		query = metric
-	}
 
 	samples, err := h.prom.Query(r.Context(), query)
 	if err != nil {
@@ -75,9 +77,6 @@ func (h *Labels) handleLabelNames(w http.ResponseWriter, r *http.Request, metric
 
 func (h *Labels) handleLabelValues(w http.ResponseWriter, r *http.Request, metric, label, namespace string) {
 	query := fmt.Sprintf(`%s{namespace="%s"}`, metric, namespace)
-	if namespace == "" {
-		query = metric
-	}
 
 	samples, err := h.prom.Query(r.Context(), query)
 	if err != nil {

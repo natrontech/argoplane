@@ -122,7 +122,8 @@ export async function createRestore(
     body: JSON.stringify(body),
   });
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    const errBody = await response.json().catch(() => ({}));
+    throw new Error(errBody.error || `HTTP ${response.status}: ${response.statusText}`);
   }
   return response.json();
 }
@@ -162,6 +163,7 @@ export async function fetchPodVolumeRestores(
 export async function toggleSchedulePause(
   name: string,
   paused: boolean,
+  namespace: string,
   appNamespace: string,
   appName: string,
   project: string
@@ -172,10 +174,11 @@ export async function toggleSchedulePause(
       ...proxyHeaders(appNamespace, appName, project),
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ paused }),
+    body: JSON.stringify({ paused, namespace }),
   });
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.error || `HTTP ${response.status}: ${response.statusText}`);
   }
   return response.json();
 }

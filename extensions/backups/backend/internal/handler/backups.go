@@ -104,6 +104,7 @@ func (h *BackupsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	username := r.Header.Get("Argocd-Username")
+	auditLog(r, "backup.create", req.Namespace, "schedule", req.ScheduleName)
 	slog.Info("creating backup", "namespace", req.Namespace, "ttl", req.TTL, "schedule", req.ScheduleName, "user", username)
 
 	backupName := fmt.Sprintf("%s-ondemand-%d", req.Namespace, time.Now().Unix())
@@ -162,6 +163,7 @@ func (h *BackupsHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	username := r.Header.Get("Argocd-Username")
+	auditLog(r, "backup.delete", "", "backup", name)
 	slog.Info("deleting backup", "name", name, "user", username)
 
 	deleteReqName := fmt.Sprintf("delete-%s-%d", name, time.Now().Unix())

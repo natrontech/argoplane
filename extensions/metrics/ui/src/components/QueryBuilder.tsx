@@ -116,7 +116,7 @@ export const QueryBuilder: React.FC<QueryBuilderProps> = ({
     if (!q) return;
     setLoading(true);
     setRawQuery(q);
-    fetchCustomQuery(q, timeRange, appNamespace, appName, project)
+    fetchCustomQuery(q, namespace, timeRange, appNamespace, appName, project)
       .then(setResult)
       .catch((err) => setResult({ error: err.message }))
       .finally(() => setLoading(false));

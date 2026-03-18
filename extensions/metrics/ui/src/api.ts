@@ -54,10 +54,10 @@ export function fetchPodBreakdown(
 }
 
 export function fetchCustomQuery(
-  query: string, range: TimeRange | undefined,
+  query: string, namespace: string, range: TimeRange | undefined,
   appNamespace: string, appName: string, project: string
 ): Promise<CustomQueryResult> {
-  const params = new URLSearchParams({ query });
+  const params = new URLSearchParams({ query, namespace });
   if (range) params.set('range', range);
   return jsonFetch(`/extensions/metrics/api/v1/query?${params}`, argoHeaders(appNamespace, appName, project));
 }

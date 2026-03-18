@@ -20,7 +20,14 @@ func NewLabels(loki *loki.Client) *Labels {
 }
 
 // HandleLabels processes GET /api/v1/logs/labels requests.
+// Security: requires namespace to prevent cross-namespace label enumeration.
 func (h *Labels) HandleLabels(w http.ResponseWriter, r *http.Request) {
+	namespace := r.URL.Query().Get("namespace")
+	if namespace == "" {
+		writeError(w, http.StatusBadRequest, "namespace is required")
+		return
+	}
+
 	end := time.Now()
 	start := end.Add(-1 * time.Hour)
 	if s := r.URL.Query().Get("start"); s != "" {
@@ -34,9 +41,10 @@ func (h *Labels) HandleLabels(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	labels, err := h.loki.Labels(r.Context(), start, end)
+	query := logql.ForNamespace(namespace, "")
+	labels, err := h.loki.LabelsWithQuery(r.Context(), query, start, end)
 	if err != nil {
-		slog.Warn("labels query failed", "error", err)
+		slog.Warn("labels query failed", "error", err, "namespace", namespace)
 		writeError(w, http.StatusBadGateway, "failed to query labels")
 		return
 	}
@@ -45,6 +53,7 @@ func (h *Labels) HandleLabels(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleLabelValues processes GET /api/v1/logs/label/{name}/values requests.
+// Security: requires namespace to prevent cross-namespace value enumeration.
 func (h *Labels) HandleLabelValues(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
@@ -53,6 +62,11 @@ func (h *Labels) HandleLabelValues(w http.ResponseWriter, r *http.Request) {
 	}
 
 	namespace := r.URL.Query().Get("namespace")
+	if namespace == "" {
+		writeError(w, http.StatusBadRequest, "namespace is required")
+		return
+	}
+
 	end := time.Now()
 	start := end.Add(-1 * time.Hour)
 	if s := r.URL.Query().Get("start"); s != "" {
@@ -66,11 +80,7 @@ func (h *Labels) HandleLabelValues(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Build a query to scope label values to a namespace
-	query := ""
-	if namespace != "" {
-		query = logql.ForNamespace(namespace, "")
-	}
+	query := logql.ForNamespace(namespace, "")
 
 	values, err := h.loki.LabelValues(r.Context(), name, query, start, end)
 	if err != nil {

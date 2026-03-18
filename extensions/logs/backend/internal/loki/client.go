@@ -137,9 +137,17 @@ func (c *Client) VolumeRange(ctx context.Context, query string, start, end time.
 
 // Labels returns label names available in Loki for a given time range.
 func (c *Client) Labels(ctx context.Context, start, end time.Time) ([]string, error) {
+	return c.LabelsWithQuery(ctx, "", start, end)
+}
+
+// LabelsWithQuery returns label names, optionally scoped by a LogQL stream selector.
+func (c *Client) LabelsWithQuery(ctx context.Context, query string, start, end time.Time) ([]string, error) {
 	params := url.Values{
 		"start": {strconv.FormatInt(start.UnixNano(), 10)},
 		"end":   {strconv.FormatInt(end.UnixNano(), 10)},
+	}
+	if query != "" {
+		params.Set("query", query)
 	}
 
 	body, err := c.get(ctx, "/loki/api/v1/labels", params)

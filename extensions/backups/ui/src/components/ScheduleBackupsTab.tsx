@@ -112,14 +112,14 @@ export const ScheduleBackupsTab: React.FC<{ resource: any; tree?: any; applicati
     setToggling(true);
     setTriggerError(null);
     try {
-      await toggleSchedulePause(scheduleName, !currentPaused, appNamespace, appName, project);
+      await toggleSchedulePause(scheduleName, !currentPaused, targetNamespace, appNamespace, appName, project);
       setCurrentPaused(!currentPaused);
     } catch (err: any) {
       setTriggerError(`Failed to ${currentPaused ? 'resume' : 'pause'} schedule: ${err.message || 'unknown error'}`);
     } finally {
       setToggling(false);
     }
-  }, [scheduleName, currentPaused, appNamespace, appName, project]);
+  }, [scheduleName, currentPaused, targetNamespace, appNamespace, appName, project]);
 
   const handleTriggerBackup = React.useCallback(async () => {
     setTriggering(true);

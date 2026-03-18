@@ -64,6 +64,7 @@ type ScheduleSummary struct {
 	ExcludedNamespaces []string          `json:"excludedNamespaces"`
 	TTL                string            `json:"ttl,omitempty"`
 	Ownership          string            `json:"ownership"`
+	ReadOnly           bool              `json:"readOnly"`
 	BackupCount        int               `json:"backupCount"`
 	LastBackupStatus   string            `json:"lastBackupStatus,omitempty"`
 	CreationTimestamp  string            `json:"creationTimestamp"`

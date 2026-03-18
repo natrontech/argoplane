@@ -110,6 +110,7 @@ func (h *OverviewHandler) Handle(w http.ResponseWriter, r *http.Request) {
 			s.Ownership = "app"
 		} else {
 			s.Ownership = "platform"
+			s.ReadOnly = true
 		}
 
 		if stats, ok := backupsBySchedule[s.Name]; ok {

@@ -417,7 +417,7 @@ const ScheduleDetail: React.FC<{
   const handleTogglePause = async () => {
     setToggling(true);
     try {
-      await toggleSchedulePause(s.name, !s.paused, appNamespace, appName, project);
+      await toggleSchedulePause(s.name, !s.paused, namespace, appNamespace, appName, project);
       onPauseToggled();
     } catch { /* banner will be shown by parent */ }
     setToggling(false);

@@ -2,6 +2,7 @@ package logql
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -51,11 +52,16 @@ func WithFilter(base, text string) string {
 
 // WithSeverity appends severity line filters for the given severities.
 // This uses case-insensitive regex matching on common severity patterns.
+// Each severity value is escaped to prevent regex injection.
 func WithSeverity(base string, severities []string) string {
 	if len(severities) == 0 {
 		return base
 	}
-	pattern := strings.Join(severities, "|")
+	escaped := make([]string, len(severities))
+	for i, s := range severities {
+		escaped[i] = regexp.QuoteMeta(s)
+	}
+	pattern := strings.Join(escaped, "|")
 	return fmt.Sprintf(`%s |~ "(?i)(%s)"`, base, pattern)
 }
 

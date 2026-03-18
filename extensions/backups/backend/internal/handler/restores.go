@@ -82,11 +82,45 @@ func (h *RestoresHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Security: reject namespace mappings that target namespaces other than the
+	// requested one. Without this check, a user could map a foreign namespace
+	// from a platform-wide backup into their own namespace.
+	for src, dst := range req.NamespaceMapping {
+		if dst != req.Namespace {
+			auditLog(r, "restore.rejected.namespace_mapping", req.Namespace,
+				"backup", req.BackupName, "src", src, "dst", dst)
+			WriteError(w, http.StatusForbidden, "namespace mapping target must match the requested namespace")
+			return
+		}
+	}
+
+	// Security: fetch the backup and validate it includes the requested namespace.
+	// This prevents restoring from arbitrary platform-wide backups to namespaces
+	// the backup doesn't cover, and ensures the backup actually exists.
+	backupObj, err := h.client.Resource(types.BackupGVR).Namespace(h.veleroNamespace).Get(
+		r.Context(), req.BackupName, metav1.GetOptions{},
+	)
+	if err != nil {
+		slog.Warn("restore rejected: backup not found", "backup", req.BackupName, "error", err)
+		WriteError(w, http.StatusNotFound, "backup not found")
+		return
+	}
+	backupIncluded := nestedStringSlice(backupObj.Object, "spec", "includedNamespaces")
+	if !includesNamespace(backupIncluded, req.Namespace) {
+		auditLog(r, "restore.rejected.namespace_not_in_backup", req.Namespace,
+			"backup", req.BackupName, "backupNamespaces", backupIncluded)
+		WriteError(w, http.StatusForbidden, "backup does not cover the requested namespace")
+		return
+	}
+
 	username := r.Header.Get("Argocd-Username")
+	auditLog(r, "restore.create", req.Namespace, "backup", req.BackupName)
 	slog.Info("creating restore", "backup", req.BackupName, "namespace", req.Namespace, "user", username)
 
 	restoreName := fmt.Sprintf("restore-%s-%d", req.BackupName, time.Now().Unix())
 
+	// Security: always scope the restore to the requested namespace only,
+	// regardless of what the backup covers.
 	spec := map[string]interface{}{
 		"backupName":         req.BackupName,
 		"includedNamespaces": []interface{}{req.Namespace},

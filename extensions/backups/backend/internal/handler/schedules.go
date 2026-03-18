@@ -55,6 +55,9 @@ func (h *SchedulesHandler) Handle(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleTogglePause toggles the paused state of a schedule.
+// Security: only app-owned schedules can be paused/unpaused. Platform schedules
+// (cluster-wide or multi-namespace) are read-only to prevent users from
+// disrupting platform backup coverage.
 func (h *SchedulesHandler) HandleTogglePause(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
@@ -63,7 +66,8 @@ func (h *SchedulesHandler) HandleTogglePause(w http.ResponseWriter, r *http.Requ
 	}
 
 	var req struct {
-		Paused bool `json:"paused"`
+		Paused    bool   `json:"paused"`
+		Namespace string `json:"namespace"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request body")
@@ -71,11 +75,35 @@ func (h *SchedulesHandler) HandleTogglePause(w http.ResponseWriter, r *http.Requ
 	}
 	defer r.Body.Close()
 
+	if req.Namespace == "" {
+		WriteError(w, http.StatusBadRequest, "namespace is required")
+		return
+	}
+
+	// Fetch the schedule to check ownership before allowing mutation.
+	scheduleObj, err := h.client.Resource(types.ScheduleGVR).Namespace(h.veleroNamespace).Get(
+		r.Context(), name, metav1.GetOptions{},
+	)
+	if err != nil {
+		slog.Error("failed to get schedule", "error", err, "name", name)
+		WriteError(w, http.StatusNotFound, "schedule not found")
+		return
+	}
+
+	included := nestedStringSlice(scheduleObj.Object, "spec", "template", "includedNamespaces")
+	if !isScheduleAppOwned(included, req.Namespace) {
+		auditLog(r, "schedule.pause.rejected.platform", req.Namespace,
+			"schedule", name, "includedNamespaces", included)
+		WriteError(w, http.StatusForbidden, "cannot modify platform-managed schedules")
+		return
+	}
+
 	username := r.Header.Get("Argocd-Username")
+	auditLog(r, "schedule.pause", req.Namespace, "schedule", name, "paused", req.Paused)
 	slog.Info("toggling schedule pause", "name", name, "paused", req.Paused, "user", username)
 
 	patch := []byte(`{"spec":{"paused":` + boolStr(req.Paused) + `}}`)
-	_, err := h.client.Resource(types.ScheduleGVR).Namespace(h.veleroNamespace).Patch(
+	_, err = h.client.Resource(types.ScheduleGVR).Namespace(h.veleroNamespace).Patch(
 		r.Context(), name, k8stypes.MergePatchType, patch, metav1.PatchOptions{},
 	)
 	if err != nil {
