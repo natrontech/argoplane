@@ -26,7 +26,7 @@ trivy:
 
 # Scanner toggles and concurrency live under operator.* (env vars on the deployment).
 operator:
-  scanJobsConcurrentLimit: 1
+  scanJobsConcurrentLimit: 5
   vulnerabilityScannerEnabled: true
   configAuditScannerEnabled: true
   sbomGenerationEnabled: true
