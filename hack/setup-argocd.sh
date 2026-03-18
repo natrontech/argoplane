@@ -13,7 +13,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
 ARGOCD_NS="${ARGOCD_NS:-argocd}"
 PROJECT_ROOT="$(repo_root)"
-EXTENSIONS="${EXTENSIONS:-metrics backups networking logs}"
+EXTENSIONS="${EXTENSIONS:-metrics backups networking logs vulnerabilities}"
 UI_ONLY_EXTENSIONS="${UI_ONLY_EXTENSIONS:-argoplane}"
 
 log "Setting up ArgoCD for local development"

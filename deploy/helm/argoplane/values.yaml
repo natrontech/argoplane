@@ -253,6 +253,50 @@ extensions:
     rbac:
       rules: []
 
+  vulnerabilities:
+    enabled: false
+    image:
+      repository: ghcr.io/natrontech/argoplane-vulnerabilities-backend
+      tag: ""
+      pullPolicy: IfNotPresent
+    replicas: 1
+    revisionHistoryLimit: 3
+    port: 8084
+    env:
+      LOG_LEVEL: "info"
+    extraEnv: []
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+    podLabels: {}
+    podAnnotations: {}
+    priorityClassName: ""
+    podSecurityContext:
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 65534
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop: ["ALL"]
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    serviceAccount:
+      create: true
+      annotations: {}
+    rbac:
+      rules:
+        - apiGroups: ["aquasecurity.github.io"]
+          resources: ["vulnerabilityreports"]
+          verbs: ["get", "list", "watch", "delete"]
+
 # -- Optional ArgoPlane services (docs site, portal)
 services:
   docs:

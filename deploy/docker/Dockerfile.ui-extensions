@@ -21,6 +21,7 @@ COPY extensions/metrics/ui/dist/extension-metrics.js /extensions/
 COPY extensions/backups/ui/dist/extension-backups.js /extensions/
 COPY extensions/networking/ui/dist/extension-networking.js /extensions/
 COPY extensions/logs/ui/dist/extension-logs.js /extensions/
+COPY extensions/vulnerabilities/ui/dist/extension-vulnerabilities.js /extensions/
 COPY extensions/argoplane/ui/dist/extension-argoplane.js /extensions/
 COPY deploy/argocd/argoplane-links.js /extensions/extension-argoplane-links.js
 ENTRYPOINT ["cp", "-r", "/extensions/.", "/tmp/extensions/"]

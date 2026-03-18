@@ -1,0 +1,107 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argoplane-vulnerabilities-backend
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argoplane-vulnerabilities-backend
+    app.kubernetes.io/part-of: argoplane
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argoplane-vulnerabilities-manager
+  labels:
+    app.kubernetes.io/name: argoplane-vulnerabilities-backend
+    app.kubernetes.io/part-of: argoplane
+rules:
+  - apiGroups: ["aquasecurity.github.io"]
+    resources: ["vulnerabilityreports"]
+    verbs: ["get", "list", "watch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argoplane-vulnerabilities-manager-binding
+  labels:
+    app.kubernetes.io/name: argoplane-vulnerabilities-backend
+    app.kubernetes.io/part-of: argoplane
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argoplane-vulnerabilities-manager
+subjects:
+  - kind: ServiceAccount
+    name: argoplane-vulnerabilities-backend
+    namespace: argocd
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argoplane-vulnerabilities-backend
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argoplane-vulnerabilities-backend
+    app.kubernetes.io/part-of: argoplane
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argoplane-vulnerabilities-backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: argoplane-vulnerabilities-backend
+        app.kubernetes.io/part-of: argoplane
+    spec:
+      serviceAccountName: argoplane-vulnerabilities-backend
+      containers:
+        - name: backend
+          image: argoplane-vulnerabilities-backend:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8084
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "8084"
+            - name: LOG_LEVEL
+              value: "info"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8084
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8084
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: argoplane-vulnerabilities-backend
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argoplane-vulnerabilities-backend
+    app.kubernetes.io/part-of: argoplane
+spec:
+  ports:
+    - port: 8084
+      targetPort: 8084
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: argoplane-vulnerabilities-backend

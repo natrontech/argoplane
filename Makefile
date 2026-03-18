@@ -6,7 +6,7 @@ CLUSTER_NAME    ?= argoplane-dev
 ARGOCD_VERSION  ?= v3.3.3
 ARGOCD_NS       := argocd
 KIND_CONFIG     := hack/kind-config.yaml
-EXTENSIONS      := metrics backups networking logs
+EXTENSIONS      := metrics backups networking logs vulnerabilities
 UI_ONLY_EXTENSIONS := argoplane
 ALL_UI_EXTENSIONS  := $(EXTENSIONS) $(UI_ONLY_EXTENSIONS)
 
@@ -87,6 +87,10 @@ velero: cluster ## Install Velero with MinIO (idempotent)
 loki: cluster ## Install Loki + Alloy for log aggregation (idempotent)
 	@bash hack/install-loki.sh
 
+.PHONY: trivy
+trivy: cluster ## Install Trivy Operator (idempotent)
+	@bash hack/install-trivy.sh
+
 .PHONY: crossplane
 crossplane: cluster ## Install Crossplane (idempotent)
 	@echo "==> Installing Crossplane"
@@ -109,7 +113,7 @@ external-secrets: cluster ## Install External Secrets Operator (idempotent)
 # --- Dev environment ---
 
 .PHONY: dev-infra
-dev-infra: argocd prometheus velero loki setup-argocd ## Full local dev stack (kind + ArgoCD + operators)
+dev-infra: argocd prometheus velero loki trivy setup-argocd ## Full local dev stack (kind + ArgoCD + operators)
 	@echo ""
 	@echo "==> Dev infrastructure ready!"
 	@echo "    Run 'make argocd-portforward' to access the UI"

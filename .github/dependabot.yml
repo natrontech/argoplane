@@ -40,6 +40,16 @@ updates:
         patterns:
           - "*"
 
+  # Go modules - vulnerabilities backend
+  - package-ecosystem: gomod
+    directory: /extensions/vulnerabilities/backend
+    schedule:
+      interval: monthly
+    groups:
+      go-dependencies:
+        patterns:
+          - "*"
+
   # Go modules - integration tests
   - package-ecosystem: gomod
     directory: /tests
@@ -83,6 +93,16 @@ updates:
   # npm - logs UI
   - package-ecosystem: npm
     directory: /extensions/logs/ui
+    schedule:
+      interval: monthly
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+
+  # npm - vulnerabilities UI
+  - package-ecosystem: npm
+    directory: /extensions/vulnerabilities/ui
     schedule:
       interval: monthly
     groups:
@@ -143,6 +163,16 @@ updates:
   # Docker - logs backend
   - package-ecosystem: docker
     directory: /extensions/logs/backend
+    schedule:
+      interval: monthly
+    groups:
+      docker-dependencies:
+        patterns:
+          - "*"
+
+  # Docker - vulnerabilities backend
+  - package-ecosystem: docker
+    directory: /extensions/vulnerabilities/backend
     schedule:
       interval: monthly
     groups:
