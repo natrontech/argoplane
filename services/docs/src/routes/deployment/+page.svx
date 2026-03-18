@@ -17,7 +17,12 @@ ArgoPlane ships as a Helm chart that deploys extension backends alongside ArgoCD
 - ArgoCD v3.x installed and running
 - `kubectl` access to the cluster
 - Helm 3.x
-- Backend dependencies installed (Prometheus for metrics, Velero for backups, Cilium for networking)
+- Backend dependencies installed per extension:
+  - **Metrics**: Prometheus
+  - **Backups**: Velero
+  - **Networking**: Cilium with Hubble
+  - **Logs**: Loki with a log collector (e.g., Grafana Alloy)
+  - **Vulnerabilities**: Trivy Operator
 
 ## Install with Helm
 
@@ -88,6 +93,14 @@ extensions:
     enabled: false
     env:
       HUBBLE_RELAY_URL: "hubble-relay.kube-system.svc:80"
+  logs:
+    enabled: false
+    env:
+      LOKI_URL: "http://loki.monitoring.svc:3100"
+      # LOKI_TENANT_ID: ""  # For multi-tenant Loki
+  vulnerabilities:
+    enabled: false
+    # No external URL needed; reads Trivy Operator CRDs via K8s API
 ```
 
 Setting `enabled: false` skips the backend Deployment, Service, proxy routing, and RBAC for that extension. To also prevent the UI bundle from loading in ArgoCD, set the `ENABLED_EXTENSIONS` env var on the UI extensions init container. See [Loading only enabled UI bundles](/deployment/argocd-configuration#loading-only-enabled-ui-bundles) for details.

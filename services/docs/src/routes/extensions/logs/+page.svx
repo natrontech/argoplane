@@ -1,0 +1,76 @@
+---
+title: Logs Extension
+description: Loki-based log search and severity detection for ArgoCD
+---
+
+# Logs Extension
+
+The logs extension surfaces Loki log data inside ArgoCD. Developers can search historical logs, filter by severity, and view log volume charts without leaving ArgoCD.
+
+## Registration
+
+The extension registers as:
+
+- **Resource tabs** on `Pod`, `Deployment`, and `StatefulSet` resources
+- **App view** on any ArgoCD Application (Log Explorer)
+
+## What it shows
+
+### Resource tabs
+
+Per-resource log views:
+
+- Historical log lines from Loki
+- Severity detection (error, warn, info, debug) with color coding
+- Time range picker (15m, 1h, 6h, 24h, custom)
+- Free-text search filter
+- Container selector (for multi-container pods)
+- Label-based filtering
+
+### Application view (Log Explorer)
+
+Cross-pod log aggregation for the entire application:
+
+- All logs from pods in the application's namespace
+- Volume chart showing log rate over time
+- Severity filter buttons
+- Search across all containers
+
+## Live tail
+
+The logs extension does **not** support live tail. ArgoCD's built-in Logs tab handles real-time pod streaming via the Kubernetes API. Loki's tail API uses WebSocket, which ArgoCD's proxy extension mechanism does not support.
+
+## Severity detection
+
+The backend automatically detects log severity from line content:
+
+- **JSON structured logs**: `"level": "error"`, `"severity": "warn"`
+- **Key-value format** (slog, logfmt): `level=error`, `level=warn`
+- **Bracket format**: `[ERROR]`, `[WARN]`, `[INFO]`, `[DEBUG]`
+- **Fallback**: lines without severity markers default to `info`
+
+## Backend
+
+The logs backend queries Loki:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/v1/logs` | Query log entries with filters |
+| `GET /api/v1/logs/labels` | Discover available log labels |
+| `GET /api/v1/logs/label/{name}/values` | Get values for a specific label |
+| `GET /api/v1/logs/volume` | Get log volume over time (for charts) |
+
+### Configuration
+
+| Environment Variable | Required | Default | Description |
+|---------------------|----------|---------|-------------|
+| `LOKI_URL` | No | `http://loki.monitoring.svc:3100` | Loki instance URL |
+| `LOKI_TENANT_ID` | No | (empty) | Loki tenant ID for multi-tenant mode |
+| `PORT` | No | `8083` | HTTP server port |
+| `LOG_LEVEL` | No | `info` | Log level |
+
+## RBAC
+
+```
+p, role:developer, extensions, invoke, logs, allow
+```

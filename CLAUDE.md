@@ -50,7 +50,8 @@ The portal is a single Go binary that serves the SvelteKit frontend and REST API
 - **Loki**: Log aggregation (logs extension)
 - **Velero**: Backup/restore (backups extension)
 - **Cilium/Hubble**: Network visibility (networking extension)
-- **Kyverno**: Policy enforcement (policies extension)
+- **Trivy Operator**: Image vulnerability scanning, config audit, exposed secrets, SBOM (vulnerabilities extension)
+- **Kyverno**: Policy enforcement (policies extension, planned)
 - **Crossplane**: Platform resource abstraction (XRD claims for databases, caches, registries in tenant GitOps repos)
 - **Tempo/Jaeger**: Distributed tracing (traces extension, future)
 - **cert-manager**: Certificate lifecycle (certificates extension, future)
@@ -84,6 +85,14 @@ extensions/
   networking/
     ui/
     backend/         # Go service querying Cilium/Hubble
+  logs/
+    ui/
+    backend/         # Go service querying Loki
+  vulnerabilities/
+    ui/
+    backend/         # Go service querying Trivy Operator CRDs via K8s API
+  argoplane/
+    ui/              # System-level UI extension (no backend)
   ...
 services/
   portal/
@@ -106,7 +115,11 @@ docs/
 
 **Done (Phase 1):** Metrics (Prometheus), Backups (Velero), Networking (Cilium/Hubble)
 
-**Next (Phase 2):** Logs (Loki), Policies (Kyverno), Alerts (Prometheus Rules / Alertmanager)
+**Done (Phase 2):** Logs (Loki), Vulnerabilities (Trivy Operator)
+
+**Building (Phase 2):** Events (Kubernetes Events API)
+
+**Next (Phase 2):** Policies (Kyverno), Alerts (Prometheus Rules / Alertmanager)
 
 **Phase 2.5:** System-level extensions (ArgoPlane Overview sidebar page, Alerts Dashboard, Portal link button)
 

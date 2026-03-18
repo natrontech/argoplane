@@ -1,0 +1,226 @@
+---
+title: Vulnerabilities API
+description: Vulnerabilities extension backend API reference
+---
+
+# Vulnerabilities API
+
+The vulnerabilities backend exposes a JSON HTTP API consumed by the UI extension via ArgoCD's proxy at `/extensions/vulnerabilities/`.
+
+## Endpoints
+
+### Get vulnerability reports
+
+```
+GET /api/v1/reports?namespace={ns}&resource={resource}&kind={kind}
+```
+
+Get vulnerability reports for container images in a namespace.
+
+**Parameters:**
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `namespace` | string | Yes | Kubernetes namespace |
+| `resource` | string | No | Filter by resource name |
+| `kind` | string | No | Filter by resource kind |
+
+**Response:**
+
+```json
+[
+  {
+    "image": "library/nginx",
+    "tag": "latest",
+    "registry": "docker.io",
+    "summary": { "critical": 2, "high": 5, "medium": 10, "low": 3, "unknown": 0 },
+    "fixable": 4,
+    "lastScanned": "2026-03-18T10:30:00Z",
+    "containerName": "app",
+    "resourceKind": "Deployment",
+    "resourceName": "app-deployment",
+    "resourceNamespace": "production",
+    "reportName": "deployment-app-deployment-3f7c9d2k8",
+    "vulnerabilities": [
+      {
+        "id": "CVE-2021-12345",
+        "severity": "CRITICAL",
+        "score": 9.8,
+        "package": "openssl",
+        "installedVersion": "1.1.1",
+        "fixedVersion": "1.1.1k",
+        "title": "Buffer overflow in OpenSSL",
+        "primaryLink": "https://nvd.nist.gov/vuln/detail/CVE-2021-12345",
+        "target": "openssl-1.1.1"
+      }
+    ]
+  }
+]
+```
+
+### Vulnerability overview
+
+```
+POST /api/v1/overview
+```
+
+Get aggregated vulnerability overview for a namespace.
+
+**Request body:**
+
+```json
+{ "namespace": "production" }
+```
+
+**Response:**
+
+```json
+{
+  "summary": { "critical": 2, "high": 5, "medium": 10, "low": 3, "unknown": 0 },
+  "fixable": 4,
+  "images": [ ... ],
+  "namespace": "production"
+}
+```
+
+### Config audit overview
+
+```
+POST /api/v1/audit/overview
+```
+
+Get aggregated config audit findings for a namespace. Returns failed checks only.
+
+**Request body:**
+
+```json
+{ "namespace": "production" }
+```
+
+**Response:**
+
+```json
+{
+  "summary": { "critical": 1, "high": 3, "medium": 5, "low": 2, "unknown": 0 },
+  "reports": [
+    {
+      "resourceKind": "Deployment",
+      "resourceName": "app-deployment",
+      "summary": { ... },
+      "checks": [
+        {
+          "checkID": "KSV001",
+          "title": "Image pull policy must be Always",
+          "severity": "HIGH",
+          "category": "Pod Security Standards",
+          "remediation": "Set imagePullPolicy to Always",
+          "success": false
+        }
+      ]
+    }
+  ],
+  "namespace": "production"
+}
+```
+
+### Exposed secrets overview
+
+```
+POST /api/v1/secrets/overview
+```
+
+Get aggregated exposed secrets findings for a namespace.
+
+**Request body:**
+
+```json
+{ "namespace": "production" }
+```
+
+**Response:**
+
+```json
+{
+  "summary": { "critical": 1, "high": 0, "medium": 2, "low": 0, "unknown": 0 },
+  "reports": [
+    {
+      "image": "library/nginx",
+      "tag": "latest",
+      "secrets": [
+        {
+          "ruleID": "generic-api-key",
+          "title": "Generic API Key",
+          "severity": "CRITICAL",
+          "category": "Secrets",
+          "target": "Dockerfile"
+        }
+      ]
+    }
+  ],
+  "namespace": "production"
+}
+```
+
+### SBOM overview
+
+```
+POST /api/v1/sbom/overview
+```
+
+Get software bill of materials for a namespace.
+
+**Request body:**
+
+```json
+{ "namespace": "production" }
+```
+
+**Response:**
+
+```json
+{
+  "reports": [
+    {
+      "image": "library/nginx",
+      "tag": "latest",
+      "components": [
+        { "name": "openssl", "version": "1.1.1k", "type": "application", "purl": "pkg:deb/debian/openssl@1.1.1k" }
+      ],
+      "componentsCount": 45
+    }
+  ],
+  "totalComponents": 120,
+  "namespace": "production"
+}
+```
+
+### Export as CSV
+
+```
+GET /api/v1/export?namespace={ns}&type={type}
+```
+
+Export reports as CSV file.
+
+**Parameters:**
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `namespace` | string | Yes | Kubernetes namespace |
+| `type` | string | Yes | `vulnerabilities`, `audit`, `secrets`, or `sbom` |
+
+**Response:** CSV file with `Content-Disposition: attachment` header.
+
+## Error responses
+
+```json
+{
+  "error": "namespace is required"
+}
+```
+
+| Status | Description |
+|--------|-------------|
+| 400 | Invalid namespace or missing required parameters |
+| 403 | Missing ArgoCD proxy headers (direct access attempt) |
+| 500 | Kubernetes API or parsing error |

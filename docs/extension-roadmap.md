@@ -26,8 +26,8 @@ ArgoCD v3.x provides six registration methods. ArgoPlane uses all of them:
 
 | Method | Where it appears | Used by |
 |--------|-----------------|---------|
-| `registerResourceExtension` | Tab on a K8s resource's sliding panel | Metrics, Backups, Networking, Logs, Policies |
-| `registerAppViewExtension` | Full-page view in app details | Metrics, Backups, Networking, Alerts |
+| `registerResourceExtension` | Tab on a K8s resource's sliding panel | Metrics, Backups, Networking, Logs, Vulnerabilities, Policies |
+| `registerAppViewExtension` | Full-page view in app details | Metrics, Backups, Networking, Logs, Vulnerabilities, Alerts |
 | `registerStatusPanelExtension` | Compact widget in app header status bar | Metrics, Backups, Networking |
 | `registerSystemLevelExtension` | Sidebar page (global, not tied to any app) | ArgoPlane Overview (Phase 2.5) |
 | `registerTopBarActionMenuExt` | Action button in top toolbar | Portal link button (Phase 2.5) |
@@ -41,11 +41,20 @@ ArgoCD v3.x provides six registration methods. ArgoPlane uses all of them:
 | Observe | **backups** | Backup status, schedules, restore triggers, BSL details, pod volume backups | Velero | App view + Status panel + Resource tabs (Schedule, Backup) |
 | Observe | **networking** | Traffic flows (Hubble), network policies, app vs platform ownership | Cilium/Hubble | App view + Status panel + Resource tabs (Pod, CiliumNetworkPolicy, CiliumClusterwideNetworkPolicy) |
 
-## Phase 2 (Next)
+## Phase 2 (In Progress)
+
+### Done
 
 | Category | Domain | Description | Backend | Extension Points |
 |----------|--------|-------------|---------|-----------------|
-| Observe | **logs** (Log Explorer) | Historical log search, label-based filtering, severity detection, time range selection. No live tail: ArgoCD's built-in Logs tab handles real-time pod streaming via the Kubernetes API. Loki's tail API uses WebSocket which ArgoCD's proxy extension mechanism does not support. | Loki | Resource tabs (Pod, Deployment, StatefulSet) + App view |
+| Observe | **logs** (Log Explorer) | Historical log search, label-based filtering, severity detection, time range selection, volume charts. No live tail: ArgoCD's built-in Logs tab handles real-time pod streaming via the Kubernetes API. Loki's tail API uses WebSocket which ArgoCD's proxy extension mechanism does not support. | Loki | Resource tabs (Pod, Deployment, StatefulSet) + App view |
+| Secure | **vulnerabilities** | Image vulnerability scanning (CVEs), config audit, exposed secrets detection, SBOM inventory. Per-image severity breakdown, CSV export, deduplication across ReplicaSets. | Trivy Operator (K8s API) | App view (4 tabs: Vulnerabilities, Config Audit, Exposed Secrets, SBOM) |
+
+### Next
+
+| Category | Domain | Description | Backend | Extension Points |
+|----------|--------|-------------|---------|-----------------|
+| Observe | **events** | Kubernetes events per resource and application. Warning/Normal event filtering, timeline view. | Kubernetes API | Resource tabs + App view |
 | Secure | **policies** | Policy violations, admission control results, policy reports per app | Kyverno | Resource tabs + App view + Status panel |
 | Observe | **alerts** | Firing/pending alerts, PrometheusRules and AlertmanagerConfigs per app, app vs platform ownership, smart links to Grafana/runbooks/Git | Prometheus Rules API, Alertmanager API | App view + Status panel |
 
@@ -347,7 +356,7 @@ No hardcoded integrations. Platform teams annotate what they want visible.
 | Observe | **databases** | DB health, connections, backups, scaling | CNPG, Percona, Redis Operator |
 | Observe | **costs** | Resource cost attribution per app/namespace | Kubecost, OpenCost |
 | Secure | **secrets** | Secret sync status, rotation, store health | External Secrets, Vault; ESO already has visibility tools |
-| Secure | **security** | Image vulnerabilities, runtime threats | Trivy, Grype, Falco; value depends on scan infrastructure |
+| Secure | ~~**security**~~ | ~~Image vulnerabilities, runtime threats~~ | Implemented as the **vulnerabilities** extension (Trivy Operator) in Phase 2 |
 | Observe | **builds** | Build status, image tags, pipeline runs | GitHub Actions, GitLab CI, Tekton |
 
 ## Design Principles

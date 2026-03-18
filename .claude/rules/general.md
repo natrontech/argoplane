@@ -7,9 +7,12 @@ Each extension is a self-contained module under `extensions/<name>/`:
 - `extensions/metrics/` - Prometheus metrics integration
 - `extensions/backups/` - Velero backup/restore visibility
 - `extensions/networking/` - Cilium/Hubble network flows
-- `extensions/logs/` - Loki log aggregation (Phase 2)
-- `extensions/policies/` - Kyverno policy reports (Phase 2)
-- `extensions/alerts/` - Prometheus/Alertmanager alerts (Phase 2)
+- `extensions/logs/` - Loki log aggregation
+- `extensions/vulnerabilities/` - Trivy Operator vulnerability scanning
+- `extensions/argoplane/` - System-level UI extension (no backend)
+- `extensions/policies/` - Kyverno policy reports (planned)
+- `extensions/alerts/` - Prometheus/Alertmanager alerts (planned)
+- `extensions/events/` - Kubernetes events (planned)
 
 ## Portal Structure
 

@@ -55,11 +55,13 @@ Extensions require explicit RBAC in ArgoCD. Add permissions to `argocd-rbac-cm`:
 p, role:developer, extensions, invoke, metrics, allow
 p, role:developer, extensions, invoke, backups, allow
 p, role:developer, extensions, invoke, networking, allow
+p, role:developer, extensions, invoke, logs, allow
+p, role:developer, extensions, invoke, vulnerabilities, allow
 ```
 
 ### Verify
 
-After deployment, navigate to any ArgoCD Application. You should see new tabs on Deployment and StatefulSet resources (Metrics), and new panels in the Application detail view (Backups, Networking).
+After deployment, navigate to any ArgoCD Application. You should see new tabs on Deployment and StatefulSet resources (Metrics, Logs), new panels in the Application detail view (Backups, Networking), and vulnerability/security tabs (Vulnerabilities).
 
 ## Demo app
 
@@ -69,7 +71,7 @@ A demo application is included to exercise all extensions:
 make deploy-example
 ```
 
-This deploys a guestbook application with Velero schedules, CiliumNetworkPolicies, and Prometheus metrics targets.
+This deploys a guestbook application with Velero schedules, CiliumNetworkPolicies, Prometheus metrics targets, and workloads for Trivy to scan.
 
 ## Next steps
 

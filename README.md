@@ -39,9 +39,11 @@ ArgoCD extensions that surface operational data where developers already work. R
 | **Observe** | Metrics | CPU, memory, request rates, latency (Prometheus) |
 | **Observe** | Backups | Backup status, schedules, restore triggers (Velero) |
 | **Observe** | Networking | Traffic flows, network policies (Cilium/Hubble) |
-| **Observe** | Logs | Log search, live tail, severity detection (Loki) |
-| **Observe** | Alerts | Firing alerts, PrometheusRules, silences (Alertmanager) |
-| **Secure** | Policies | Policy violations, admission results (Kyverno) |
+| **Observe** | Logs | Log search, severity detection, volume charts (Loki) |
+| **Secure** | Vulnerabilities | Image CVEs, config audit, exposed secrets, SBOM (Trivy Operator) |
+| **Observe** | Events | Kubernetes events per resource and application (planned) |
+| **Observe** | Alerts | Firing alerts, PrometheusRules, silences (Alertmanager, planned) |
+| **Secure** | Policies | Policy violations, admission results (Kyverno, planned) |
 
 Extensions answer: **"What's happening with my app right now?"**
 
@@ -103,7 +105,9 @@ ArgoCD UI                          ArgoPlane Portal
 │                      backends    │                  ├── OIDC (Dex)
 │                      ├── Prom    │                  ├── K8s API
 │                      ├── Velero  │                  ├── ArgoCD API
-│                      └── Hubble  │                  └── Git (2 repos)
+│                      ├── Hubble  │                  └── Git (2 repos)
+│                      ├── Loki    │
+│                      └── Trivy   │
 │                                  │
 └── ArgoCD RBAC + Dex auth         └── Same Dex, same groups
 ```
@@ -118,11 +122,13 @@ ArgoPlane is purpose-built for ArgoCD platforms. Extensions live inside ArgoCD (
 
 ## Current Status
 
-**Done:** Metrics, Backups, Networking extensions
+**Done:** Metrics, Backups, Networking, Logs, Vulnerabilities extensions
 
-**Building:** Logs, Policies, Alerts extensions + system-level dashboards
+**Building:** Events extension
 
-**Next:** Portal (auth, tenant onboarding, service catalog, team membership, simple app deploy)
+**Next:** Policies, Alerts extensions + system-level dashboards
+
+**Later:** Portal (auth, tenant onboarding, service catalog, team membership, simple app deploy)
 
 See [`docs/extension-roadmap.md`](docs/extension-roadmap.md) for the full roadmap.
 

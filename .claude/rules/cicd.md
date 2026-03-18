@@ -27,6 +27,8 @@ The release workflow automatically updates Chart.yaml during packaging so the pu
 | `argoplane-metrics-backend` | `extensions/metrics/backend/Dockerfile` | `ghcr.io/natrontech/argoplane-metrics-backend` |
 | `argoplane-backups-backend` | `extensions/backups/backend/Dockerfile` | `ghcr.io/natrontech/argoplane-backups-backend` |
 | `argoplane-networking-backend` | `extensions/networking/backend/Dockerfile` | `ghcr.io/natrontech/argoplane-networking-backend` |
+| `argoplane-logs-backend` | `extensions/logs/backend/Dockerfile` | `ghcr.io/natrontech/argoplane-logs-backend` |
+| `argoplane-vulnerabilities-backend` | `extensions/vulnerabilities/backend/Dockerfile` | `ghcr.io/natrontech/argoplane-vulnerabilities-backend` |
 | `argoplane-ui-extensions` | `deploy/docker/Dockerfile.ui-extensions` | `ghcr.io/natrontech/argoplane-ui-extensions` |
 | `argoplane-docs` | `services/docs/Dockerfile` | `ghcr.io/natrontech/argoplane-docs` |
 

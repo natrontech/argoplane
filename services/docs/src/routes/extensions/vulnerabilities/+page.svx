@@ -1,0 +1,107 @@
+---
+title: Vulnerabilities Extension
+description: Trivy Operator vulnerability scanning and security audit for ArgoCD
+---
+
+# Vulnerabilities Extension
+
+The vulnerabilities extension surfaces Trivy Operator scan results inside ArgoCD. Developers can see image vulnerabilities, config audit findings, exposed secrets, and software bill of materials (SBOM) for their applications.
+
+## Registration
+
+The extension registers as:
+
+- **App view** on any ArgoCD Application with four tabs:
+  - **Vulnerabilities**: image CVEs with severity breakdown
+  - **Config Audit**: Kubernetes misconfiguration checks
+  - **Exposed Secrets**: hardcoded secrets detected in images
+  - **SBOM**: software bill of materials inventory
+
+## What it shows
+
+### Vulnerabilities tab
+
+Per-application vulnerability overview:
+
+- Pie chart showing severity distribution (Critical, High, Medium, Low, Unknown)
+- Metric cards for each severity level plus fixable count
+- Per-image collapsible sections with vulnerability tables
+- Sortable columns: CVE, Severity, Score, Package, Installed/Fixed version
+- Search by CVE ID, package name, or title
+- Severity filter buttons
+- Links to CVE details (NVD, etc.)
+- CSV export
+
+### Config Audit tab
+
+Kubernetes security best practice checks:
+
+- Pie chart showing severity distribution
+- Flat table of failed checks across all resources
+- Check ID, severity, resource, title, remediation guidance
+- Search and severity filtering
+- CSV export
+
+### Exposed Secrets tab
+
+Hardcoded secrets detected in container images:
+
+- Pie chart showing severity distribution
+- Table of detected secrets with rule ID, severity, category, target file
+- Search and severity filtering
+- CSV export
+
+### SBOM tab
+
+Software component inventory:
+
+- Total component count and per-image breakdown
+- Per-image collapsible sections with component tables
+- Component name, version, type, and PURL
+- Search by component name
+- CSV export
+
+## Deduplication
+
+The backend deduplicates vulnerability reports from old ReplicaSets. When a Deployment is updated, Trivy creates new reports for the new ReplicaSet. The extension shows only the latest report per unique image:tag combination, preventing inflated counts.
+
+## Backend
+
+The vulnerabilities backend queries Trivy Operator CRDs via the Kubernetes API:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/v1/reports` | Get vulnerability reports for a namespace |
+| `POST /api/v1/overview` | Get aggregated vulnerability overview |
+| `POST /api/v1/audit/overview` | Get config audit overview |
+| `POST /api/v1/secrets/overview` | Get exposed secrets overview |
+| `POST /api/v1/sbom/overview` | Get SBOM overview |
+| `GET /api/v1/export` | Export reports as CSV |
+
+### Configuration
+
+| Environment Variable | Required | Default | Description |
+|---------------------|----------|---------|-------------|
+| `PORT` | No | `8084` | HTTP server port |
+| `LOG_LEVEL` | No | `info` | Log level |
+
+The backend uses in-cluster Kubernetes credentials (service account) to read Trivy Operator CRDs. No external service URL is needed.
+
+### Trivy Operator CRDs
+
+The extension reads these CRDs from the `aquasecurity.github.io/v1alpha1` API group:
+
+- `VulnerabilityReport`
+- `ConfigAuditReport`
+- `ExposedSecretReport`
+- `SbomReport`
+
+## Prerequisites
+
+The [Trivy Operator](https://aquasecurity.github.io/trivy-operator/) must be installed in the cluster. It automatically scans workloads and creates the CRD reports that this extension reads.
+
+## RBAC
+
+```
+p, role:developer, extensions, invoke, vulnerabilities, allow
+```

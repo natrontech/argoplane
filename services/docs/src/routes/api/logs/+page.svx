@@ -1,0 +1,138 @@
+---
+title: Logs API
+description: Logs extension backend API reference
+---
+
+# Logs API
+
+The logs backend exposes a JSON HTTP API consumed by the UI extension via ArgoCD's proxy at `/extensions/logs/`.
+
+## Endpoints
+
+### Query logs
+
+```
+GET /api/v1/logs?namespace={ns}&pod={pod}&severity={severity}&limit={limit}
+```
+
+Query log entries from Loki with optional filters.
+
+**Parameters:**
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `namespace` | string | Yes | - | Kubernetes namespace |
+| `pod` | string | No | - | Filter by pod name |
+| `resource` | string | No | - | Deployment or StatefulSet name |
+| `kind` | string | No | - | Resource kind (`Deployment`, `StatefulSet`) |
+| `container` | string | No | - | Container name |
+| `filter` | string | No | - | Free-text line filter |
+| `severity` | string | No | - | Comma-separated: `debug`, `info`, `warn`, `error` |
+| `start` | string | No | 1h ago | RFC3339 timestamp |
+| `end` | string | No | now | RFC3339 timestamp |
+| `limit` | integer | No | 500 | Max entries (1-5000) |
+| `direction` | string | No | `backward` | `forward` or `backward` |
+
+**Response:**
+
+```json
+{
+  "entries": [
+    {
+      "timestamp": "2026-03-18T10:30:45.123Z",
+      "line": "Starting application server on port 8080",
+      "severity": "info",
+      "labels": {
+        "namespace": "default",
+        "pod": "app-abc123",
+        "container": "app"
+      }
+    }
+  ],
+  "stats": {
+    "totalEntries": 42,
+    "bytesProcessed": 8192
+  }
+}
+```
+
+### Discover labels
+
+```
+GET /api/v1/logs/labels?namespace={ns}
+```
+
+List available log label names for a namespace.
+
+**Parameters:**
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `namespace` | string | Yes | Kubernetes namespace |
+| `start` | string | No | RFC3339 timestamp (default: 1h ago) |
+| `end` | string | No | RFC3339 timestamp (default: now) |
+
+**Response:**
+
+```json
+["namespace", "pod", "container", "cluster", "app"]
+```
+
+### Get label values
+
+```
+GET /api/v1/logs/label/{name}/values?namespace={ns}
+```
+
+Get distinct values for a specific label.
+
+**Parameters:**
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `name` | path | Yes | Label name |
+| `namespace` | string | Yes | Kubernetes namespace |
+
+**Response:**
+
+```json
+["app-abc123", "app-def456"]
+```
+
+### Log volume
+
+```
+GET /api/v1/logs/volume?namespace={ns}&pod={pod}
+```
+
+Get log entry count bucketed by time. Used for volume charts.
+
+**Parameters:**
+
+Same as query logs (namespace, pod, resource, kind, container, filter, severity, start, end).
+
+**Response:**
+
+```json
+{
+  "series": [
+    { "time": "2026-03-18T10:30:00Z", "value": 42.0 },
+    { "time": "2026-03-18T10:31:00Z", "value": 38.0 }
+  ]
+}
+```
+
+Step size is calculated automatically based on time range (30s for 15min, 1min for 1h, up to 1h for >24h).
+
+## Error responses
+
+```json
+{
+  "error": "namespace is required"
+}
+```
+
+| Status | Description |
+|--------|-------------|
+| 400 | Missing or invalid parameter |
+| 502 | Loki query failed or unreachable |
