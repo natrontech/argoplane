@@ -4,6 +4,6 @@ import { ArgoPlaneAppView } from '@argoplane/shared';
   window.extensionsAPI.registerAppViewExtension(
     ArgoPlaneAppView,
     'ArgoPlane',
-    'fa-th-large'
+    'fa-puzzle-piece'
   );
 })(window);
