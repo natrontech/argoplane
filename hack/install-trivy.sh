@@ -24,18 +24,22 @@ trivy:
     limits:
       memory: 512Mi
 
-trivyOperator:
+# Scanner toggles and concurrency live under operator.* (env vars on the deployment).
+operator:
   scanJobsConcurrentLimit: 1
   vulnerabilityScannerEnabled: true
   configAuditScannerEnabled: true
   sbomGenerationEnabled: false
   exposedSecretScannerEnabled: false
-  scanJobsInSameNamespace: true
-  scanJobCompressLogs: false
   # Disable infra assessment and compliance (triggers node-collector pods that
   # can't schedule on tainted control-plane nodes in kind clusters).
   infraAssessmentScannerEnabled: false
   clusterComplianceEnabled: false
+
+# Scan job behavior lives under trivyOperator.* (ConfigMap entries).
+trivyOperator:
+  scanJobsInSameNamespace: true
+  scanJobCompressLogs: false
 EOF
 
 helm upgrade --install trivy-operator aqua/trivy-operator \
