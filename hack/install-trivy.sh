@@ -7,24 +7,36 @@ log "Installing Trivy Operator"
 helm repo add aqua https://aquasecurity.github.io/helm-charts 2>/dev/null || true
 helm repo update
 
-# Exclude namespaces with local-only dev images (kind-loaded, not pullable)
-# and system namespaces whose images are also not always pullable.
-# The demo app namespace (argoplane-demo) uses public registry images and will be scanned.
-EXCLUDE_NS="kube-system,trivy-system,argocd,velero,monitoring,kube-node-lease,kube-public,local-path-storage"
+# Write a temporary values file to avoid Helm --set comma escaping issues.
+VALUES_FILE=$(mktemp)
+trap "rm -f ${VALUES_FILE}" EXIT
+
+cat > "${VALUES_FILE}" <<'EOF'
+# Exclude namespaces with local-only dev images (kind-loaded, not pullable from registries)
+# and system namespaces. The demo app namespace uses public images and will be scanned.
+excludeNamespaces: "kube-system,trivy-system,argocd,velero,monitoring,kube-node-lease,kube-public,local-path-storage"
+
+trivy:
+  command: image
+  resources:
+    requests:
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+trivyOperator:
+  scanJobsConcurrentLimit: 1
+  vulnerabilityScannerEnabled: true
+  configAuditScannerEnabled: false
+  sbomGenerationEnabled: false
+  exposedSecretScannerEnabled: false
+  scanJobsInSameNamespace: true
+  scanJobCompressLogs: false
+EOF
 
 helm upgrade --install trivy-operator aqua/trivy-operator \
     --namespace trivy-system --create-namespace \
-    --set trivy.command=image \
-    --set "excludeNamespaces=${EXCLUDE_NS}" \
-    --set trivyOperator.scanJobsConcurrentLimit=1 \
-    --set trivyOperator.vulnerabilityScannerEnabled=true \
-    --set trivyOperator.configAuditScannerEnabled=false \
-    --set trivyOperator.sbomGenerationEnabled=false \
-    --set trivyOperator.exposedSecretScannerEnabled=false \
-    --set trivyOperator.scanJobsInSameNamespace=true \
-    --set trivyOperator.scanJobCompressLogs=false \
-    --set trivy.resources.requests.memory=256Mi \
-    --set trivy.resources.limits.memory=512Mi \
+    -f "${VALUES_FILE}" \
     --wait --timeout 180s
 
 log "Trivy Operator installed"
