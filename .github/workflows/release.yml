@@ -19,7 +19,7 @@ jobs:
   # --- Parse version from tag ---
   meta:
     name: Release Meta
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
@@ -30,7 +30,7 @@ jobs:
   # --- Build and push extension backend images ---
   backend-images:
     name: Backend Image (${{ matrix.extension }})
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     needs: [meta]
     strategy:
       matrix:
@@ -70,7 +70,7 @@ jobs:
   # --- Build and push UI extensions init container ---
   ui-extensions-image:
     name: UI Extensions Image
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     needs: [meta]
     steps:
       - uses: actions/checkout@v4
@@ -133,7 +133,7 @@ jobs:
   # --- Build and push docs image ---
   docs-image:
     name: Docs Image
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     needs: [meta]
     steps:
       - uses: actions/checkout@v4
@@ -170,7 +170,7 @@ jobs:
   # --- Package and push Helm chart ---
   helm-chart:
     name: Helm Chart
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     needs: [meta, backend-images, ui-extensions-image, docs-image]
     steps:
       - uses: actions/checkout@v4
