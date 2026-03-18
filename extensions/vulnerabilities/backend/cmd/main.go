@@ -53,6 +53,7 @@ func main() {
 	mux.HandleFunc("GET /api/v1/reports", reportsHandler.Handle)
 	mux.HandleFunc("POST /api/v1/overview", overviewHandler.Handle)
 	mux.HandleFunc("POST /api/v1/rescan", rescanHandler.Handle)
+	mux.HandleFunc("POST /api/v1/rescan/all", rescanHandler.HandleAll)
 	mux.HandleFunc("POST /api/v1/audit/overview", auditHandler.HandleOverview)
 	mux.HandleFunc("GET /api/v1/export", exportHandler.Handle)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {

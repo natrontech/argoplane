@@ -32,6 +32,10 @@ trivyOperator:
   exposedSecretScannerEnabled: false
   scanJobsInSameNamespace: true
   scanJobCompressLogs: false
+  # Disable infra assessment and compliance (triggers node-collector pods that
+  # can't schedule on tainted control-plane nodes in kind clusters).
+  infraAssessmentScannerEnabled: false
+  clusterComplianceEnabled: false
 EOF
 
 helm upgrade --install trivy-operator aqua/trivy-operator \

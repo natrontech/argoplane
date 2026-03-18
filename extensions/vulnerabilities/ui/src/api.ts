@@ -85,6 +85,22 @@ export async function triggerRescan(
   }
 }
 
+export async function triggerRescanAll(
+  namespace: string,
+  appNamespace: string,
+  appName: string,
+  project: string
+): Promise<void> {
+  const params = new URLSearchParams({ namespace });
+  const response = await fetch(`/extensions/vulnerabilities/api/v1/rescan/all?${params}`, {
+    method: 'POST',
+    headers: proxyHeaders(appNamespace, appName, project),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+}
+
 export async function downloadExport(
   namespace: string,
   type: 'vulnerabilities' | 'audit',

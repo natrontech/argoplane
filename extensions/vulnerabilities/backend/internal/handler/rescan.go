@@ -42,3 +42,34 @@ func (h *RescanHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	slog.Info("triggered rescan", "namespace", namespace, "report", reportName)
 	WriteJSON(w, map[string]string{"status": "rescan triggered"})
 }
+
+// HandleAll triggers a rescan of all images in a namespace by deleting all VulnerabilityReports.
+func (h *RescanHandler) HandleAll(w http.ResponseWriter, r *http.Request) {
+	namespace := r.URL.Query().Get("namespace")
+	if namespace == "" {
+		WriteError(w, http.StatusBadRequest, "namespace is required")
+		return
+	}
+
+	auditLog(r, "rescan-all", namespace)
+
+	list, err := h.client.Resource(types.VulnerabilityReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{})
+	if err != nil {
+		slog.Error("failed to list vulnerability reports for rescan", "error", err, "namespace", namespace)
+		WriteError(w, http.StatusInternalServerError, "failed to list reports")
+		return
+	}
+
+	deleted := 0
+	for _, item := range list.Items {
+		err := h.client.Resource(types.VulnerabilityReportGVR).Namespace(namespace).Delete(r.Context(), item.GetName(), metav1.DeleteOptions{})
+		if err != nil {
+			slog.Warn("failed to delete report during rescan-all", "error", err, "report", item.GetName())
+			continue
+		}
+		deleted++
+	}
+
+	slog.Info("triggered rescan-all", "namespace", namespace, "deleted", deleted)
+	WriteJSON(w, map[string]any{"status": "rescan triggered", "deleted": deleted})
+}

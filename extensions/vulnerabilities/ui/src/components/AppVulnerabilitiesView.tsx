@@ -13,7 +13,7 @@ import {
   spacing,
   panel,
 } from '@argoplane/shared';
-import { fetchOverview, triggerRescan, downloadExport } from '../api';
+import { fetchOverview, triggerRescan, triggerRescanAll, downloadExport } from '../api';
 import { ImageReport, OverviewResponse, Vulnerability } from '../types';
 import { PieChart } from './PieChart';
 
@@ -116,6 +116,7 @@ export const AppVulnerabilitiesView: React.FC<{ application: any; tree?: any }> 
   const [error, setError] = React.useState<string | null>(null);
   const [expandedImage, setExpandedImage] = React.useState<string | null>(null);
   const [rescanning, setRescanning] = React.useState<string | null>(null);
+  const [scanningAll, setScanningAll] = React.useState(false);
   const [severityFilter, setSeverityFilter] = React.useState<Set<string>>(new Set(SEVERITIES));
   const [search, setSearch] = React.useState('');
   const [sortKey, setSortKey] = React.useState<SortKey>('severity');
@@ -189,9 +190,20 @@ export const AppVulnerabilitiesView: React.FC<{ application: any; tree?: any }> 
             <MetricCard label="Fixable" value={String(overview.fixable)} />
           </div>
         </div>
-        <Button onClick={() => downloadExport(destNamespace, 'vulnerabilities', appNamespace, appName, project)}>
-          Export CSV
-        </Button>
+        <div style={{ display: 'flex', gap: spacing[2] }}>
+          <Button primary onClick={() => {
+            setScanningAll(true);
+            triggerRescanAll(destNamespace, appNamespace, appName, project)
+              .then(() => setTimeout(loadData, 5000))
+              .catch(err => setError(err.message))
+              .finally(() => setScanningAll(false));
+          }} disabled={scanningAll}>
+            {scanningAll ? 'Scanning...' : 'Scan All'}
+          </Button>
+          <Button onClick={() => downloadExport(destNamespace, 'vulnerabilities', appNamespace, appName, project)}>
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       {/* Toolbar: search + severity filter */}
