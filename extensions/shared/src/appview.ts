@@ -168,8 +168,7 @@ export const ArgoPlaneAppView: React.FC<{ application: any; tree?: any }> = (pro
     // Active tab content
     activeView && React.createElement(
       TabErrorBoundary,
-      { key: resolvedActiveId, tabId: activeView.title },
-      React.createElement(activeView.component, props),
+      { key: resolvedActiveId, tabId: activeView.title, children: React.createElement(activeView.component, props) },
     ),
   );
 };

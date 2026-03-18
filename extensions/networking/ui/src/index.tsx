@@ -1,5 +1,4 @@
-import * as React from 'react';
-import { registerArgoPlaneView } from '@argoplane/shared';
+import { registerArgoPlaneView, registerArgoPlaneResourceTab } from '@argoplane/shared';
 import { AppNetworkingView } from './components/AppNetworkingView';
 import { PodFlowsTab } from './components/PodFlowsTab';
 import { PolicyFlowsTab } from './components/PolicyFlowsTab';
@@ -12,17 +11,17 @@ registerArgoPlaneView({
   component: AppNetworkingView,
 });
 
-((window: any) => {
-  // Pod-level flows tab (flows affecting a specific pod)
-  window.extensionsAPI.registerResourceExtension(
-    PodFlowsTab,
-    '',          // core API group
-    'Pod',
-    'Flows',
-    { icon: 'fa-exchange-alt' }
-  );
+// Register Pod flows via ArgoPlane consolidated resource tab
+registerArgoPlaneResourceTab('', 'Pod', {
+  id: 'networking',
+  title: 'Flows',
+  icon: 'fa-exchange-alt',
+  component: PodFlowsTab,
+});
 
-  // CiliumNetworkPolicy flows tab (flows affected by this policy)
+// CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy only have one extension tab each,
+// so register them directly with ArgoCD (no consolidation needed)
+((window: any) => {
   window.extensionsAPI.registerResourceExtension(
     PolicyFlowsTab,
     'cilium.io',
@@ -31,7 +30,6 @@ registerArgoPlaneView({
     { icon: 'fa-exchange-alt' }
   );
 
-  // CiliumClusterwideNetworkPolicy flows tab
   window.extensionsAPI.registerResourceExtension(
     PolicyFlowsTab,
     'cilium.io',

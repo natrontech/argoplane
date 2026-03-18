@@ -1,5 +1,4 @@
-import * as React from 'react';
-import { registerArgoPlaneView } from '@argoplane/shared';
+import { registerArgoPlaneView, registerArgoPlaneResourceTab } from '@argoplane/shared';
 import { MetricsPanel } from './components/MetricsPanel';
 import { AppMetricsView } from './components/AppMetricsView';
 
@@ -11,31 +10,14 @@ registerArgoPlaneView({
   component: AppMetricsView,
 });
 
-((window: any) => {
-  // Resource tab: Deployments
-  window.extensionsAPI.registerResourceExtension(
-    MetricsPanel,
-    'apps',
-    'Deployment',
-    'Metrics',
-    { icon: 'fa-chart-line' }
-  );
+// Register resource tabs via ArgoPlane consolidated resource tab
+const entry = {
+  id: 'metrics',
+  title: 'Metrics',
+  icon: 'fa-chart-line',
+  component: MetricsPanel,
+};
 
-  // Resource tab: StatefulSets
-  window.extensionsAPI.registerResourceExtension(
-    MetricsPanel,
-    'apps',
-    'StatefulSet',
-    'Metrics',
-    { icon: 'fa-chart-line' }
-  );
-
-  // Resource tab: Pods (core API group)
-  window.extensionsAPI.registerResourceExtension(
-    MetricsPanel,
-    '',
-    'Pod',
-    'Metrics',
-    { icon: 'fa-chart-line' }
-  );
-})(window);
+registerArgoPlaneResourceTab('apps', 'Deployment', entry);
+registerArgoPlaneResourceTab('apps', 'StatefulSet', entry);
+registerArgoPlaneResourceTab('', 'Pod', entry);

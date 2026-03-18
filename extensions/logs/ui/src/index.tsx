@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { registerArgoPlaneView } from '@argoplane/shared';
+import { registerArgoPlaneView, registerArgoPlaneResourceTab } from '@argoplane/shared';
 import { LogsPanel } from './components/LogsPanel';
 import { AppLogsView } from './components/AppLogsView';
 
@@ -57,31 +57,14 @@ registerArgoPlaneView({
   component: SafeAppLogsView,
 });
 
-((window: any) => {
-  // Resource tab: Pod log explorer (Loki-backed historical search)
-  window.extensionsAPI.registerResourceExtension(
-    SafeLogsPanel,
-    '',
-    'Pod',
-    'Log Explorer',
-    { icon: 'fa-search' }
-  );
+// Register resource tabs via ArgoPlane consolidated resource tab
+const entry = {
+  id: 'logs',
+  title: 'Log Explorer',
+  icon: 'fa-search',
+  component: SafeLogsPanel,
+};
 
-  // Resource tab: Deployment log explorer (aggregated across pods)
-  window.extensionsAPI.registerResourceExtension(
-    SafeLogsPanel,
-    'apps',
-    'Deployment',
-    'Log Explorer',
-    { icon: 'fa-search' }
-  );
-
-  // Resource tab: StatefulSet log explorer
-  window.extensionsAPI.registerResourceExtension(
-    SafeLogsPanel,
-    'apps',
-    'StatefulSet',
-    'Log Explorer',
-    { icon: 'fa-search' }
-  );
-})(window);
+registerArgoPlaneResourceTab('', 'Pod', entry);
+registerArgoPlaneResourceTab('apps', 'Deployment', entry);
+registerArgoPlaneResourceTab('apps', 'StatefulSet', entry);
