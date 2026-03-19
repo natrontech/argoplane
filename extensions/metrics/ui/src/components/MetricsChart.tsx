@@ -212,13 +212,12 @@ export const MetricsChart: React.FC<MetricsChartProps> = ({
               y={t.value}
               stroke={t.color}
               strokeDasharray="6 3"
-              strokeWidth={1}
+              strokeWidth={1.5}
               label={{
                 value: `${t.name}: ${fmt(t.value)}`,
-                position: 'right',
+                position: 'insideTopRight',
                 fill: t.color,
                 fontSize: 10,
-                fontFamily: fonts.mono,
               }}
             />
           ))}
