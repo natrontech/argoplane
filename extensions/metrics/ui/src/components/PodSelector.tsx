@@ -53,18 +53,18 @@ export const PodSelector: React.FC<PodSelectorProps> = ({ pods, selected, onChan
         {allSelected ? (
           <button style={chip} onClick={() => setOpen(!open)}>
             All Pods ({pods.length})
-            <span style={chevron}>{open ? '\u25B2' : '\u25BC'}</span>
+            <span style={chevron}>{open ? '▲' : '▼'}</span>
           </button>
         ) : (
           <>
             {selected.map((pod) => (
               <button key={pod} style={chipSelected} onClick={() => togglePod(pod)}>
                 {shortName(pod)}
-                <span style={chipX}>\u00D7</span>
+                <span style={chipX}>{'×'}</span>
               </button>
             ))}
             <button style={chipAdd} onClick={() => setOpen(!open)}>
-              {open ? '\u25B2' : '+'}
+              {open ? '▲' : '+'}
             </button>
           </>
         )}
@@ -77,7 +77,7 @@ export const PodSelector: React.FC<PodSelectorProps> = ({ pods, selected, onChan
             style={allSelected ? dropItemActive : dropItem}
             onClick={selectAll}
           >
-            <span style={checkbox}>{allSelected ? '\u2611' : '\u2610'}</span>
+            <span style={checkbox}>{allSelected ? '☑' : '☐'}</span>
             All Pods
           </button>
           {pods.map((pod) => {
@@ -88,7 +88,7 @@ export const PodSelector: React.FC<PodSelectorProps> = ({ pods, selected, onChan
                 style={checked && !allSelected ? dropItemActive : dropItem}
                 onClick={() => togglePod(pod)}
               >
-                <span style={checkbox}>{checked ? '\u2611' : '\u2610'}</span>
+                <span style={checkbox}>{checked ? '☑' : '☐'}</span>
                 {shortName(pod)}
               </button>
             );
