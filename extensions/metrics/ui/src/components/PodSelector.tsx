@@ -59,7 +59,7 @@ export const PodSelector: React.FC<PodSelectorProps> = ({ pods, selected, onChan
           <>
             {selected.map((pod) => (
               <button key={pod} style={chipSelected} onClick={() => togglePod(pod)}>
-                {shortName(pod)}
+                {pod}
                 <span style={chipX}>{'×'}</span>
               </button>
             ))}
@@ -89,7 +89,7 @@ export const PodSelector: React.FC<PodSelectorProps> = ({ pods, selected, onChan
                 onClick={() => togglePod(pod)}
               >
                 <span style={checkbox}>{checked ? '☑' : '☐'}</span>
-                {shortName(pod)}
+                {pod}
               </button>
             );
           })}
@@ -98,16 +98,6 @@ export const PodSelector: React.FC<PodSelectorProps> = ({ pods, selected, onChan
     </div>
   );
 };
-
-/** Strip common deployment prefix to save space in chips */
-function shortName(pod: string): string {
-  // Show last two segments for readability (e.g., "abc12-xyz45" from "my-app-abc12-xyz45")
-  const parts = pod.split('-');
-  if (parts.length > 3) {
-    return parts.slice(-2).join('-');
-  }
-  return pod;
-}
 
 // --- Styles ---
 
