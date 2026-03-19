@@ -52,10 +52,13 @@ export interface DashboardConfig {
   rows: DashboardRow[];
 }
 
+export type ViewMode = 'pod' | 'container';
+
 export interface DashboardRow {
   name: string;
   title: string;
   tab: string;
+  groupBy?: string; // "pod", "container", or undefined (always visible)
   graphs: DashboardGraph[];
 }
 

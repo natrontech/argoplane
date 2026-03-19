@@ -16,6 +16,7 @@ interface GraphPanelProps {
   appName: string;
   project: string;
   syncId?: string;
+  pods?: string[]; // Filter to specific pods
 }
 
 const REFRESH_INTERVAL = 30_000;
@@ -24,21 +25,24 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({
   graph, row, applicationName, groupKind,
   namespace, name, duration,
   appNamespace, appName, project,
-  syncId,
+  syncId, pods,
 }) => {
   const [data, setData] = React.useState<GraphDataResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
+  const podsKey = pods ? pods.join(',') : '';
+
   const fetchData = React.useCallback(() => {
-    fetchGraphData(applicationName, groupKind, row, graph.name, namespace, name, duration, appNamespace, appName, project)
+    fetchGraphData(applicationName, groupKind, row, graph.name, namespace, name, duration, appNamespace, appName, project, pods)
       .then((resp) => {
         setData(resp);
         setError(null);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [applicationName, groupKind, row, graph.name, namespace, name, duration, appNamespace, appName, project]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applicationName, groupKind, row, graph.name, namespace, name, duration, appNamespace, appName, project, podsKey]);
 
   React.useEffect(() => {
     setLoading(true);

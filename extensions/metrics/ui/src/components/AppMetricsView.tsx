@@ -110,7 +110,7 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
         ))}
       </div>
 
-      {/* Config-driven charts with tabs */}
+      {/* Config-driven charts with pod selector + view mode toggle */}
       <div style={{ marginTop: spacing[5] }}>
         <ConfigDashboard
           applicationName={appName}
@@ -121,6 +121,8 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
           appNamespace={appNamespace}
           appName={appName}
           project={project}
+          pods={pods.map((p) => p.pod)}
+          isWorkload={true}
         />
       </div>
 

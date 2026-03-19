@@ -11,9 +11,11 @@ import {
   radius,
 } from '@argoplane/shared';
 import { fetchDashboardConfig } from '../api';
-import { DashboardConfig, DashboardRow, TimeRange } from '../types';
+import { DashboardConfig, DashboardRow, TimeRange, ViewMode } from '../types';
 import { GraphPanel } from './GraphPanel';
 import { DurationSelector } from './DurationSelector';
+import { ViewModeToggle } from './ViewModeToggle';
+import { PodSelector } from './PodSelector';
 
 interface ConfigDashboardProps {
   applicationName: string;
@@ -24,26 +26,24 @@ interface ConfigDashboardProps {
   appNamespace: string;
   appName: string;
   project: string;
+  pods?: string[];      // Available pod names (for pod selector)
+  isWorkload?: boolean;  // Show pod selector + view mode toggle
 }
 
 export const ConfigDashboard: React.FC<ConfigDashboardProps> = ({
   applicationName, groupKind, namespace, name, namePattern,
-  appNamespace, appName, project,
+  appNamespace, appName, project, pods, isWorkload,
 }) => {
   const [config, setConfig] = React.useState<DashboardConfig | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [activeTab, setActiveTab] = React.useState<string>('');
   const [duration, setDuration] = React.useState<TimeRange>('1h');
+  const [viewMode, setViewMode] = React.useState<ViewMode>('pod');
+  const [selectedPods, setSelectedPods] = React.useState<string[]>([]); // empty = all
 
   React.useEffect(() => {
     setLoading(true);
     fetchDashboardConfig(applicationName, groupKind, appNamespace, appName, project)
-      .then((cfg) => {
-        setConfig(cfg);
-        if (cfg.tabs && cfg.tabs.length > 0) {
-          setActiveTab(cfg.tabs[0]);
-        }
-      })
+      .then((cfg) => setConfig(cfg))
       .catch(() => setConfig(null))
       .finally(() => setLoading(false));
   }, [applicationName, groupKind, appNamespace, appName, project]);
@@ -54,35 +54,33 @@ export const ConfigDashboard: React.FC<ConfigDashboardProps> = ({
     return <EmptyState message="No dashboard configured for this resource type" />;
   }
 
-  const tabs = config.tabs || [];
   const rows = config.rows || [];
 
-  // Filter rows by active tab
-  const visibleRows = activeTab
-    ? rows.filter((r) => r.tab === activeTab || (!r.tab && activeTab === tabs[0]))
-    : rows;
+  // Filter rows by view mode: show rows matching current viewMode or rows with no groupBy (always visible)
+  const visibleRows = rows.filter((r) => !r.groupBy || r.groupBy === viewMode);
 
   // Use explicit pattern if provided, otherwise auto-compute:
   // workloads: "name-.*", pods: exact "name"
   const nameParam = namePattern || (groupKind === 'pod' ? name : `${name}-.*`);
 
+  const showControls = isWorkload && pods && pods.length > 0;
+
   return (
     <div>
-      {/* Tab bar + duration selector */}
+      {/* Controls row: pod selector + view mode + duration */}
       <div style={headerRow}>
-        {tabs.length > 1 && (
-          <div style={tabBar}>
-            {tabs.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                style={tab === activeTab ? tabActive : tabBtn}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-        )}
+        <div style={leftControls}>
+          {showControls && (
+            <>
+              <PodSelector
+                pods={pods}
+                selected={selectedPods}
+                onChange={setSelectedPods}
+              />
+              <ViewModeToggle value={viewMode} onChange={setViewMode} />
+            </>
+          )}
+        </div>
         <DurationSelector value={duration} onChange={setDuration} />
       </div>
 
@@ -104,6 +102,7 @@ export const ConfigDashboard: React.FC<ConfigDashboardProps> = ({
                   appNamespace={appNamespace}
                   appName={appName}
                   project={project}
+                  pods={selectedPods.length > 0 ? selectedPods : undefined}
                 />
               </div>
             ))}
@@ -125,29 +124,11 @@ const headerRow: React.CSSProperties = {
   gap: spacing[2],
 };
 
-const tabBar: React.CSSProperties = {
+const leftControls: React.CSSProperties = {
   display: 'flex',
-  gap: 0,
-  borderBottom: `1px solid ${colors.gray200}`,
-};
-
-const tabBtn: React.CSSProperties = {
-  background: 'none',
-  border: 'none',
-  borderBottom: '2px solid transparent',
-  padding: `${spacing[2]}px ${spacing[4]}px`,
-  fontSize: fontSize.sm,
-  fontWeight: fontWeight.medium,
-  color: colors.gray500,
-  cursor: 'pointer',
-  textTransform: 'uppercase',
-  letterSpacing: '0.3px',
-};
-
-const tabActive: React.CSSProperties = {
-  ...tabBtn,
-  color: colors.orange600,
-  borderBottom: `2px solid ${colors.orange500}`,
+  alignItems: 'center',
+  gap: spacing[3],
+  flexWrap: 'wrap',
 };
 
 const chartRow: React.CSSProperties = {

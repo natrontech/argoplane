@@ -108,7 +108,7 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
         ))}
       </div>
 
-      {/* Config-driven charts with tabs */}
+      {/* Config-driven charts with pod selector + view mode toggle */}
       <div style={{ marginTop: spacing[5] }}>
         <ConfigDashboard
           applicationName={appName}
@@ -118,6 +118,8 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
           appNamespace={appNamespace}
           appName={appName}
           project={project}
+          pods={isWorkload ? pods.map((p) => p.pod) : undefined}
+          isWorkload={isWorkload}
         />
       </div>
 

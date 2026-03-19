@@ -77,7 +77,8 @@ export function fetchGraphData(
   applicationName: string, groupKind: string,
   row: string, graph: string,
   namespace: string, name: string, duration: string,
-  appNamespace: string, appName: string, project: string
+  appNamespace: string, appName: string, project: string,
+  pods?: string[]
 ): Promise<GraphDataResponse> {
   const params = new URLSearchParams({
     application: applicationName,
@@ -88,5 +89,6 @@ export function fetchGraphData(
     name,
     duration,
   });
+  if (pods && pods.length > 0) params.set('pods', pods.join(','));
   return jsonFetch(`/extensions/metrics/api/v1/graph?${params}`, argoHeaders(appNamespace, appName, project));
 }

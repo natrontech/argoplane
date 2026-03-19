@@ -28,10 +28,11 @@ type Dashboard struct {
 
 // Row is a horizontal group of graphs displayed together.
 type Row struct {
-	Name   string   `json:"name"`  // URL-safe identifier
-	Title  string   `json:"title"` // Display title
-	Tab    string   `json:"tab"`   // Which tab this row appears under (empty = default tab)
-	Graphs []*Graph `json:"graphs"`
+	Name    string   `json:"name"`              // URL-safe identifier
+	Title   string   `json:"title"`             // Display title
+	Tab     string   `json:"tab"`               // Which tab this row appears under (empty = default tab)
+	GroupBy string   `json:"groupBy,omitempty"` // View mode filter: "pod", "container", or "" (always visible)
+	Graphs  []*Graph `json:"graphs"`
 }
 
 // Graph defines a single chart and its PromQL query.

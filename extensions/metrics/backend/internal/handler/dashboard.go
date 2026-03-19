@@ -144,9 +144,19 @@ func (h *Dashboard) HandleGraph(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// For workloads, name should match pods: "name-.*"
-	// For pods, name should match exactly: "name"
-	// The query template handles this via the config (pod=~ vs pod=)
+	// Set podFilter: if specific pods are requested, use them as a regex OR;
+	// otherwise fall back to the name pattern (e.g., "deployment-name-.*").
+	pods := r.URL.Query().Get("pods")
+	if pods != "" {
+		// Escape dots in pod names for regex safety, join with |
+		podNames := strings.Split(pods, ",")
+		for i, p := range podNames {
+			podNames[i] = strings.TrimSpace(p)
+		}
+		vars["podFilter"] = strings.Join(podNames, "|")
+	} else if vars["name"] != "" {
+		vars["podFilter"] = vars["name"]
+	}
 
 	// Execute PromQL template
 	query, err := renderTemplate(graph.QueryExpression, vars)
