@@ -67,7 +67,15 @@ func (h *Dashboard) HandleConfig(w http.ResponseWriter, r *http.Request) {
 
 // graphDataResponse is the JSON response for a single graph's data.
 type graphDataResponse struct {
-	Series []graphSeries `json:"series"`
+	Series     []graphSeries     `json:"series"`
+	Thresholds []thresholdResult `json:"thresholds,omitempty"`
+}
+
+// thresholdResult is a resolved threshold with its current value.
+type thresholdResult struct {
+	Name  string  `json:"name"`
+	Color string  `json:"color"`
+	Value float64 `json:"value"`
 }
 
 type graphSeries struct {
@@ -182,6 +190,34 @@ func (h *Dashboard) HandleGraph(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 		resp.Series = append(resp.Series, gs)
+	}
+
+	// Resolve threshold values via instant queries
+	for _, t := range graph.Thresholds {
+		if t.QueryExpression == "" {
+			continue
+		}
+		tQuery, err := renderTemplate(t.QueryExpression, vars)
+		if err != nil {
+			slog.Warn("threshold template render failed", "name", t.Name, "error", err)
+			continue
+		}
+		samples, err := h.prom.Query(r.Context(), tQuery)
+		if err != nil {
+			slog.Warn("threshold query failed", "name", t.Name, "error", err)
+			continue
+		}
+		if len(samples) == 0 {
+			continue
+		}
+		val := convertValueForUnit(samples[0].Value, graph.YAxisUnit)
+		if val > 0 {
+			resp.Thresholds = append(resp.Thresholds, thresholdResult{
+				Name:  t.Name,
+				Color: t.Color,
+				Value: val,
+			})
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

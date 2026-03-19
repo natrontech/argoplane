@@ -20,7 +20,11 @@ export interface TimeSeriesMetric {
 export interface PodMetric {
   pod: string;
   cpu: string;
+  cpuRequest: string;
+  cpuLimit: string;
   memory: string;
+  memoryRequest: string;
+  memoryLimit: string;
   netRx: string;
   netTx: string;
   restarts: string;
@@ -71,8 +75,15 @@ export interface DashboardGraph {
   }>;
 }
 
+export interface ThresholdData {
+  name: string;
+  color: string;
+  value: number;
+}
+
 export interface GraphDataResponse {
   series: GraphSeries[];
+  thresholds?: ThresholdData[];
 }
 
 export interface GraphSeries {

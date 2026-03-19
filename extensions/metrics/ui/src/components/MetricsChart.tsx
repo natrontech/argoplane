@@ -19,6 +19,12 @@ interface EventMarker {
   count: number;
 }
 
+interface ThresholdLine {
+  name: string;
+  color: string;
+  value: number;
+}
+
 interface MetricsChartProps {
   title?: string;
   unit?: string;
@@ -29,6 +35,7 @@ interface MetricsChartProps {
   timeRange?: string;
   syncId?: string;
   events?: EventMarker[];
+  thresholds?: ThresholdLine[];
   formatValue?: (v: number) => string;
 }
 
@@ -102,6 +109,7 @@ export const MetricsChart: React.FC<MetricsChartProps> = ({
   timeRange = '1h',
   syncId = 'argoplane-metrics',
   events,
+  thresholds,
   formatValue,
 }) => {
   const fmt = formatValue || defaultFormat;
@@ -194,6 +202,24 @@ export const MetricsChart: React.FC<MetricsChartProps> = ({
               stroke={colors.red}
               strokeDasharray="3 2"
               strokeWidth={1.5}
+            />
+          ))}
+
+          {/* Threshold reference lines (horizontal) */}
+          {thresholds && thresholds.map((t) => (
+            <ReferenceLine
+              key={`threshold-${t.name}`}
+              y={t.value}
+              stroke={t.color}
+              strokeDasharray="6 3"
+              strokeWidth={1}
+              label={{
+                value: `${t.name}: ${fmt(t.value)}`,
+                position: 'right',
+                fill: t.color,
+                fontSize: 10,
+                fontFamily: fonts.mono,
+              }}
             />
           ))}
 

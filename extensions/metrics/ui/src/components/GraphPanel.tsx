@@ -84,6 +84,13 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({
     values: (s.values || []).map((v) => v.value === null ? NaN : v.value),
   }));
 
+  // Map threshold data from response
+  const thresholds = data.thresholds?.map((t) => ({
+    name: t.name,
+    color: t.color,
+    value: t.value,
+  }));
+
   return (
     <MetricsChart
       title={graph.title}
@@ -93,6 +100,7 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({
       height={150}
       timeRange={duration}
       syncId={syncId || 'argoplane-metrics'}
+      thresholds={thresholds}
     />
   );
 };

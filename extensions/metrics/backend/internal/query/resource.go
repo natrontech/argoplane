@@ -21,8 +21,28 @@ func ResourceMetrics(namespace, name, kind string) []NamedQuery {
 			Unit:  "millicores",
 		},
 		{
+			Name:  "CPU Requests",
+			Query: fmt.Sprintf(`sum(kube_pod_container_resource_requests{%s,resource="cpu"}) * 1000`, podSelector),
+			Unit:  "millicores",
+		},
+		{
+			Name:  "CPU Limits",
+			Query: fmt.Sprintf(`sum(kube_pod_container_resource_limits{%s,resource="cpu"}) * 1000`, podSelector),
+			Unit:  "millicores",
+		},
+		{
 			Name:  "Memory Usage",
 			Query: fmt.Sprintf(`sum(container_memory_working_set_bytes{%s,container!=""})`, podSelector),
+			Unit:  "bytes",
+		},
+		{
+			Name:  "Memory Requests",
+			Query: fmt.Sprintf(`sum(kube_pod_container_resource_requests{%s,resource="memory"})`, podSelector),
+			Unit:  "bytes",
+		},
+		{
+			Name:  "Memory Limits",
+			Query: fmt.Sprintf(`sum(kube_pod_container_resource_limits{%s,resource="memory"})`, podSelector),
 			Unit:  "bytes",
 		},
 		{

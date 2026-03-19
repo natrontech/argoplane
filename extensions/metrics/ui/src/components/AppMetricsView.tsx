@@ -134,31 +134,47 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
                 <tr>
                   <th style={th}>Pod</th>
                   <th style={th}>CPU</th>
+                  <th style={th}>CPU Req</th>
+                  <th style={th}>CPU Lim</th>
                   <th style={th}>Memory</th>
+                  <th style={th}>Mem Req</th>
+                  <th style={th}>Mem Lim</th>
                   <th style={th}>Net RX</th>
                   <th style={th}>Net TX</th>
                   <th style={th}>Restarts</th>
                 </tr>
               </thead>
               <tbody>
-                {pods.map((p, i) => (
-                  <tr key={p.pod}>
-                    <td style={td}>
-                      <span style={{ ...podDot, background: SERIES_COLORS[i % SERIES_COLORS.length] }} />
-                      {p.pod}
-                    </td>
-                    <td style={td}>{p.cpu}m</td>
-                    <td style={td}>{p.memory} MiB</td>
-                    <td style={td}>{p.netRx} KB/s</td>
-                    <td style={td}>{p.netTx} KB/s</td>
-                    <td style={{
-                      ...td,
-                      color: Number(p.restarts) > 0 ? colors.redText : undefined,
-                    }}>
-                      {p.restarts}
-                    </td>
-                  </tr>
-                ))}
+                {pods.map((p, i) => {
+                  const cpuVal = parseFloat(p.cpu);
+                  const cpuLimVal = parseFloat(p.cpuLimit);
+                  const memVal = parseFloat(p.memory);
+                  const memLimVal = parseFloat(p.memoryLimit);
+                  const cpuOverLimit = !isNaN(cpuVal) && !isNaN(cpuLimVal) && cpuLimVal > 0 && cpuVal >= cpuLimVal;
+                  const memOverLimit = !isNaN(memVal) && !isNaN(memLimVal) && memLimVal > 0 && memVal >= memLimVal;
+                  return (
+                    <tr key={p.pod}>
+                      <td style={td}>
+                        <span style={{ ...podDot, background: SERIES_COLORS[i % SERIES_COLORS.length] }} />
+                        {p.pod}
+                      </td>
+                      <td style={{ ...td, color: cpuOverLimit ? colors.redText : undefined }}>{p.cpu}m</td>
+                      <td style={tdDim}>{p.cpuRequest !== '-' ? `${p.cpuRequest}m` : '-'}</td>
+                      <td style={tdDim}>{p.cpuLimit !== '-' ? `${p.cpuLimit}m` : '-'}</td>
+                      <td style={{ ...td, color: memOverLimit ? colors.redText : undefined }}>{p.memory} MiB</td>
+                      <td style={tdDim}>{p.memoryRequest !== '-' ? `${p.memoryRequest} MiB` : '-'}</td>
+                      <td style={tdDim}>{p.memoryLimit !== '-' ? `${p.memoryLimit} MiB` : '-'}</td>
+                      <td style={td}>{p.netRx} KB/s</td>
+                      <td style={td}>{p.netTx} KB/s</td>
+                      <td style={{
+                        ...td,
+                        color: Number(p.restarts) > 0 ? colors.redText : undefined,
+                      }}>
+                        {p.restarts}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -202,6 +218,11 @@ const td: React.CSSProperties = {
   padding: `${spacing[2]}px ${spacing[3]}px`,
   borderBottom: `1px solid ${colors.gray100}`,
   color: colors.gray800,
+};
+
+const tdDim: React.CSSProperties = {
+  ...td,
+  color: colors.gray500,
 };
 
 const podDot: React.CSSProperties = {

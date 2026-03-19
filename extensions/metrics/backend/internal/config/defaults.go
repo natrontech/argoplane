@@ -21,6 +21,10 @@ func DefaultConfig() *DashboardConfig {
 					MetricName:      "pod",
 					QueryExpression: `sum by (pod) (rate(container_cpu_usage_seconds_total{namespace="{{.namespace}}",pod=~"{{.name}}",container!=""}[5m])) * 1000`,
 					YAxisUnit:       "millicores",
+					Thresholds: []Threshold{
+						{Name: "Request", Color: "#f5a337", QueryExpression: `sum(kube_pod_container_resource_requests{namespace="{{.namespace}}",pod=~"{{.name}}",resource="cpu"}) * 1000`},
+						{Name: "Limit", Color: "#ef4444", QueryExpression: `sum(kube_pod_container_resource_limits{namespace="{{.namespace}}",pod=~"{{.name}}",resource="cpu"}) * 1000`},
+					},
 				},
 				{
 					Name:            "memory-by-pod",
@@ -30,6 +34,10 @@ func DefaultConfig() *DashboardConfig {
 					MetricName:      "pod",
 					QueryExpression: `sum by (pod) (container_memory_working_set_bytes{namespace="{{.namespace}}",pod=~"{{.name}}",container!=""})`,
 					YAxisUnit:       "bytes",
+					Thresholds: []Threshold{
+						{Name: "Request", Color: "#f5a337", QueryExpression: `sum(kube_pod_container_resource_requests{namespace="{{.namespace}}",pod=~"{{.name}}",resource="memory"})`},
+						{Name: "Limit", Color: "#ef4444", QueryExpression: `sum(kube_pod_container_resource_limits{namespace="{{.namespace}}",pod=~"{{.name}}",resource="memory"})`},
+					},
 				},
 			},
 		},
@@ -71,6 +79,10 @@ func DefaultConfig() *DashboardConfig {
 					MetricName:      "container",
 					QueryExpression: `sum by (container) (rate(container_cpu_usage_seconds_total{namespace="{{.namespace}}",pod=~"{{.name}}",container!=""}[5m])) * 1000`,
 					YAxisUnit:       "millicores",
+					Thresholds: []Threshold{
+						{Name: "Request", Color: "#f5a337", QueryExpression: `sum(kube_pod_container_resource_requests{namespace="{{.namespace}}",pod=~"{{.name}}",resource="cpu"}) * 1000`},
+						{Name: "Limit", Color: "#ef4444", QueryExpression: `sum(kube_pod_container_resource_limits{namespace="{{.namespace}}",pod=~"{{.name}}",resource="cpu"}) * 1000`},
+					},
 				},
 				{
 					Name:            "memory-by-container",
@@ -80,6 +92,10 @@ func DefaultConfig() *DashboardConfig {
 					MetricName:      "container",
 					QueryExpression: `sum by (container) (container_memory_working_set_bytes{namespace="{{.namespace}}",pod=~"{{.name}}",container!=""})`,
 					YAxisUnit:       "bytes",
+					Thresholds: []Threshold{
+						{Name: "Request", Color: "#f5a337", QueryExpression: `sum(kube_pod_container_resource_requests{namespace="{{.namespace}}",pod=~"{{.name}}",resource="memory"})`},
+						{Name: "Limit", Color: "#ef4444", QueryExpression: `sum(kube_pod_container_resource_limits{namespace="{{.namespace}}",pod=~"{{.name}}",resource="memory"})`},
+					},
 				},
 			},
 		},
@@ -116,6 +132,10 @@ func DefaultConfig() *DashboardConfig {
 					MetricName:      "container",
 					QueryExpression: `sum by (container) (rate(container_cpu_usage_seconds_total{namespace="{{.namespace}}",pod="{{.name}}",container!=""}[5m])) * 1000`,
 					YAxisUnit:       "millicores",
+					Thresholds: []Threshold{
+						{Name: "Request", Color: "#f5a337", QueryExpression: `sum(kube_pod_container_resource_requests{namespace="{{.namespace}}",pod="{{.name}}",resource="cpu"}) * 1000`},
+						{Name: "Limit", Color: "#ef4444", QueryExpression: `sum(kube_pod_container_resource_limits{namespace="{{.namespace}}",pod="{{.name}}",resource="cpu"}) * 1000`},
+					},
 				},
 				{
 					Name:            "memory-by-container",
@@ -125,6 +145,10 @@ func DefaultConfig() *DashboardConfig {
 					MetricName:      "container",
 					QueryExpression: `sum by (container) (container_memory_working_set_bytes{namespace="{{.namespace}}",pod="{{.name}}",container!=""})`,
 					YAxisUnit:       "bytes",
+					Thresholds: []Threshold{
+						{Name: "Request", Color: "#f5a337", QueryExpression: `sum(kube_pod_container_resource_requests{namespace="{{.namespace}}",pod="{{.name}}",resource="memory"})`},
+						{Name: "Limit", Color: "#ef4444", QueryExpression: `sum(kube_pod_container_resource_limits{namespace="{{.namespace}}",pod="{{.name}}",resource="memory"})`},
+					},
 				},
 			},
 		},

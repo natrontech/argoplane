@@ -21,12 +21,16 @@ func NewPods(prom *prometheus.Client) *Pods {
 }
 
 type podMetric struct {
-	Pod     string `json:"pod"`
-	CPU     string `json:"cpu"`
-	Memory  string `json:"memory"`
-	NetRX   string `json:"netRx"`
-	NetTX   string `json:"netTx"`
-	Restart string `json:"restarts"`
+	Pod           string `json:"pod"`
+	CPU           string `json:"cpu"`
+	CPURequest    string `json:"cpuRequest"`
+	CPULimit      string `json:"cpuLimit"`
+	Memory        string `json:"memory"`
+	MemoryRequest string `json:"memoryRequest"`
+	MemoryLimit   string `json:"memoryLimit"`
+	NetRX         string `json:"netRx"`
+	NetTX         string `json:"netTx"`
+	Restart       string `json:"restarts"`
 }
 
 // Handle serves GET /api/v1/pod-breakdown.
@@ -61,13 +65,21 @@ func (h *Pods) Handle(w http.ResponseWriter, r *http.Request) {
 
 	// Query per-pod CPU
 	cpuQuery := fmt.Sprintf(`sum by (pod) (rate(container_cpu_usage_seconds_total{%s,container!=""}[5m])) * 1000`, podSelector)
+	cpuReqQuery := fmt.Sprintf(`sum by (pod) (kube_pod_container_resource_requests{%s,resource="cpu"}) * 1000`, podSelector)
+	cpuLimQuery := fmt.Sprintf(`sum by (pod) (kube_pod_container_resource_limits{%s,resource="cpu"}) * 1000`, podSelector)
 	memQuery := fmt.Sprintf(`sum by (pod) (container_memory_working_set_bytes{%s,container!=""})`, podSelector)
+	memReqQuery := fmt.Sprintf(`sum by (pod) (kube_pod_container_resource_requests{%s,resource="memory"})`, podSelector)
+	memLimQuery := fmt.Sprintf(`sum by (pod) (kube_pod_container_resource_limits{%s,resource="memory"})`, podSelector)
 	rxQuery := fmt.Sprintf(`sum by (pod) (rate(container_network_receive_bytes_total{%s}[5m]))`, podSelector)
 	txQuery := fmt.Sprintf(`sum by (pod) (rate(container_network_transmit_bytes_total{%s}[5m]))`, podSelector)
 	restartQuery := fmt.Sprintf(`sum by (pod) (kube_pod_container_status_restarts_total{%s})`, podSelector)
 
 	cpuSamples, _ := h.prom.Query(r.Context(), cpuQuery)
+	cpuReqSamples, _ := h.prom.Query(r.Context(), cpuReqQuery)
+	cpuLimSamples, _ := h.prom.Query(r.Context(), cpuLimQuery)
 	memSamples, _ := h.prom.Query(r.Context(), memQuery)
+	memReqSamples, _ := h.prom.Query(r.Context(), memReqQuery)
+	memLimSamples, _ := h.prom.Query(r.Context(), memLimQuery)
 	rxSamples, _ := h.prom.Query(r.Context(), rxQuery)
 	txSamples, _ := h.prom.Query(r.Context(), txQuery)
 	restartSamples, _ := h.prom.Query(r.Context(), restartQuery)
@@ -75,25 +87,63 @@ func (h *Pods) Handle(w http.ResponseWriter, r *http.Request) {
 	// Build per-pod map
 	pods := make(map[string]*podMetric)
 
+	ensurePod := func(pod string) {
+		if _, ok := pods[pod]; !ok {
+			pods[pod] = &podMetric{
+				Pod: pod, CPU: "-", CPURequest: "-", CPULimit: "-",
+				Memory: "-", MemoryRequest: "-", MemoryLimit: "-",
+				NetRX: "-", NetTX: "-", Restart: "0",
+			}
+		}
+	}
+
 	for _, s := range cpuSamples {
 		pod := s.Metric["pod"]
 		if pod == "" {
 			continue
 		}
-		if _, ok := pods[pod]; !ok {
-			pods[pod] = &podMetric{Pod: pod, CPU: "-", Memory: "-", NetRX: "-", NetTX: "-", Restart: "0"}
-		}
+		ensurePod(pod)
 		pods[pod].CPU = formatValue(s.Value, "millicores")
+	}
+	for _, s := range cpuReqSamples {
+		pod := s.Metric["pod"]
+		if pod == "" {
+			continue
+		}
+		ensurePod(pod)
+		pods[pod].CPURequest = formatValue(s.Value, "millicores")
+	}
+	for _, s := range cpuLimSamples {
+		pod := s.Metric["pod"]
+		if pod == "" {
+			continue
+		}
+		ensurePod(pod)
+		pods[pod].CPULimit = formatValue(s.Value, "millicores")
 	}
 	for _, s := range memSamples {
 		pod := s.Metric["pod"]
 		if pod == "" {
 			continue
 		}
-		if _, ok := pods[pod]; !ok {
-			pods[pod] = &podMetric{Pod: pod, CPU: "-", Memory: "-", NetRX: "-", NetTX: "-", Restart: "0"}
-		}
+		ensurePod(pod)
 		pods[pod].Memory = formatValue(s.Value, "bytes")
+	}
+	for _, s := range memReqSamples {
+		pod := s.Metric["pod"]
+		if pod == "" {
+			continue
+		}
+		ensurePod(pod)
+		pods[pod].MemoryRequest = formatValue(s.Value, "bytes")
+	}
+	for _, s := range memLimSamples {
+		pod := s.Metric["pod"]
+		if pod == "" {
+			continue
+		}
+		ensurePod(pod)
+		pods[pod].MemoryLimit = formatValue(s.Value, "bytes")
 	}
 	for _, s := range rxSamples {
 		pod := s.Metric["pod"]
