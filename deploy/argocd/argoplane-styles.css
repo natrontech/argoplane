@@ -328,6 +328,7 @@ body {
 /* Tabs in app detail */
 .application-details__tab-bar .argo-tabs__tab {
   border-radius: 0 !important;
+  border-bottom: 2px solid transparent !important;
 }
 
 .application-details__tab-bar .argo-tabs__tab--selected {
@@ -476,6 +477,7 @@ i.fa.fa-heart {
 .argo-tabs__tab {
   font-family: var(--ap-font-body) !important;
   border-radius: 0 !important;
+  border-bottom: 2px solid transparent !important;
   transition: color 100ms ease, border-color 100ms ease !important;
 }
 

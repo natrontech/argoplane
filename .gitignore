@@ -49,3 +49,5 @@ extensions/*/ui/node_modules/
 
 # Internal docs (not for public repo)
 docs/internal/
+_references/
+
