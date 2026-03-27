@@ -136,6 +136,7 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
           appName={appName}
           project={project}
           pods={pods.map((p) => p.pod)}
+          scopedPods={scopedPodNames}
           isWorkload={true}
         />
       </div>

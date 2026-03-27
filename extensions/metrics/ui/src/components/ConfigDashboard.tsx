@@ -27,12 +27,13 @@ interface ConfigDashboardProps {
   appName: string;
   project: string;
   pods?: string[];      // Available pod names (for pod selector)
+  scopedPods?: string[]; // App-scoped pod names from tree (limits all queries)
   isWorkload?: boolean;  // Show pod selector + view mode toggle
 }
 
 export const ConfigDashboard: React.FC<ConfigDashboardProps> = ({
   applicationName, groupKind, namespace, name, namePattern,
-  appNamespace, appName, project, pods, isWorkload,
+  appNamespace, appName, project, pods, scopedPods, isWorkload,
 }) => {
   const [config, setConfig] = React.useState<DashboardConfig | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -62,6 +63,16 @@ export const ConfigDashboard: React.FC<ConfigDashboardProps> = ({
   // Use explicit pattern if provided, otherwise auto-compute:
   // workloads: "name-.*", pods: exact "name"
   const nameParam = namePattern || (groupKind === 'pod' ? name : `${name}-.*`);
+
+  // Determine which pods to send to GraphPanel:
+  // 1. If user selected specific pods in PodSelector, use those (already within scope)
+  // 2. Else if scopedPods is provided (app scope), use those
+  // 3. Else undefined (namespace-wide)
+  const graphPods = selectedPods.length > 0
+    ? selectedPods
+    : scopedPods && scopedPods.length > 0
+      ? scopedPods
+      : undefined;
 
   const showControls = isWorkload && pods && pods.length > 0;
 
@@ -102,7 +113,7 @@ export const ConfigDashboard: React.FC<ConfigDashboardProps> = ({
                   appNamespace={appNamespace}
                   appName={appName}
                   project={project}
-                  pods={selectedPods.length > 0 ? selectedPods : undefined}
+                  pods={graphPods}
                 />
               </div>
             ))}
