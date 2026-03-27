@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { page } from '$app/stores';
 	import { navigation } from '$lib/config/navigation';
 	import type { NavItem } from '$lib/types';
@@ -20,7 +21,7 @@
 
 	let flatNav = flattenNav(navigation);
 
-	let currentIndex = $derived(flatNav.findIndex((item) => item.href === $page.url.pathname));
+	let currentIndex = $derived(flatNav.findIndex((item) => base + item.href === $page.url.pathname));
 	let prev = $derived(currentIndex > 0 ? flatNav[currentIndex - 1] : null);
 	let next = $derived(currentIndex < flatNav.length - 1 ? flatNav[currentIndex + 1] : null);
 </script>
@@ -29,7 +30,7 @@
 	<div class="mt-8 flex items-center justify-between border-t border-gray-200 pt-4 dark:border-gray-700">
 		{#if prev}
 			<a
-				href={prev.href}
+				href="{base}{prev.href}"
 				class="group flex items-center gap-2 text-sm text-gray-500 no-underline hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-400"
 			>
 				<ArrowLeft size={14} />
@@ -40,7 +41,7 @@
 		{/if}
 		{#if next}
 			<a
-				href={next.href}
+				href="{base}{next.href}"
 				class="group flex items-center gap-2 text-sm text-gray-500 no-underline hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-400"
 			>
 				{next.title}

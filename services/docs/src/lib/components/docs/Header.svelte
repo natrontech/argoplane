@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { siteConfig } from '$lib/config/site';
 	import { onMount } from 'svelte';
 	import SearchDialog from './SearchDialog.svelte';
@@ -59,9 +60,9 @@
 					<PanelLeftClose size={18} />
 				{/if}
 			</button>
-			<a href="/" class="flex items-center gap-2 no-underline">
+			<a href="{base}/" class="flex items-center gap-2 no-underline">
 				<img
-					src={isDark ? '/logo-light.svg' : '/logo-dark.svg'}
+					src="{base}{isDark ? '/logo-light.svg' : '/logo-dark.svg'}"
 					alt="ArgoPlane"
 					class="h-6 w-6"
 				/>

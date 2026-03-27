@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { page } from '$app/stores';
 	import { navigation } from '$lib/config/navigation';
 	import type { NavItem } from '$lib/types';
@@ -10,18 +11,19 @@
 	}
 
 	function findCrumbs(pathname: string): Crumb[] {
-		if (pathname === '/') return [];
+		const path = pathname.startsWith(base) ? pathname.slice(base.length) || '/' : pathname;
+		if (path === '/') return [];
 
 		const crumbs: Crumb[] = [];
 
 		for (const item of navigation) {
-			if (item.href === pathname) {
+			if (item.href === path) {
 				crumbs.push({ title: item.title, href: item.href });
 				return crumbs;
 			}
 			if (item.children) {
 				for (const child of item.children) {
-					if (child.href === pathname) {
+					if (child.href === path) {
 						crumbs.push({ title: item.title, href: item.href });
 						if (child.href !== item.href) {
 							crumbs.push({ title: child.title, href: child.href });
@@ -39,7 +41,7 @@
 
 {#if crumbs.length > 0}
 	<nav class="mb-4 flex items-center gap-1.5 text-xs" aria-label="Breadcrumb">
-		<a href="/" class="text-gray-400 no-underline hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400">
+		<a href="{base}/" class="text-gray-400 no-underline hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400">
 			Docs
 		</a>
 		{#each crumbs as crumb, i}
@@ -47,7 +49,7 @@
 			{#if i === crumbs.length - 1}
 				<span class="text-gray-600 dark:text-gray-300">{crumb.title}</span>
 			{:else}
-				<a href={crumb.href} class="text-gray-400 no-underline hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400">
+				<a href="{base}{crumb.href}" class="text-gray-400 no-underline hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400">
 					{crumb.title}
 				</a>
 			{/if}

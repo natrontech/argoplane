@@ -4,6 +4,7 @@ description: Why teams adopt ArgoPlane and how to evaluate it
 ---
 
 <script>
+  import { base } from '$app/paths';
   import Callout from '$lib/components/docs/Callout.svelte';
   import Accordion from '$lib/components/docs/Accordion.svelte';
 </script>
@@ -76,7 +77,7 @@ The upcoming **platform** extension surfaces StorageClasses, IngressClasses, Gat
 ## FAQ
 
 <Accordion title="Do I need to modify my ArgoCD installation?">
-  Minimally. You add proxy extension configuration (a ConfigMap entry), deploy backend services, and copy UI bundles into the argocd-server pod. No forks, no patches. See the <a href="/deployment">deployment guide</a>.
+  Minimally. You add proxy extension configuration (a ConfigMap entry), deploy backend services, and copy UI bundles into the argocd-server pod. No forks, no patches. See the <a href="{base}/deployment">deployment guide</a>.
 </Accordion>
 
 <Accordion title="Does ArgoPlane work with ArgoCD v2?">
@@ -84,7 +85,7 @@ The upcoming **platform** extension surfaces StorageClasses, IngressClasses, Gat
 </Accordion>
 
 <Accordion title="Can I write my own extensions?">
-  Yes. ArgoPlane is a collection of extensions, not a framework. You can add your own following the same pattern. See the <a href="/developing">developing guide</a>.
+  Yes. ArgoPlane is a collection of extensions, not a framework. You can add your own following the same pattern. See the <a href="{base}/developing">developing guide</a>.
 </Accordion>
 
 <Accordion title="What happens if an extension backend goes down?">

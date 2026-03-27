@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { page } from '$app/stores';
 	import { navigation } from '$lib/config/navigation';
 	import type { NavItem } from '$lib/types';
@@ -10,7 +11,7 @@
 	let collapsed: Record<string, boolean> = $state({});
 
 	function isActive(href: string): boolean {
-		return $page.url.pathname === href;
+		return $page.url.pathname === base + href;
 	}
 
 	function isSectionActive(item: NavItem): boolean {
@@ -65,7 +66,7 @@
 						<div class="flex flex-col gap-0.5">
 							{#each item.children as child}
 								<a
-									href={child.href}
+									href="{base}{child.href}"
 									class="block rounded-md px-2 py-1.5 text-sm no-underline transition-colors duration-100 {isActive(child.href)
 										? 'bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400'
 										: 'text-gray-600 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200'}"
@@ -78,7 +79,7 @@
 				</div>
 			{:else}
 				<a
-					href={item.href}
+					href="{base}{item.href}"
 					class="block rounded-md px-2 py-1.5 text-sm no-underline transition-colors duration-100 {isActive(item.href)
 						? 'bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400'
 						: 'text-gray-600 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200'}"

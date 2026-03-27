@@ -4,6 +4,7 @@ description: Join the ArgoPlane community
 ---
 
 <script>
+  import { base } from '$app/paths';
   import Callout from '$lib/components/docs/Callout.svelte';
 </script>
 
@@ -60,5 +61,5 @@ ArgoPlane stands on the shoulders of excellent open-source projects:
 | [SvelteKit](https://svelte.dev/docs/kit) | Documentation site |
 
 <Callout type="info">
-  ArgoPlane is maintained by <a href="https://natron.io">Natron Tech AG</a> from Switzerland. See the <a href="/about">about page</a> for more.
+  ArgoPlane is maintained by <a href="https://natron.io">Natron Tech AG</a> from Switzerland. See the <a href="{base}/about">about page</a> for more.
 </Callout>

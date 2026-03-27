@@ -6,9 +6,9 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
-		"postbuild": "npx pagefind --site build/prerendered --output-path build/client/pagefind",
-		"search:index": "vite build && npx pagefind --site build/prerendered --output-path static/pagefind",
-		"preview": "node build/index.js",
+		"postbuild": "npx pagefind --site build --output-path build/pagefind",
+		"search:index": "vite build && npx pagefind --site build --output-path static/pagefind",
+		"preview": "npx sirv build --single --port 4173",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
@@ -16,6 +16,7 @@
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^7.0.0",
 		"@sveltejs/adapter-node": "^5.5.4",
+		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.50.2",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",
 		"@tailwindcss/vite": "^4.2.2",
