@@ -80,13 +80,23 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({
     );
   }
 
-  // Convert GraphDataResponse to MetricsChart format
-  const firstValues = data.series[0]?.values || [];
-  const timestamps = firstValues.map((v) => v.time);
-  const series = data.series.map((s) => ({
-    label: s.label || 'unknown',
-    values: (s.values || []).map((v) => v.value === null ? NaN : v.value),
-  }));
+  // Build a unified sorted timestamp array from ALL series, then align values.
+  // Each series may cover a different time range (e.g., a new pod has only recent data).
+  const allTimestamps = new Set<string>();
+  for (const s of data.series) {
+    for (const v of (s.values || [])) {
+      allTimestamps.add(v.time);
+    }
+  }
+  const timestamps = Array.from(allTimestamps).sort();
+
+  const series = data.series.map((s) => {
+    const timeMap = new Map((s.values || []).map((v) => [v.time, v.value === null ? NaN : v.value]));
+    return {
+      label: s.label || 'unknown',
+      values: timestamps.map((t) => timeMap.get(t) ?? NaN),
+    };
+  });
 
   // Map threshold data from response
   const thresholds = data.thresholds?.map((t) => ({

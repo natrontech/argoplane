@@ -4,7 +4,7 @@ import {
   ScopeToggle, extractWorkloadNames,
   colors, fonts, fontSize, fontWeight, spacing, panel,
 } from '@argoplane/shared';
-import type { Scope } from '@argoplane/shared';
+import { useStickyScope } from '@argoplane/shared';
 import { fetchSbomOverview, downloadExport } from '../api';
 import { SbomOverviewResponse, SbomComponent } from '../types';
 
@@ -24,7 +24,7 @@ export const AppSbomView: React.FC<{ application: any; tree?: any }> = ({ applic
   const [sortKey, setSortKey] = React.useState<SortKey>('name');
   const [sortDir, setSortDir] = React.useState<'asc' | 'desc'>('asc');
   const [expandedImage, setExpandedImage] = React.useState<string | null>(null);
-  const [scope, setScope] = React.useState<Scope>('app');
+  const [scope, setScope] = useStickyScope();
 
   const appName = application?.metadata?.name || '';
   const appNamespace = application?.metadata?.namespace || 'argocd';

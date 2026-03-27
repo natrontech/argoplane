@@ -12,7 +12,7 @@ import {
   panel,
   spacing,
 } from '@argoplane/shared';
-import type { Scope } from '@argoplane/shared';
+import { useStickyScope } from '@argoplane/shared';
 import { fetchLogs, fetchLabelValues } from '../api';
 import { LogEntry, Severity, TimeSelection, resolveTimeSelection } from '../types';
 import { LogLine } from './LogLine';
@@ -45,7 +45,7 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
     type: 'relative',
     relative: '1h',
   });
-  const [scope, setScope] = React.useState<Scope>('app');
+  const [scope, setScope] = useStickyScope();
 
   const namespace = application?.spec?.destination?.namespace || '';
   const appName = application?.metadata?.name || '';

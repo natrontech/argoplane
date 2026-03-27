@@ -27,6 +27,28 @@ export const ScopeToggle: React.FC<ScopeToggleProps> = ({ value, onChange }) => 
   );
 };
 
+// --- Persistent scope hook ---
+
+const SCOPE_STORAGE_KEY = 'argoplane-scope';
+
+/** Use scope state that persists across ArgoCD UI refreshes via sessionStorage. */
+export function useStickyScope(): [Scope, (s: Scope) => void] {
+  const [scope, setScopeRaw] = React.useState<Scope>(() => {
+    try {
+      const stored = sessionStorage.getItem(SCOPE_STORAGE_KEY);
+      if (stored === 'app' || stored === 'namespace') return stored;
+    } catch {}
+    return 'app';
+  });
+
+  const setScope = React.useCallback((s: Scope) => {
+    setScopeRaw(s);
+    try { sessionStorage.setItem(SCOPE_STORAGE_KEY, s); } catch {}
+  }, []);
+
+  return [scope, setScope];
+}
+
 // --- Tree extraction helpers ---
 
 /** Extract pod names belonging to this app from the ArgoCD resource tree. */

@@ -15,7 +15,7 @@ import {
   spacing,
   panel,
 } from '@argoplane/shared';
-import type { Scope } from '@argoplane/shared';
+import { useStickyScope } from '@argoplane/shared';
 import { fetchOverview, downloadExport } from '../api';
 import { ImageReport, OverviewResponse, Vulnerability } from '../types';
 import { PieChart } from './PieChart';
@@ -123,7 +123,7 @@ export const AppVulnerabilitiesView: React.FC<{ application: any; tree?: any }> 
   const [sortKey, setSortKey] = React.useState<SortKey>('severity');
   const [sortDir, setSortDir] = React.useState<'asc' | 'desc'>('asc');
 
-  const [scope, setScope] = React.useState<Scope>('app');
+  const [scope, setScope] = useStickyScope();
 
   const appName = application?.metadata?.name || '';
   const appNamespace = application?.metadata?.namespace || 'argocd';

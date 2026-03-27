@@ -4,7 +4,7 @@ import {
   ScopeToggle, extractWorkloadNames,
   colors, fonts, fontSize, fontWeight, spacing, panel,
 } from '@argoplane/shared';
-import type { Scope } from '@argoplane/shared';
+import { useStickyScope } from '@argoplane/shared';
 import { fetchSecretsOverview, downloadExport } from '../api';
 import { SecretOverviewResponse, ExposedSecret } from '../types';
 import { PieChart } from './PieChart';
@@ -42,7 +42,7 @@ export const AppExposedSecretsView: React.FC<{ application: any; tree?: any }> =
   const [search, setSearch] = React.useState('');
   const [sortKey, setSortKey] = React.useState<SortKey>('severity');
   const [sortDir, setSortDir] = React.useState<'asc' | 'desc'>('asc');
-  const [scope, setScope] = React.useState<Scope>('app');
+  const [scope, setScope] = useStickyScope();
 
   const appName = application?.metadata?.name || '';
   const appNamespace = application?.metadata?.namespace || 'argocd';

@@ -14,7 +14,7 @@ import {
   spacing,
   panel,
 } from '@argoplane/shared';
-import type { Scope } from '@argoplane/shared';
+import { useStickyScope } from '@argoplane/shared';
 import { fetchAppMetrics, fetchPodBreakdown } from '../api';
 import { MetricData, PodMetric } from '../types';
 import { ConfigDashboard } from './ConfigDashboard';
@@ -36,7 +36,7 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
   const [pods, setPods] = React.useState<PodMetric[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [scope, setScope] = React.useState<Scope>('app');
+  const [scope, setScope] = useStickyScope();
 
   const namespace = application?.spec?.destination?.namespace || '';
   const appName = application?.metadata?.name || '';

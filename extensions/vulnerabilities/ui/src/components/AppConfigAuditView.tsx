@@ -15,7 +15,7 @@ import {
   spacing,
   panel,
 } from '@argoplane/shared';
-import type { Scope } from '@argoplane/shared';
+import { useStickyScope } from '@argoplane/shared';
 import { fetchAuditOverview, downloadExport } from '../api';
 import { AuditOverviewResponse, AuditCheck, AuditReport } from '../types';
 import { PieChart } from './PieChart';
@@ -113,7 +113,7 @@ export const AppConfigAuditView: React.FC<{ application: any; tree?: any }> = ({
   const [sortDir, setSortDir] = React.useState<'asc' | 'desc'>('asc');
   const [expandedResource, setExpandedResource] = React.useState<string | null>(null);
 
-  const [scope, setScope] = React.useState<Scope>('app');
+  const [scope, setScope] = useStickyScope();
 
   const appName = application?.metadata?.name || '';
   const appNamespace = application?.metadata?.namespace || 'argocd';

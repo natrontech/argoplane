@@ -14,7 +14,7 @@ import {
   spacing,
   panel,
 } from '@argoplane/shared';
-import type { Scope } from '@argoplane/shared';
+import { useStickyScope } from '@argoplane/shared';
 import { fetchPoliciesWithOwnership, fetchEndpoints, fetchFlows } from '../api';
 import {
   PolicySummary,
@@ -275,7 +275,7 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
   const [expandedFlowIdx, setExpandedFlowIdx] = React.useState<number | null>(null);
   const [expandedPolicy, setExpandedPolicy] = React.useState<string | null>(null);
   const [aggregated, setAggregated] = React.useState(false);
-  const [scope, setScope] = React.useState<Scope>('app');
+  const [scope, setScope] = useStickyScope();
 
   const namespace = application?.spec?.destination?.namespace || '';
   const appName = application?.metadata?.name || '';
