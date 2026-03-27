@@ -37,9 +37,11 @@ export async function fetchEndpoints(
   namespace: string,
   appNamespace: string,
   appName: string,
-  project: string
+  project: string,
+  pods?: string[]
 ): Promise<EndpointSummary[]> {
   const params = new URLSearchParams({ namespace });
+  if (pods && pods.length > 0) params.set('pods', pods.join(','));
   const response = await fetch(`/extensions/networking/api/v1/endpoints?${params}`, {
     headers: headers(appNamespace, appName, project),
   });
@@ -57,7 +59,8 @@ export async function fetchFlows(
   since: string = '5m',
   limit: number = 200,
   verdict: string = 'all',
-  direction: string = 'all'
+  direction: string = 'all',
+  pods?: string[]
 ): Promise<FlowsResponse> {
   const params = new URLSearchParams({
     namespace,
@@ -66,6 +69,7 @@ export async function fetchFlows(
     verdict,
     direction,
   });
+  if (pods && pods.length > 0) params.set('pods', pods.join(','));
   const response = await fetch(`/extensions/networking/api/v1/flows?${params}`, {
     headers: headers(appNamespace, appName, project),
   });

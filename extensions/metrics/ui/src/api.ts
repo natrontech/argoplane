@@ -36,10 +36,12 @@ export function fetchTimeSeriesMetrics(
 
 export function fetchAppMetrics(
   namespace: string, range: TimeRange | undefined,
-  appNamespace: string, appName: string, project: string
+  appNamespace: string, appName: string, project: string,
+  pods?: string[]
 ): Promise<AppMetricsResponse> {
   const params = new URLSearchParams({ namespace });
   if (range) params.set('range', range);
+  if (pods && pods.length > 0) params.set('pods', pods.join(','));
   return jsonFetch(`/extensions/metrics/api/v1/app-metrics?${params}`, argoHeaders(appNamespace, appName, project));
 }
 

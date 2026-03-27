@@ -33,6 +33,19 @@ func ForStatefulSet(namespace, name, container string) string {
 	return sel
 }
 
+// ForPods builds a LogQL stream selector matching a specific set of pods.
+func ForPods(namespace string, pods []string, container string) string {
+	escaped := make([]string, len(pods))
+	for i, p := range pods {
+		escaped[i] = regexp.QuoteMeta(p)
+	}
+	podRegex := strings.Join(escaped, "|")
+	if container != "" {
+		return fmt.Sprintf(`{namespace=%q, pod=~%q, container=%q}`, namespace, podRegex, container)
+	}
+	return fmt.Sprintf(`{namespace=%q, pod=~%q}`, namespace, podRegex)
+}
+
 // ForNamespace builds a LogQL stream selector for an entire namespace.
 func ForNamespace(namespace, container string) string {
 	sel := fmt.Sprintf(`{namespace=%q}`, namespace)
@@ -71,7 +84,8 @@ func VolumeQuery(selector string, step string) string {
 }
 
 // BuildSelector constructs a LogQL stream selector from query parameters.
-func BuildSelector(namespace, pod, resource, kind, container string) string {
+// When pods is non-empty, the selector is scoped to those pods only.
+func BuildSelector(namespace, pod, resource, kind, container string, pods []string) string {
 	switch {
 	case pod != "":
 		return ForPod(namespace, pod, container)
@@ -79,6 +93,8 @@ func BuildSelector(namespace, pod, resource, kind, container string) string {
 		return ForDeployment(namespace, resource, container)
 	case resource != "" && kind == "StatefulSet":
 		return ForStatefulSet(namespace, resource, container)
+	case len(pods) > 0:
+		return ForPods(namespace, pods, container)
 	default:
 		return ForNamespace(namespace, container)
 	}

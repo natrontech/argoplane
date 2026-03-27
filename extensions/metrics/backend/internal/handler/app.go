@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/natrontech/argoplane/extensions/metrics/backend/internal/prometheus"
@@ -36,10 +37,15 @@ func (h *App) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	username := r.Header.Get("Argocd-Username")
-	slog.Debug("app metrics request", "namespace", namespace, "range", timeRange, "user", username)
+	var pods []string
+	if p := r.URL.Query().Get("pods"); p != "" {
+		pods = strings.Split(p, ",")
+	}
 
-	queries := query.AppMetrics(namespace)
+	username := r.Header.Get("Argocd-Username")
+	slog.Debug("app metrics request", "namespace", namespace, "range", timeRange, "pods", len(pods), "user", username)
+
+	queries := query.AppMetrics(namespace, pods)
 	resp := appResponse{}
 
 	// Instant summary

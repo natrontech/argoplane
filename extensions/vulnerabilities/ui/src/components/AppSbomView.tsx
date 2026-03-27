@@ -1,8 +1,10 @@
 import * as React from 'react';
 import {
   Loading, EmptyState, Button, SectionHeader, MetricCard, Input,
+  ScopeToggle, extractWorkloadNames,
   colors, fonts, fontSize, fontWeight, spacing, panel,
 } from '@argoplane/shared';
+import type { Scope } from '@argoplane/shared';
 import { fetchSbomOverview, downloadExport } from '../api';
 import { SbomOverviewResponse, SbomComponent } from '../types';
 
@@ -14,7 +16,7 @@ const SortHeader: React.FC<{ label: string; sortKey: SortKey; active: SortKey; d
   </th>
 );
 
-export const AppSbomView: React.FC<{ application: any; tree?: any }> = ({ application }) => {
+export const AppSbomView: React.FC<{ application: any; tree?: any }> = ({ application, tree }) => {
   const [data, setData] = React.useState<SbomOverviewResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -22,22 +24,26 @@ export const AppSbomView: React.FC<{ application: any; tree?: any }> = ({ applic
   const [sortKey, setSortKey] = React.useState<SortKey>('name');
   const [sortDir, setSortDir] = React.useState<'asc' | 'desc'>('asc');
   const [expandedImage, setExpandedImage] = React.useState<string | null>(null);
+  const [scope, setScope] = React.useState<Scope>('app');
 
   const appName = application?.metadata?.name || '';
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
   const destNamespace = application?.spec?.destination?.namespace || 'default';
 
+  const workloads = React.useMemo(() => extractWorkloadNames(tree, destNamespace), [tree, destNamespace]);
+  const scopedResources = scope === 'app' && workloads.length > 0 ? workloads : undefined;
+
   React.useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    fetchSbomOverview(destNamespace, appNamespace, appName, project, controller.signal)
+    fetchSbomOverview(destNamespace, appNamespace, appName, project, controller.signal, scopedResources)
       .then(d => { if (!controller.signal.aborted) setData(d); })
       .catch(err => { if (!controller.signal.aborted) setError(err.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [destNamespace, appNamespace, appName, project]);
+  }, [destNamespace, appNamespace, appName, project, scopedResources]);
 
   const handleSort = (key: SortKey) => { if (key === sortKey) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc'); } };
 
@@ -55,6 +61,9 @@ export const AppSbomView: React.FC<{ application: any; tree?: any }> = ({ applic
 
   return (
     <div style={panel}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: spacing[3] }}>
+        <ScopeToggle value={scope} onChange={(s) => setScope(s)} />
+      </div>
       {/* Summary */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing[6], marginBottom: spacing[6] }}>
         <div style={{ flex: 1 }}>

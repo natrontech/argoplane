@@ -1,8 +1,10 @@
 import * as React from 'react';
 import {
   Loading, EmptyState, Button, SectionHeader, MetricCard, Input,
+  ScopeToggle, extractWorkloadNames,
   colors, fonts, fontSize, fontWeight, spacing, panel,
 } from '@argoplane/shared';
+import type { Scope } from '@argoplane/shared';
 import { fetchSecretsOverview, downloadExport } from '../api';
 import { SecretOverviewResponse, ExposedSecret } from '../types';
 import { PieChart } from './PieChart';
@@ -32,7 +34,7 @@ const SortHeader: React.FC<{ label: string; sortKey: SortKey; active: SortKey; d
   </th>
 );
 
-export const AppExposedSecretsView: React.FC<{ application: any; tree?: any }> = ({ application }) => {
+export const AppExposedSecretsView: React.FC<{ application: any; tree?: any }> = ({ application, tree }) => {
   const [data, setData] = React.useState<SecretOverviewResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -40,22 +42,26 @@ export const AppExposedSecretsView: React.FC<{ application: any; tree?: any }> =
   const [search, setSearch] = React.useState('');
   const [sortKey, setSortKey] = React.useState<SortKey>('severity');
   const [sortDir, setSortDir] = React.useState<'asc' | 'desc'>('asc');
+  const [scope, setScope] = React.useState<Scope>('app');
 
   const appName = application?.metadata?.name || '';
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
   const destNamespace = application?.spec?.destination?.namespace || 'default';
 
+  const workloads = React.useMemo(() => extractWorkloadNames(tree, destNamespace), [tree, destNamespace]);
+  const scopedResources = scope === 'app' && workloads.length > 0 ? workloads : undefined;
+
   React.useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    fetchSecretsOverview(destNamespace, appNamespace, appName, project, controller.signal)
+    fetchSecretsOverview(destNamespace, appNamespace, appName, project, controller.signal, scopedResources)
       .then(d => { if (!controller.signal.aborted) setData(d); })
       .catch(err => { if (!controller.signal.aborted) setError(err.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [destNamespace, appNamespace, appName, project]);
+  }, [destNamespace, appNamespace, appName, project, scopedResources]);
 
   const handleSort = (key: SortKey) => { if (key === sortKey) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc'); } };
   const toggleSeverity = (sev: string) => { setSeverityFilter(prev => { const next = new Set(prev); if (next.has(sev)) next.delete(sev); else next.add(sev); return next; }); };
@@ -98,6 +104,9 @@ export const AppExposedSecretsView: React.FC<{ application: any; tree?: any }> =
 
   return (
     <div style={panel}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: spacing[3] }}>
+        <ScopeToggle value={scope} onChange={(s) => setScope(s)} />
+      </div>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing[6], marginBottom: spacing[6] }}>
         <PieChart segments={pieSegments} />
         <div style={{ flex: 1 }}>

@@ -42,6 +42,10 @@ func (h *Logs) Handle(w http.ResponseWriter, r *http.Request) {
 	container := q.Get("container")
 	filter := q.Get("filter")
 	severity := q.Get("severity")
+	var scopedPods []string
+	if p := q.Get("pods"); p != "" {
+		scopedPods = strings.Split(p, ",")
+	}
 	direction := q.Get("direction")
 	if direction == "" {
 		direction = "backward"
@@ -68,7 +72,7 @@ func (h *Logs) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build LogQL query
-	selector := logql.BuildSelector(namespace, pod, resource, kind, container)
+	selector := logql.BuildSelector(namespace, pod, resource, kind, container, scopedPods)
 	query := logql.WithFilter(selector, filter)
 	if severity != "" {
 		severities := strings.Split(severity, ",")

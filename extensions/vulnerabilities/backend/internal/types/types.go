@@ -113,7 +113,8 @@ type AuditReport struct {
 
 // AuditOverviewRequest is the body for the audit overview endpoint.
 type AuditOverviewRequest struct {
-	Namespace string `json:"namespace"`
+	Namespace string   `json:"namespace"`
+	Resources []string `json:"resources,omitempty"`
 }
 
 // AuditOverviewResponse is the combined config audit summary.
@@ -168,7 +169,8 @@ type ImageReport struct {
 
 // OverviewRequest is the body for the overview endpoint.
 type OverviewRequest struct {
-	Namespace string `json:"namespace"`
+	Namespace string   `json:"namespace"`
+	Resources []string `json:"resources,omitempty"`
 }
 
 // OverviewResponse is the combined app-level vulnerability summary.

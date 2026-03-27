@@ -6,6 +6,8 @@ import {
   SectionHeader,
   MetricCard,
   Input,
+  ScopeToggle,
+  extractWorkloadNames,
   colors,
   fonts,
   fontSize,
@@ -13,6 +15,7 @@ import {
   spacing,
   panel,
 } from '@argoplane/shared';
+import type { Scope } from '@argoplane/shared';
 import { fetchAuditOverview, downloadExport } from '../api';
 import { AuditOverviewResponse, AuditCheck, AuditReport } from '../types';
 import { PieChart } from './PieChart';
@@ -100,7 +103,7 @@ const SortHeader: React.FC<{ label: string; sortKey: SortKey; active: SortKey; d
 // Main Component
 // ============================================================
 
-export const AppConfigAuditView: React.FC<{ application: any; tree?: any }> = ({ application }) => {
+export const AppConfigAuditView: React.FC<{ application: any; tree?: any }> = ({ application, tree }) => {
   const [data, setData] = React.useState<AuditOverviewResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -110,21 +113,26 @@ export const AppConfigAuditView: React.FC<{ application: any; tree?: any }> = ({
   const [sortDir, setSortDir] = React.useState<'asc' | 'desc'>('asc');
   const [expandedResource, setExpandedResource] = React.useState<string | null>(null);
 
+  const [scope, setScope] = React.useState<Scope>('app');
+
   const appName = application?.metadata?.name || '';
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
   const destNamespace = application?.spec?.destination?.namespace || 'default';
 
+  const workloads = React.useMemo(() => extractWorkloadNames(tree, destNamespace), [tree, destNamespace]);
+  const scopedResources = scope === 'app' && workloads.length > 0 ? workloads : undefined;
+
   React.useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    fetchAuditOverview(destNamespace, appNamespace, appName, project, controller.signal)
+    fetchAuditOverview(destNamespace, appNamespace, appName, project, controller.signal, scopedResources)
       .then(d => { if (!controller.signal.aborted) setData(d); })
       .catch(err => { if (!controller.signal.aborted) setError(err.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [destNamespace, appNamespace, appName, project]);
+  }, [destNamespace, appNamespace, appName, project, scopedResources]);
 
   const handleSort = (key: SortKey) => {
     if (key === sortKey) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -177,6 +185,9 @@ export const AppConfigAuditView: React.FC<{ application: any; tree?: any }> = ({
 
   return (
     <div style={panel}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: spacing[3] }}>
+        <ScopeToggle value={scope} onChange={(s) => setScope(s)} />
+      </div>
       {/* Summary row: pie chart + cards + export */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing[6], marginBottom: spacing[6] }}>
         <PieChart segments={pieSegments} />

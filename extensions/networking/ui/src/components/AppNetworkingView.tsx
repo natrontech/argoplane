@@ -5,6 +5,8 @@ import {
   Tag,
   Button,
   Input,
+  ScopeToggle,
+  extractPodNames,
   colors,
   fonts,
   fontSize,
@@ -12,6 +14,7 @@ import {
   spacing,
   panel,
 } from '@argoplane/shared';
+import type { Scope } from '@argoplane/shared';
 import { fetchPoliciesWithOwnership, fetchEndpoints, fetchFlows } from '../api';
 import {
   PolicySummary,
@@ -272,11 +275,15 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
   const [expandedFlowIdx, setExpandedFlowIdx] = React.useState<number | null>(null);
   const [expandedPolicy, setExpandedPolicy] = React.useState<string | null>(null);
   const [aggregated, setAggregated] = React.useState(false);
+  const [scope, setScope] = React.useState<Scope>('app');
 
   const namespace = application?.spec?.destination?.namespace || '';
   const appName = application?.metadata?.name || '';
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
+
+  const treePodNames = React.useMemo(() => extractPodNames(tree, namespace), [tree, namespace]);
+  const scopedPods = scope === 'app' && treePodNames.length > 0 ? treePodNames : undefined;
 
   const resourceRefs = React.useMemo<ResourceRef[]>(() => {
     if (!tree?.nodes) return [];
@@ -301,8 +308,8 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
     if (!namespace) return;
     Promise.all([
       fetchPoliciesWithOwnership(namespace, resourceRefs, appNamespace, appName, project).catch(() => null),
-      fetchEndpoints(namespace, appNamespace, appName, project).catch(() => null),
-      fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter, directionFilter).catch(() => null),
+      fetchEndpoints(namespace, appNamespace, appName, project, scopedPods).catch(() => null),
+      fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter, directionFilter, scopedPods).catch(() => null),
     ]).then(([pol, ep, fl]) => {
       // Only update state if the fetch succeeded; keep previous data on failure.
       if (pol !== null) setPolicies(pol);
@@ -312,7 +319,7 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
     })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [namespace, appNamespace, appName, project, resourceRefs, timeRange, verdictFilter, directionFilter]);
+  }, [namespace, appNamespace, appName, project, resourceRefs, timeRange, verdictFilter, directionFilter, scopedPods]);
 
   React.useEffect(() => { setLoading(true); fetchAll(); }, [fetchAll]);
   React.useEffect(() => { const i = setInterval(fetchAll, REFRESH_INTERVAL); return () => clearInterval(i); }, [fetchAll]);
@@ -379,6 +386,8 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
           </>)}
         </div>
         <div style={topRight}>
+          <ScopeToggle value={scope} onChange={(s) => { setScope(s); setLoading(true); }} />
+          <Sep />
           {(['5m', '15m', '1h'] as TimeRange[]).map((t) => <button key={t} onClick={() => setTimeRange(t)} style={pill(timeRange === t)}>{t}</button>)}
           <Sep />
           {(['all', 'forwarded', 'dropped', 'error'] as VerdictFilter[]).map((v) => <button key={v} onClick={() => setVerdictFilter(v)} style={pill(verdictFilter === v)}>{v}</button>)}

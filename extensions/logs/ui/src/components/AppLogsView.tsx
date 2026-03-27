@@ -4,12 +4,15 @@ import {
   EmptyState,
   SectionHeader,
   MetricCard,
+  ScopeToggle,
+  extractPodNames,
   colors,
   fonts,
   fontSize,
   panel,
   spacing,
 } from '@argoplane/shared';
+import type { Scope } from '@argoplane/shared';
 import { fetchLogs, fetchLabelValues } from '../api';
 import { LogEntry, Severity, TimeSelection, resolveTimeSelection } from '../types';
 import { LogLine } from './LogLine';
@@ -42,11 +45,15 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
     type: 'relative',
     relative: '1h',
   });
+  const [scope, setScope] = React.useState<Scope>('app');
 
   const namespace = application?.spec?.destination?.namespace || '';
   const appName = application?.metadata?.name || '';
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
+
+  const treePodNames = React.useMemo(() => extractPodNames(tree, namespace), [tree, namespace]);
+  const scopedPods = scope === 'app' && treePodNames.length > 0 ? treePodNames : undefined;
 
   // Debounce search text: only update debouncedSearch after 500ms of no typing
   React.useEffect(() => {
@@ -72,6 +79,7 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
       start: start.toISOString(),
       end: end.toISOString(),
       limit: DEFAULT_LIMIT,
+      pods: scopedPods,
     };
 
     fetchLogs(queryParams, appNamespace, appName, project)
@@ -82,18 +90,18 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [namespace, selectedPod, selectedContainer, debouncedSearch, activeSeverities, timeSelection, appNamespace, appName, project]);
+  }, [namespace, selectedPod, selectedContainer, debouncedSearch, activeSeverities, timeSelection, appNamespace, appName, project, scopedPods]);
 
   // Fetch containers and pods for dropdowns
   React.useEffect(() => {
     if (!namespace) return;
-    fetchLabelValues('container', namespace, appNamespace, appName, project)
+    fetchLabelValues('container', namespace, appNamespace, appName, project, scopedPods)
       .then((vals) => setContainers(vals || []))
       .catch(() => setContainers([]));
-    fetchLabelValues('pod', namespace, appNamespace, appName, project)
+    fetchLabelValues('pod', namespace, appNamespace, appName, project, scopedPods)
       .then((vals) => setPods(vals || []))
       .catch(() => setPods([]));
-  }, [namespace, appNamespace, appName, project]);
+  }, [namespace, appNamespace, appName, project, scopedPods]);
 
   // Fetch data when filters change (but not on every keystroke thanks to debounce)
   React.useEffect(() => {
@@ -157,7 +165,10 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
 
   return (
     <div style={{ ...panel, maxWidth: '100%', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 200px)', minHeight: 500 }}>
-      <SectionHeader title="LOG EXPLORER" />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <SectionHeader title="LOG EXPLORER" />
+        <ScopeToggle value={scope} onChange={(s) => { setScope(s); setLoading(true); }} />
+      </div>
 
       {/* Stats row */}
       <div style={{

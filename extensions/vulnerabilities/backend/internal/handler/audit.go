@@ -41,7 +41,8 @@ func (h *AuditHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
 
 	auditLog(r, "audit.overview", req.Namespace)
 
-	list, err := h.client.Resource(types.ConfigAuditReportGVR).Namespace(req.Namespace).List(r.Context(), metav1.ListOptions{})
+	listOpts := metav1.ListOptions{LabelSelector: resourceLabelSelector(req.Resources)}
+	list, err := h.client.Resource(types.ConfigAuditReportGVR).Namespace(req.Namespace).List(r.Context(), listOpts)
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "failed to list config audit reports")
 		return

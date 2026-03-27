@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -69,4 +70,13 @@ func extractAppNamespace(r *http.Request) string {
 		return parts[0]
 	}
 	return ""
+}
+
+// resourceLabelSelector builds a Kubernetes label selector that filters Trivy reports
+// to only those belonging to the given workload resource names.
+func resourceLabelSelector(resources []string) string {
+	if len(resources) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("trivy-operator.resource.name in (%s)", strings.Join(resources, ","))
 }

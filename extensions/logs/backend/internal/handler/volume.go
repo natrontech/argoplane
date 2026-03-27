@@ -40,6 +40,10 @@ func (h *Volume) Handle(w http.ResponseWriter, r *http.Request) {
 	container := q.Get("container")
 	filter := q.Get("filter")
 	severity := q.Get("severity")
+	var scopedPods []string
+	if p := q.Get("pods"); p != "" {
+		scopedPods = strings.Split(p, ",")
+	}
 
 	end := time.Now()
 	start := end.Add(-1 * time.Hour)
@@ -59,7 +63,7 @@ func (h *Volume) Handle(w http.ResponseWriter, r *http.Request) {
 	step := calculateStep(duration)
 
 	// Build LogQL query
-	selector := logql.BuildSelector(namespace, pod, resource, kind, container)
+	selector := logql.BuildSelector(namespace, pod, resource, kind, container, scopedPods)
 	query := logql.WithFilter(selector, filter)
 	if severity != "" {
 		severities := strings.Split(severity, ",")

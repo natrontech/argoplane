@@ -28,7 +28,8 @@ func (h *SbomHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Namespace string `json:"namespace"`
+		Namespace string   `json:"namespace"`
+		Resources []string `json:"resources,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request body")
@@ -42,7 +43,8 @@ func (h *SbomHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
 
 	auditLog(r, "sbom.overview", req.Namespace)
 
-	list, err := h.client.Resource(types.SbomReportGVR).Namespace(req.Namespace).List(r.Context(), metav1.ListOptions{})
+	listOpts := metav1.ListOptions{LabelSelector: resourceLabelSelector(req.Resources)}
+	list, err := h.client.Resource(types.SbomReportGVR).Namespace(req.Namespace).List(r.Context(), listOpts)
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "failed to list sbom reports")
 		return

@@ -40,8 +40,20 @@ func (h *EndpointsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Filter by pod names if provided (app-scoped mode).
+	var podSet map[string]bool
+	if p := r.URL.Query().Get("pods"); p != "" {
+		podSet = make(map[string]bool)
+		for _, name := range strings.Split(p, ",") {
+			podSet[name] = true
+		}
+	}
+
 	endpoints := make([]types.EndpointSummary, 0, len(list.Items))
 	for _, item := range list.Items {
+		if podSet != nil && !podSet[item.GetName()] {
+			continue
+		}
 		endpoints = append(endpoints, parseEndpointSummary(item))
 	}
 

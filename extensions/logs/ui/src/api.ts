@@ -26,6 +26,7 @@ export function fetchLogs(
     end?: string;
     limit?: number;
     direction?: string;
+    pods?: string[];
   },
   appNamespace: string, appName: string, project: string,
 ): Promise<LogsResponse> {
@@ -41,21 +42,26 @@ export function fetchLogs(
   if (params.end) searchParams.set('end', params.end);
   if (params.limit) searchParams.set('limit', String(params.limit));
   if (params.direction) searchParams.set('direction', params.direction);
+  if (params.pods && params.pods.length > 0) searchParams.set('pods', params.pods.join(','));
   return jsonFetch(`/extensions/logs/api/v1/logs?${searchParams}`, argoHeaders(appNamespace, appName, project));
 }
 
 export function fetchLabels(
   namespace: string,
   appNamespace: string, appName: string, project: string,
+  pods?: string[],
 ): Promise<string[]> {
   const params = new URLSearchParams({ namespace });
+  if (pods && pods.length > 0) params.set('pods', pods.join(','));
   return jsonFetch(`/extensions/logs/api/v1/logs/labels?${params}`, argoHeaders(appNamespace, appName, project));
 }
 
 export function fetchLabelValues(
   label: string, namespace: string,
   appNamespace: string, appName: string, project: string,
+  pods?: string[],
 ): Promise<string[]> {
   const params = new URLSearchParams({ namespace });
+  if (pods && pods.length > 0) params.set('pods', pods.join(','));
   return jsonFetch(`/extensions/logs/api/v1/logs/label/${encodeURIComponent(label)}/values?${params}`, argoHeaders(appNamespace, appName, project));
 }

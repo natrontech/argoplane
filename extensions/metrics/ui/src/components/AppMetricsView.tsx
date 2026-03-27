@@ -5,6 +5,8 @@ import {
   SectionHeader,
   MetricCard,
   Button,
+  ScopeToggle,
+  extractPodNames,
   colors,
   fonts,
   fontSize,
@@ -12,6 +14,7 @@ import {
   spacing,
   panel,
 } from '@argoplane/shared';
+import type { Scope } from '@argoplane/shared';
 import { fetchAppMetrics, fetchPodBreakdown } from '../api';
 import { MetricData, PodMetric } from '../types';
 import { ConfigDashboard } from './ConfigDashboard';
@@ -33,6 +36,7 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
   const [pods, setPods] = React.useState<PodMetric[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [scope, setScope] = React.useState<Scope>('app');
 
   const namespace = application?.spec?.destination?.namespace || '';
   const appName = application?.metadata?.name || '';
@@ -53,13 +57,18 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
       .map((n: any) => n.name) as string[];
   }, [tree, namespace]);
 
+  const scopedPodNames = React.useMemo(() => {
+    if (scope === 'namespace') return undefined;
+    return treePodNames.length > 0 ? treePodNames : undefined;
+  }, [scope, treePodNames]);
+
   const fetchAll = React.useCallback(() => {
     if (!namespace) return;
 
-    const metricsP = fetchAppMetrics(namespace, undefined, appNamespace, appName, project);
+    const metricsP = fetchAppMetrics(namespace, undefined, appNamespace, appName, project, scopedPodNames);
 
     const deployName = treeDeployments.length > 0 ? treeDeployments[0] : appName;
-    const podNames = treePodNames.length > 0 ? treePodNames : undefined;
+    const podNames = scope === 'app' && treePodNames.length > 0 ? treePodNames : undefined;
     const podsP = fetchPodBreakdown(namespace, deployName, 'Deployment', appNamespace, appName, project, podNames)
       .catch(() => [] as PodMetric[]);
 
@@ -71,7 +80,7 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [namespace, appNamespace, appName, project, treePodNames, treeDeployments]);
+  }, [namespace, appNamespace, appName, project, treePodNames, treeDeployments, scope, scopedPodNames]);
 
   React.useEffect(() => {
     setLoading(true);
@@ -102,6 +111,11 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
 
   return (
     <div style={panel}>
+      {/* Scope toggle */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: spacing[3] }}>
+        <ScopeToggle value={scope} onChange={(s) => { setScope(s); setLoading(true); }} />
+      </div>
+
       {/* Overview */}
       <SectionHeader title="OVERVIEW" />
       <div style={cardGrid}>

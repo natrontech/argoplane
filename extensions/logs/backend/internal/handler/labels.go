@@ -3,6 +3,7 @@ package handler
 import (
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/natrontech/argoplane/extensions/logs/backend/internal/logql"
@@ -41,7 +42,12 @@ func (h *Labels) HandleLabels(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	query := logql.ForNamespace(namespace, "")
+	var query string
+	if p := r.URL.Query().Get("pods"); p != "" {
+		query = logql.ForPods(namespace, strings.Split(p, ","), "")
+	} else {
+		query = logql.ForNamespace(namespace, "")
+	}
 	labels, err := h.loki.LabelsWithQuery(r.Context(), query, start, end)
 	if err != nil {
 		slog.Warn("labels query failed", "error", err, "namespace", namespace)
@@ -80,7 +86,12 @@ func (h *Labels) HandleLabelValues(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	query := logql.ForNamespace(namespace, "")
+	var query string
+	if p := r.URL.Query().Get("pods"); p != "" {
+		query = logql.ForPods(namespace, strings.Split(p, ","), "")
+	} else {
+		query = logql.ForNamespace(namespace, "")
+	}
 
 	values, err := h.loki.LabelValues(r.Context(), name, query, start, end)
 	if err != nil {

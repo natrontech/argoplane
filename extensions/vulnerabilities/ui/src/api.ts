@@ -21,15 +21,18 @@ export async function fetchOverview(
   appNamespace: string,
   appName: string,
   project: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  resources?: string[]
 ): Promise<OverviewResponse> {
+  const body: any = { namespace };
+  if (resources && resources.length > 0) body.resources = resources;
   const response = await fetch('/extensions/vulnerabilities/api/v1/overview', {
     method: 'POST',
     headers: {
       ...proxyHeaders(appNamespace, appName, project),
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ namespace }),
+    body: JSON.stringify(body),
     signal,
   });
   if (!response.ok) {
@@ -48,15 +51,18 @@ export async function fetchAuditOverview(
   appNamespace: string,
   appName: string,
   project: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  resources?: string[]
 ): Promise<AuditOverviewResponse> {
+  const body: any = { namespace };
+  if (resources && resources.length > 0) body.resources = resources;
   const response = await fetch('/extensions/vulnerabilities/api/v1/audit/overview', {
     method: 'POST',
     headers: {
       ...proxyHeaders(appNamespace, appName, project),
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ namespace }),
+    body: JSON.stringify(body),
     signal,
   });
   if (!response.ok) {
@@ -75,15 +81,18 @@ export async function fetchSecretsOverview(
   appNamespace: string,
   appName: string,
   project: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  resources?: string[]
 ): Promise<SecretOverviewResponse> {
+  const body: any = { namespace };
+  if (resources && resources.length > 0) body.resources = resources;
   const response = await fetch('/extensions/vulnerabilities/api/v1/secrets/overview', {
     method: 'POST',
     headers: {
       ...proxyHeaders(appNamespace, appName, project),
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ namespace }),
+    body: JSON.stringify(body),
     signal,
   });
   if (!response.ok) {
@@ -98,15 +107,18 @@ export async function fetchSbomOverview(
   appNamespace: string,
   appName: string,
   project: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  resources?: string[]
 ): Promise<SbomOverviewResponse> {
+  const body: any = { namespace };
+  if (resources && resources.length > 0) body.resources = resources;
   const response = await fetch('/extensions/vulnerabilities/api/v1/sbom/overview', {
     method: 'POST',
     headers: {
       ...proxyHeaders(appNamespace, appName, project),
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ namespace }),
+    body: JSON.stringify(body),
     signal,
   });
   if (!response.ok) {

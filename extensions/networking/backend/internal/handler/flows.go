@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/natrontech/argoplane/extensions/networking/backend/internal/hubble"
@@ -75,6 +76,21 @@ func (h *FlowsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		slog.Error("failed to query hubble flows", "error", err, "namespace", namespace)
 		WriteError(w, http.StatusInternalServerError, "failed to query flows")
 		return
+	}
+
+	// Filter by pod names if provided (app-scoped mode).
+	if podsParam := r.URL.Query().Get("pods"); podsParam != "" {
+		podSet := make(map[string]bool)
+		for _, p := range strings.Split(podsParam, ",") {
+			podSet[p] = true
+		}
+		filtered := make([]hubble.FlowSummary, 0, len(flows))
+		for _, f := range flows {
+			if podSet[f.SourcePod] || podSet[f.DestPod] {
+				filtered = append(filtered, f)
+			}
+		}
+		flows = filtered
 	}
 
 	// Compute verdict summary counts.
