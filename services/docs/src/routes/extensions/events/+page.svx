@@ -1,0 +1,78 @@
+---
+title: Events Extension
+description: Kubernetes event visibility for ArgoCD resources and applications
+---
+
+# Events Extension
+
+The events extension surfaces Kubernetes events inside ArgoCD. Developers can see warnings, scheduling failures, image pull errors, and other cluster events for their resources without leaving ArgoCD.
+
+## Registration
+
+The extension registers as:
+
+- **Resource tabs** on `Pod`, `Deployment`, `StatefulSet`, `ReplicaSet`, `DaemonSet`, `Job`, and `CronJob` resources
+- **App view** on any ArgoCD Application (Events)
+
+## What it shows
+
+### Resource tabs
+
+Per-resource event views:
+
+- Kubernetes events filtered to the specific resource (by kind and name)
+- Event type color coding (Warning in red, Normal in green)
+- Time range picker (1h, 6h, 24h, 7d)
+- Expandable rows with full message, source component, host, and timestamps
+- Event count and relative timestamps (e.g. "5m ago")
+- Auto-refresh every 30 seconds
+
+### Application view (Events)
+
+Namespace-wide event aggregation for the entire application:
+
+- All events from the application's destination namespace
+- Summary cards: total events, warnings, normal
+- Type filter buttons (All, Warning, Normal)
+- Free-text search across reason, message, object kind, and object name
+- Time range picker
+- Expandable detail rows with source and timestamp information
+
+## No external dependencies
+
+Unlike other extensions, the events backend queries the Kubernetes API directly. No Prometheus, Loki, or other observability stack is required. If your cluster runs Kubernetes, events work.
+
+## Backend
+
+The events backend queries the Kubernetes Events API:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/v1/events` | List events with filters |
+
+### Configuration
+
+| Environment Variable | Required | Default | Description |
+|---------------------|----------|---------|-------------|
+| `PORT` | No | `8085` | HTTP server port |
+| `LOG_LEVEL` | No | `info` | Log level |
+
+### RBAC
+
+The backend needs read access to Kubernetes events:
+
+```yaml
+rules:
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list", "watch"]
+  - apiGroups: ["events.k8s.io"]
+    resources: ["events"]
+    verbs: ["list", "watch"]
+```
+
+## ArgoCD RBAC
+
+```
+p, role:developer, extensions, invoke, events, allow
+```

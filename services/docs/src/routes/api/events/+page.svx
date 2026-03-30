@@ -1,0 +1,81 @@
+---
+title: Events API
+description: Events extension backend API reference
+---
+
+# Events API
+
+The events backend exposes a JSON HTTP API consumed by the UI extension via ArgoCD's proxy at `/extensions/events/`.
+
+## Endpoints
+
+### List events
+
+```
+GET /api/v1/events?namespace={ns}&kind={kind}&name={name}&type={type}&since={since}
+```
+
+List Kubernetes events with optional filters.
+
+**Parameters:**
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `namespace` | string | Yes | - | Kubernetes namespace |
+| `kind` | string | No | - | Filter by involved object kind (`Pod`, `Deployment`, etc.) |
+| `name` | string | No | - | Filter by involved object name |
+| `type` | string | No | - | Event type: `Warning` or `Normal` |
+| `since` | string | No | `1h` | Time window: `1h`, `6h`, `24h`, `7d`, or any Go duration |
+
+**Response:**
+
+```json
+{
+  "events": [
+    {
+      "type": "Warning",
+      "reason": "BackOff",
+      "message": "Back-off restarting failed container app in pod app-abc123",
+      "involvedObject": {
+        "kind": "Pod",
+        "name": "app-abc123",
+        "namespace": "default"
+      },
+      "count": 5,
+      "firstTimestamp": "2026-03-30T08:00:00Z",
+      "lastTimestamp": "2026-03-30T08:15:00Z",
+      "source": {
+        "component": "kubelet",
+        "host": "node-1"
+      }
+    }
+  ],
+  "summary": {
+    "total": 12,
+    "warnings": 3,
+    "normal": 9
+  }
+}
+```
+
+### Health check
+
+```
+GET /healthz
+```
+
+Returns `200 OK` when the service is running.
+
+## Error responses
+
+```json
+{
+  "error": "namespace is required"
+}
+```
+
+| Status | Description |
+|--------|-------------|
+| 400 | Missing or invalid parameter (namespace required, invalid since format) |
+| 403 | Request did not come through ArgoCD proxy (missing `Argocd-Application-Name` header) |
+| 500 | Kubernetes API query failed |
