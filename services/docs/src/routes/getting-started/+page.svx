@@ -57,6 +57,7 @@ p, role:developer, extensions, invoke, backups, allow
 p, role:developer, extensions, invoke, networking, allow
 p, role:developer, extensions, invoke, logs, allow
 p, role:developer, extensions, invoke, vulnerabilities, allow
+p, role:developer, extensions, invoke, events, allow
 ```
 
 ### Verify

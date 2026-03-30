@@ -63,9 +63,13 @@ Add the **backups** extension. Developers can see Velero schedules, trigger back
 
 Add the **networking** extension. Developers see CiliumNetworkPolicies applied to their apps and can inspect Hubble flow logs without kubectl access.
 
-### Phase 4: Discover
+### Phase 4: Deep visibility
 
-The upcoming **platform** extension surfaces StorageClasses, IngressClasses, GatewayClasses, CRDs, operators, and node pools. This is where ArgoPlane's "discoverability first" principle really shines: developers stop asking "what can I use?" because the answer is right there.
+Add the **logs**, **vulnerabilities**, and **events** extensions. Developers can search logs from Loki, view Trivy vulnerability scan results, and see Kubernetes events for their resources, all without leaving ArgoCD.
+
+### Phase 5: Discover
+
+The upcoming **ArgoPlane Portal** will surface StorageClasses, IngressClasses, GatewayClasses, CRDs, operators, and node pools through a self-service catalog. This is where ArgoPlane's "discoverability first" principle really shines: developers stop asking "what can I use?" because the answer is right there.
 
 ## Rollout tips
 

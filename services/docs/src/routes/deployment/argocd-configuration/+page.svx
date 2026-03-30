@@ -41,7 +41,10 @@ kubectl -n argocd patch cm argocd-cm --type merge -p '{
   "data": {
     "extension.config.metrics": "services:\n- url: http://argoplane-metrics-backend.argocd.svc:8080\n",
     "extension.config.backups": "services:\n- url: http://argoplane-backups-backend.argocd.svc:8081\n",
-    "extension.config.networking": "services:\n- url: http://argoplane-networking-backend.argocd.svc:8082\n"
+    "extension.config.networking": "services:\n- url: http://argoplane-networking-backend.argocd.svc:8082\n",
+    "extension.config.logs": "services:\n- url: http://argoplane-logs-backend.argocd.svc:8083\n",
+    "extension.config.vulnerabilities": "services:\n- url: http://argoplane-vulnerabilities-backend.argocd.svc:8084\n",
+    "extension.config.events": "services:\n- url: http://argoplane-events-backend.argocd.svc:8085\n"
   }
 }'
 ```
@@ -63,9 +66,15 @@ Add the output to your `argocd-rbac-cm` ConfigMap's `policy.csv` field:
 p, role:admin, extensions, invoke, metrics, allow
 p, role:admin, extensions, invoke, backups, allow
 p, role:admin, extensions, invoke, networking, allow
+p, role:admin, extensions, invoke, logs, allow
+p, role:admin, extensions, invoke, vulnerabilities, allow
+p, role:admin, extensions, invoke, events, allow
 
 p, role:developer, extensions, invoke, metrics, allow
 p, role:developer, extensions, invoke, backups, allow
+p, role:developer, extensions, invoke, logs, allow
+p, role:developer, extensions, invoke, vulnerabilities, allow
+p, role:developer, extensions, invoke, events, allow
 ```
 
 <Callout type="warning">
@@ -186,6 +195,8 @@ extensions:
     enabled: false
   vulnerabilities:
     enabled: false
+  events:
+    enabled: false
 ```
 
 Set the init container env to:
@@ -213,7 +224,7 @@ ARGOCD_POD=$(kubectl -n argocd get pods \
 
 kubectl exec -n argocd $ARGOCD_POD -- mkdir -p /tmp/extensions
 
-for ext in metrics backups networking; do
+for ext in metrics backups networking logs vulnerabilities events; do
   kubectl cp extensions/$ext/ui/dist/extension-$ext.js \
     argocd/$ARGOCD_POD:/tmp/extensions/extension-$ext.js
 done
@@ -339,6 +350,15 @@ patches:
         extension.config.networking: |
           services:
           - url: http://argoplane-networking-backend.argocd.svc:8082
+        extension.config.logs: |
+          services:
+          - url: http://argoplane-logs-backend.argocd.svc:8083
+        extension.config.vulnerabilities: |
+          services:
+          - url: http://argoplane-vulnerabilities-backend.argocd.svc:8084
+        extension.config.events: |
+          services:
+          - url: http://argoplane-events-backend.argocd.svc:8085
 
   # RBAC for extensions
   - target:
@@ -354,8 +374,14 @@ patches:
           p, role:admin, extensions, invoke, metrics, allow
           p, role:admin, extensions, invoke, backups, allow
           p, role:admin, extensions, invoke, networking, allow
+          p, role:admin, extensions, invoke, logs, allow
+          p, role:admin, extensions, invoke, vulnerabilities, allow
+          p, role:admin, extensions, invoke, events, allow
           p, role:developer, extensions, invoke, metrics, allow
           p, role:developer, extensions, invoke, backups, allow
+          p, role:developer, extensions, invoke, logs, allow
+          p, role:developer, extensions, invoke, vulnerabilities, allow
+          p, role:developer, extensions, invoke, events, allow
         policy.default: role:admin
 
   # Patch argocd-server with init container + volume mounts
@@ -375,7 +401,7 @@ patches:
                 image: ghcr.io/natrontech/argoplane-ui-extensions:v0.1.0
                 env:
                   - name: ENABLED_EXTENSIONS
-                    value: "metrics,backups,networking,argoplane"
+                    value: "metrics,backups,networking,logs,vulnerabilities,events,argoplane"
                 volumeMounts:
                   - name: extensions
                     mountPath: /tmp/extensions

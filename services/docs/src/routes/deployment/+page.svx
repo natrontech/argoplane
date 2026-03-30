@@ -23,6 +23,7 @@ ArgoPlane ships as a Helm chart that deploys extension backends alongside ArgoCD
   - **Networking**: Cilium with Hubble
   - **Logs**: Loki with a log collector (e.g., Grafana Alloy)
   - **Vulnerabilities**: Trivy Operator
+  - **Events**: No external dependency (reads Kubernetes Events API directly)
 
 ## Install with Helm
 
@@ -54,14 +55,18 @@ kubectl -n argocd patch cm argocd-cmd-params-cm --type merge \
 kubectl -n argocd patch cm argocd-cm --type merge -p '{
   "data": {
     "extension.config.metrics": "services:\n- url: http://argoplane-metrics-backend.argocd.svc:8080\n",
-    "extension.config.backups": "services:\n- url: http://argoplane-backups-backend.argocd.svc:8081\n"
+    "extension.config.backups": "services:\n- url: http://argoplane-backups-backend.argocd.svc:8081\n",
+    "extension.config.networking": "services:\n- url: http://argoplane-networking-backend.argocd.svc:8082\n",
+    "extension.config.logs": "services:\n- url: http://argoplane-logs-backend.argocd.svc:8083\n",
+    "extension.config.vulnerabilities": "services:\n- url: http://argoplane-vulnerabilities-backend.argocd.svc:8084\n",
+    "extension.config.events": "services:\n- url: http://argoplane-events-backend.argocd.svc:8085\n"
   }
 }'
 
 # Grant RBAC
 kubectl -n argocd patch cm argocd-rbac-cm --type merge -p '{
   "data": {
-    "policy.csv": "p, role:admin, extensions, invoke, metrics, allow\np, role:admin, extensions, invoke, backups, allow\n"
+    "policy.csv": "p, role:admin, extensions, invoke, metrics, allow\np, role:admin, extensions, invoke, backups, allow\np, role:admin, extensions, invoke, networking, allow\np, role:admin, extensions, invoke, logs, allow\np, role:admin, extensions, invoke, vulnerabilities, allow\np, role:admin, extensions, invoke, events, allow\n"
   }
 }'
 
@@ -101,6 +106,9 @@ extensions:
   vulnerabilities:
     enabled: false
     # No external URL needed; reads Trivy Operator CRDs via K8s API
+  events:
+    enabled: false
+    # No external URL needed; reads Kubernetes Events API directly
 ```
 
 Setting `enabled: false` skips the backend Deployment, Service, proxy routing, and RBAC for that extension. To also prevent the UI bundle from loading in ArgoCD, set the `ENABLED_EXTENSIONS` env var on the UI extensions init container. See [Loading only enabled UI bundles](/deployment/argocd-configuration#loading-only-enabled-ui-bundles) for details.
@@ -207,7 +215,11 @@ kubectl -n argocd get cm argoplane-proxy-config -o yaml
 kubectl -n argocd patch cm argocd-cm --type merge -p '{
   "data": {
     "extension.config.metrics": "services:\n- url: http://argoplane-metrics-backend.argocd.svc:8080\n",
-    "extension.config.backups": "services:\n- url: http://argoplane-backups-backend.argocd.svc:8081\n"
+    "extension.config.backups": "services:\n- url: http://argoplane-backups-backend.argocd.svc:8081\n",
+    "extension.config.networking": "services:\n- url: http://argoplane-networking-backend.argocd.svc:8082\n",
+    "extension.config.logs": "services:\n- url: http://argoplane-logs-backend.argocd.svc:8083\n",
+    "extension.config.vulnerabilities": "services:\n- url: http://argoplane-vulnerabilities-backend.argocd.svc:8084\n",
+    "extension.config.events": "services:\n- url: http://argoplane-events-backend.argocd.svc:8085\n"
   }
 }'
 ```

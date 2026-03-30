@@ -19,7 +19,7 @@ Runs on every push to `main` and on pull requests. Validates that everything bui
 
 | Job | What it does |
 |-----|-------------|
-| **Go Lint** | `go vet` and `go build` for each extension backend (metrics, backups, networking) |
+| **Go Lint** | `go vet` and `go build` for each extension backend (metrics, backups, networking, logs, vulnerabilities, events) |
 | **Go Test Lint** | `go vet` for the integration test module |
 | **UI Build** | `npm install` + `npm run build` for each extension UI, verifies bundle output |
 | **Docs Build** | Builds the documentation site |
@@ -46,6 +46,9 @@ All images are published to `ghcr.io/natrontech/`:
 | `argoplane-metrics-backend` | Prometheus metrics backend |
 | `argoplane-backups-backend` | Velero backups backend |
 | `argoplane-networking-backend` | Cilium/Hubble networking backend |
+| `argoplane-logs-backend` | Loki logs backend |
+| `argoplane-vulnerabilities-backend` | Trivy Operator vulnerabilities backend |
+| `argoplane-events-backend` | Kubernetes events backend |
 | `argoplane-ui-extensions` | Init container with all UI extension JS bundles |
 | `argoplane-docs` | Documentation site |
 
