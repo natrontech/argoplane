@@ -1,10 +1,12 @@
 apiVersion: v2
 name: argoplane
-description: ArgoCD UI extensions for platform discoverability
+description: A package of ArgoCD UI extensions
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
 home: https://argoplane.io
+annotations:
+  artifacthub.io/license: Apache-2.0
 sources:
   - https://github.com/natrontech/argoplane
 maintainers:
