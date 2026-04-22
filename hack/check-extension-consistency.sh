@@ -107,6 +107,43 @@ for dockerfile in services/*/Dockerfile; do
   echo ""
 done
 
+# --- Toolchain version alignment ---
+# @argoplane/shared re-exports React-typed components that every ui bundle
+# imports. If @types/react, react, or typescript drift between shared and a
+# consumer, TS compilation breaks with cryptic JSX errors. Catch it here.
+echo "Checking toolchain version alignment (@types/react, react, typescript)..."
+extract_version() {
+  # $1=file, $2=dep name. Reads "dep": "^x.y.z" from dependencies or
+  # devDependencies. Strips leading ^ ~ = > < and surrounding whitespace.
+  local file="$1"
+  local dep="$2"
+  { grep -E "\"${dep}\"[[:space:]]*:" "$file" 2>/dev/null || true; } \
+    | head -n1 \
+    | sed -E 's|.*"'"${dep}"'"[[:space:]]*:[[:space:]]*"([^"]+)".*|\1|' \
+    | sed -E 's|^[\^~=><[:space:]]+||'
+}
+
+SHARED_PKG="extensions/shared/package.json"
+for dep in "@types/react" "react" "typescript"; do
+  shared_ver=$(extract_version "$SHARED_PKG" "$dep")
+  if [ -z "$shared_ver" ]; then
+    continue
+  fi
+  shared_major="${shared_ver%%.*}"
+  for pkg in extensions/*/ui/package.json; do
+    ver=$(extract_version "$pkg" "$dep")
+    if [ -z "$ver" ]; then
+      continue
+    fi
+    major="${ver%%.*}"
+    if [ "$major" != "$shared_major" ]; then
+      echo -e "${RED}DRIFT${NC}: $dep major differs: $SHARED_PKG=$shared_ver vs $pkg=$ver"
+      ERRORS=$((ERRORS + 1))
+    fi
+  done
+done
+echo ""
+
 if [ $ERRORS -gt 0 ]; then
   echo -e "${RED}Found $ERRORS consistency issues.${NC}"
   echo ""
