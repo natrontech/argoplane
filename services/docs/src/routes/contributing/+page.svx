@@ -5,7 +5,7 @@ description: How to contribute to ArgoPlane
 
 # Contributing
 
-ArgoPlane is open source (AGPL-3.0). Contributions are welcome.
+ArgoPlane is open source (Apache-2.0). Contributions are welcome.
 
 ## Repository structure
 

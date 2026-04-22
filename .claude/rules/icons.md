@@ -1,8 +1,8 @@
 # Icons
 
-## Svelte (Docs, Portal)
+## Svelte (Docs)
 
-Always use `lucide-svelte` for icons in SvelteKit projects (docs site, portal frontend). Never use inline SVG markup for standard icons.
+Always use `lucide-svelte` for icons in the SvelteKit docs site. Never use inline SVG markup for standard icons.
 
 ```svelte
 <script>

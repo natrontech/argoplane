@@ -71,8 +71,7 @@ Extensions are independent. The metrics extension doesn't know about the backups
 
 ## Design principles
 
-- **Extensions first**: don't build a separate portal unless ArgoCD's extension system can't handle it
-- **Discoverability first**: show what the platform offers, not just what's deployed
+- **Extensions first**: work within ArgoCD's extension system rather than building a separate app
 - **Simplicity first**: prefer simplicity over abstraction
 - **Stateless**: no database, query existing systems
 - **Idempotent operations**: create/delete/update are safe to retry

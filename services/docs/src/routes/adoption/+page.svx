@@ -11,37 +11,25 @@ description: Why teams adopt ArgoPlane and how to evaluate it
 
 # Adoption
 
-ArgoPlane is for platform teams that already use ArgoCD and want to make their platform capabilities visible to developers without building a separate portal.
+ArgoPlane is for platform teams that already use ArgoCD and want to give developers operational visibility (metrics, logs, backups, network flows, vulnerabilities, events) inside ArgoCD itself, without deploying another UI.
 
 ## Is ArgoPlane right for you?
 
 ArgoPlane fits well if:
 
 - Your team uses **ArgoCD** as the primary deployment tool
-- Developers lack visibility into what the platform offers (storage classes, ingress options, CRDs, operators, scheduling constraints)
-- You want observability (metrics, backups, network policies) inside ArgoCD rather than scattered across dashboards
+- You want observability (metrics, logs, backups, network policies, vulnerabilities) inside ArgoCD rather than scattered across dashboards
 - You prefer extending existing tools over adopting new platforms
 - Your team is small and wants minimal day-2 operations
 
 ArgoPlane might not be the best fit if:
 
 - You don't use ArgoCD
-- You need a full developer portal with service catalogs, scorecards, and TechDocs (consider [Backstage](https://backstage.io))
-- You need a commercial platform orchestrator with opinionated workflows (consider [Humanitec](https://humanitec.com) or [Port](https://getport.io))
+- You need a full developer portal with service catalogs, scorecards, and TechDocs (consider [Backstage](https://backstage.io), [Port](https://getport.io), or [Humanitec](https://humanitec.com))
 
 ## How ArgoPlane compares
 
-| | ArgoPlane | Backstage | Port | Humanitec |
-|---|---|---|---|---|
-| **Approach** | Extend ArgoCD | Standalone portal | SaaS portal | Platform orchestrator |
-| **UI** | Inside ArgoCD | Separate app | Separate app | Separate app |
-| **Auth** | ArgoCD RBAC | Own auth | Own auth | Own auth |
-| **State** | Stateless | PostgreSQL | SaaS | SaaS |
-| **Ops burden** | Low | High | Low (SaaS) | Low (SaaS) |
-| **Cost** | Free (AGPL-3.0) | Free (Apache-2.0) | Commercial | Commercial |
-| **Best for** | ArgoCD-native teams | Large orgs with plugin needs | Teams wanting SaaS | Opinionated platform teams |
-
-The key difference: ArgoPlane doesn't ask developers to learn a new UI or maintain a separate catalog. The cluster is the catalog. ArgoCD is the interface.
+ArgoPlane isn't in the same category as developer portals like Backstage, Port, or Humanitec. Those build standalone UIs and catalogs. ArgoPlane doesn't: it's a set of extensions that live inside ArgoCD's UI. If you need a portal, ArgoPlane won't replace it. If you already have ArgoCD and just want operational data visible next to sync status, ArgoPlane fits.
 
 ## Adoption path
 
@@ -66,10 +54,6 @@ Add the **networking** extension. Developers see CiliumNetworkPolicies applied t
 ### Phase 4: Deep visibility
 
 Add the **logs**, **vulnerabilities**, and **events** extensions. Developers can search logs from Loki, view Trivy vulnerability scan results, and see Kubernetes events for their resources, all without leaving ArgoCD.
-
-### Phase 5: Discover
-
-The upcoming **ArgoPlane Portal** will surface StorageClasses, IngressClasses, GatewayClasses, CRDs, operators, and node pools through a self-service catalog. This is where ArgoPlane's "discoverability first" principle really shines: developers stop asking "what can I use?" because the answer is right there.
 
 ## Rollout tips
 

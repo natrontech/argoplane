@@ -1,33 +1,33 @@
 ---
 title: ArgoPlane Documentation
-description: ArgoCD UI extensions for platform discoverability
+description: A package of ArgoCD UI extensions
 ---
 
 # ArgoPlane
 
-ArgoPlane is a suite of ArgoCD UI extensions that makes platform capabilities discoverable to developers. Instead of building a separate portal, ArgoPlane meets developers where they already are: inside ArgoCD.
+ArgoPlane is a package of ArgoCD UI extensions. It adds resource tabs, app views, and status panels so developers can see metrics, logs, backups, network flows, vulnerabilities, and events without leaving ArgoCD.
 
 ## What it does
 
-Developers deploying through ArgoCD can see if their app is synced. What they can't see: which StorageClasses are available, what IngressClasses exist, which CRDs and operators they can use, what scheduling constraints apply, or what policies are in place. That information lives in the cluster but is invisible without kubectl access and tribal knowledge.
+Developers deploying through ArgoCD can see whether their app is synced. What they can't see: logs, metrics, backup status, network flows, policy violations, or recent events. ArgoPlane surfaces that operational data inside ArgoCD's existing UI.
 
-ArgoPlane surfaces all of this inside ArgoCD's UI.
+No separate app. No extra auth layer. Each extension is independent and can be installed on its own.
 
 ## Extension categories
 
-Extensions fall into three categories:
-
 | Category | Purpose | Examples |
 |----------|---------|----------|
-| **Discover** | Platform capabilities | StorageClasses, IngressClasses, CRDs, operators, node pools |
-| **Observe** | Workload visibility | Metrics, logs, traces, backups, scaling, costs |
-| **Secure** | Security and compliance | Vulnerabilities, policies, secrets, certificates |
+| **Observe** | Workload visibility | Metrics, logs, backups, networking, events, alerts (planned) |
+| **Secure** | Security and compliance | Vulnerabilities, policies (planned) |
 
 ## Current extensions
 
 - **[Metrics](/extensions/metrics)**: CPU, memory, request rates, and custom Prometheus queries per resource
 - **[Backups](/extensions/backups)**: Velero backup schedules, status, and restore triggers
 - **[Networking](/extensions/networking)**: Cilium network policies and Hubble flow visibility
+- **[Logs](/extensions/logs)**: Loki log search, severity detection, volume charts
+- **[Vulnerabilities](/extensions/vulnerabilities)**: Trivy Operator image CVEs, config audit, exposed secrets, SBOM
+- **[Events](/extensions/events)**: Kubernetes events per resource and application
 
 ## Quick start
 

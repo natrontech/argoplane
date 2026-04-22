@@ -40,7 +40,7 @@ Every extension entry point registers via `window.extensionsAPI`:
 | App view | Per-app operational views | All backups for this app, all network flows |
 | Status panel | Health at a glance in app header | CPU/memory summary, backup status, flow stats |
 | System-level | Cross-app dashboards (sidebar page) | ArgoPlane Overview, Alerts Dashboard |
-| Top bar action | Global action buttons | Portal link, cluster health summary |
+| Top bar action | Global action buttons | Cluster health summary, external links |
 
 ### System-Level Extensions
 
@@ -55,7 +55,7 @@ window.extensionsAPI.registerSystemLevelExtension(
 ```
 
 Good for: cluster health dashboards, cross-app alert views, backup overview, network policy matrix.
-Not good for: service catalogs, multi-step forms, team management (those belong in the portal).
+Not good for: service catalogs, multi-step forms, team management. ArgoCD's extension system is too constrained for those kinds of flows.
 
 ### Top Bar Action Menu
 
@@ -63,12 +63,12 @@ Action buttons with optional flyout panels:
 
 ```typescript
 window.extensionsAPI.registerTopBarActionMenuExt(
-  PortalLinkComponent,
-  'ArgoPlane Portal',
-  'argoplane-portal',
+  ClusterHealthComponent,
+  'Cluster Health',
+  'cluster-health',
   undefined,          // flyout (optional)
   () => true,         // shouldDisplay
-  'fa-external-link-alt',
+  'fa-heart-pulse',
   false               // isMiddle
 );
 ```

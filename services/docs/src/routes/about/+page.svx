@@ -9,11 +9,9 @@ ArgoPlane is built with love from Switzerland by [Natron Tech AG](https://natron
 
 ## Natron Tech AG
 
-Natron Tech is a platform engineering company based in Switzerland. We help teams build and operate cloud-native platforms on Kubernetes. ArgoPlane grew out of a recurring pattern we saw across our projects: developers using ArgoCD had no visibility into what the platform offered them.
+Natron Tech is a platform engineering company based in Switzerland. We help teams build and operate cloud-native platforms on Kubernetes. ArgoPlane grew out of a recurring pattern we saw across our projects: developers using ArgoCD had a clear view of sync status but no view of what their workloads were actually doing.
 
-Every cluster has StorageClasses, IngressClasses, CRDs, operators, scheduling policies, and backup configurations. But none of that is visible in ArgoCD's UI. Developers either asked the platform team or guessed. We wanted to fix that.
-
-So we built ArgoPlane: a collection of ArgoCD extensions that surfaces platform capabilities where developers already work.
+So we built ArgoPlane: a package of ArgoCD UI extensions that surfaces metrics, logs, backups, network flows, vulnerabilities, and events right next to the apps they belong to.
 
 ## Built with AI
 
@@ -27,7 +25,7 @@ Our Claude Code setup is fully open source, checked into the repository for anyo
 
 - **`CLAUDE.md`**: the main project context file that gives Claude an understanding of ArgoPlane's architecture, conventions, and goals
 - **`.claude/rules/`**: 13 rule files covering Go conventions, React/TypeScript patterns, architecture principles, design system rules, CI/CD workflows, git conventions, documentation maintenance, and more
-- **`.claude/skills/`**: 6 custom skills that automate common workflows like scaffolding new extensions, setting up the dev environment, deploying to the local cluster, running tests, and building portal components
+- **`.claude/skills/`**: custom skills that automate common workflows like scaffolding new extensions, setting up the dev environment, deploying to the local cluster, and running tests
 
 We share this openly so others can learn from our approach to AI-assisted development. If you're building a similar project and want to see how we structure AI collaboration, browse the `.claude/` directory.
 
@@ -39,9 +37,7 @@ We think the industry benefits from honesty about AI usage. It sets realistic ex
 
 ## Why open source
 
-Platform engineering tooling should be open. The tools we build on (ArgoCD, Prometheus, Velero, Cilium, Crossplane) are all open source. ArgoPlane should be too.
-
-We chose **AGPL-3.0** because we believe in reciprocity. If you improve ArgoPlane and distribute it, those improvements should flow back to the community. This includes our AI tooling configuration: if you fork ArgoPlane, the Claude Code setup comes with it, and any improvements you make to it should be shared back.
+Platform engineering tooling should be open. The tools we build on (ArgoCD, Prometheus, Velero, Cilium, Loki, Trivy Operator) are all open source. ArgoPlane is too, under **Apache-2.0**. Use it, fork it, embed it, ship it — no strings.
 
 ## Contact
 

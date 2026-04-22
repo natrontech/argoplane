@@ -344,7 +344,7 @@ extensions:
           resources: ["events"]
           verbs: ["list", "watch"]
 
-# -- Optional ArgoPlane services (docs site, portal)
+# -- Optional ArgoPlane services (docs site)
 services:
   docs:
     enabled: false

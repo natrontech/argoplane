@@ -893,7 +893,7 @@
 
 /* ----------------------------------------------------------------
    SIDEBAR NAV
-   Vertical navigation for portal/docs.
+   Vertical navigation for docs.
    Usage: <nav class="ap-sidenav">
             <a class="ap-sidenav__item ap-sidenav__item--active" href="#">Overview</a>
             <a class="ap-sidenav__item" href="#">Settings</a>
