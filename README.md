@@ -20,7 +20,7 @@
 
 ArgoPlane is a collection of ArgoCD UI extensions. It adds resource tabs, app views, and status panels so developers can see metrics, logs, backups, network flows, vulnerabilities, and events without leaving ArgoCD. Nothing more, nothing less. Each extension is independent and can be installed on its own.
 
-https://github.com/user-attachments/assets/a90dcadd-ad52-4d42-bacc-4dfb94f03685
+https://github.com/user-attachments/assets/b9c4a296-9d05-46ca-b421-7011a22bf9b9
 
 ## Extensions
 
