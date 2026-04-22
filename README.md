@@ -20,21 +20,20 @@
 
 ArgoPlane is a collection of ArgoCD UI extensions. It adds resource tabs, app views, and status panels so developers can see metrics, logs, backups, network flows, vulnerabilities, and events without leaving ArgoCD. Nothing more, nothing less. Each extension is independent and can be installed on its own.
 
-<!-- TODO: Add screenshot of ArgoPlane extensions in ArgoCD -->
-<p align="center"><em>Screenshot coming soon.</em></p>
+https://github.com/user-attachments/assets/a90dcadd-ad52-4d42-bacc-4dfb94f03685
 
 ## Extensions
 
-| Category | Extension | What it shows | Status |
-|----------|-----------|---------------|--------|
-| **Observe** | Metrics | CPU, memory, request rates, latency (Prometheus) | ✅ |
-| **Observe** | Backups | Backup status, schedules, restore triggers (Velero) | ✅ |
-| **Observe** | Networking | Traffic flows, network policies (Cilium/Hubble) | ✅ |
-| **Observe** | Logs | Log search, severity detection, volume charts (Loki) | ✅ |
-| **Secure** | Vulnerabilities | Image CVEs, config audit, exposed secrets, SBOM (Trivy Operator) | ✅ |
-| **Observe** | Events | Kubernetes events per resource and application | ✅ |
-| **Observe** | Alerts | Firing alerts, PrometheusRules, silences (Alertmanager) | Planned |
-| **Secure** | Policies | Policy violations, admission results (Kyverno) | Planned |
+| Category | Extension | What it shows | Status | Preview |
+|----------|-----------|---------------|--------|---------|
+| **Observe** | Metrics | CPU, memory, request rates, latency (Prometheus) | ✅ | <img src="assets/demo/application_metrics.png"/><br><img src="assets/demo/pod_metrics.png"/> |
+| **Observe** | Backups | Backup status, schedules, restore triggers (Velero) | ✅ | <img src="assets/demo/application_backup.png"/> |
+| **Observe** | Networking | Traffic flows, network policies (Cilium/Hubble) | ✅ | <img src="assets/demo/application_network_flows.png"/><br><img src="assets/demo/application_network_flows_dropped.png"/> |
+| **Observe** | Logs | Log search, severity detection, volume charts (Loki) | ✅ | <img src="assets/demo/application_logs.png"/><br><img src="assets/demo/pod_logs.png"/> |
+| **Secure** | Vulnerabilities | Image CVEs, config audit, exposed secrets, SBOM (Trivy Operator) | ✅ | <img src="assets/demo/application_vulnerabilities.png"/><br><img src="assets/demo/application_configuration_audit.png"/><br><img src="assets/demo/application_exposed_secrets.png"/><br><img src="assets/demo/application_sbom.png"/> |
+| **Observe** | Events | Kubernetes events per resource and application | ✅ | <img src="assets/demo/application_events.png"/><br><img src="assets/demo/pod_events.png"/> |
+| **Observe** | Alerts | Firing alerts, PrometheusRules, silences (Alertmanager) | Planned | - |
+| **Secure** | Policies | Policy violations, admission results (Kyverno) | Planned | - |
 
 Each extension is independently toggleable. Install only what you need.
 
