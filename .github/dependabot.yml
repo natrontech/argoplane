@@ -130,6 +130,16 @@ updates:
         patterns:
           - "*"
 
+  # npm - shared package
+  - package-ecosystem: npm
+    directory: /extensions/shared
+    schedule:
+      interval: monthly
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+
   # npm - argoplane coordinator UI
   - package-ecosystem: npm
     directory: /extensions/argoplane/ui
