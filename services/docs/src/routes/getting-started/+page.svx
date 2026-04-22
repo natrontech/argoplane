@@ -3,6 +3,10 @@ title: Getting Started
 description: Install ArgoPlane extensions in your ArgoCD cluster
 ---
 
+<script>
+  import { base } from '$app/paths';
+</script>
+
 # Getting Started
 
 This guide walks you through installing ArgoPlane extensions in your ArgoCD cluster.
@@ -76,6 +80,6 @@ This deploys a guestbook application with Velero schedules, CiliumNetworkPolicie
 
 ## Next steps
 
-- [Architecture](/architecture): understand how extensions work under the hood
-- [Extensions](/extensions/metrics): explore individual extension documentation
-- [Developing](/developing): build your own extensions
+- <a href="{base}/architecture">Architecture</a>: understand how extensions work under the hood
+- <a href="{base}/extensions/metrics">Extensions</a>: explore individual extension documentation
+- <a href="{base}/developing">Developing</a>: build your own extensions

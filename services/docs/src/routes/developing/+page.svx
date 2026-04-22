@@ -3,6 +3,10 @@ title: Developing Extensions
 description: Guide to building ArgoPlane extensions
 ---
 
+<script>
+  import { base } from '$app/paths';
+</script>
+
 # Developing Extensions
 
 Every ArgoPlane extension follows the same pattern: a React/TypeScript UI bundle, a Go backend service, and ArgoCD proxy configuration.
@@ -87,6 +91,6 @@ make deploy-<name>
 
 ## Next
 
-- [UI Extensions](/developing/ui-extensions): React/TypeScript extension guide
-- [Backend Services](/developing/backend-services): Go backend guide
-- [Design System](/developing/design-system): visual design reference
+- <a href="{base}/developing/ui-extensions">UI Extensions</a>: React/TypeScript extension guide
+- <a href="{base}/developing/backend-services">Backend Services</a>: Go backend guide
+- <a href="{base}/developing/design-system">Design System</a>: visual design reference

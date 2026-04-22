@@ -3,6 +3,10 @@ title: Contributing
 description: How to contribute to ArgoPlane
 ---
 
+<script>
+  import { base } from '$app/paths';
+</script>
+
 # Contributing
 
 ArgoPlane is open source (Apache-2.0). Contributions are welcome.
@@ -61,7 +65,7 @@ Wire up proxy extension config for networking
 
 ## Adding a new extension
 
-See the [developing guide](/developing) for the full checklist. Key steps:
+See the <a href="{base}/developing">developing guide</a> for the full checklist. Key steps:
 
 1. Create `extensions/<name>/ui/` and `extensions/<name>/backend/`
 2. Register via `window.extensionsAPI`

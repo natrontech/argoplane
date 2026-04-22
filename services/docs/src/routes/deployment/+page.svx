@@ -4,6 +4,7 @@ description: Deploying ArgoPlane to a Kubernetes cluster
 ---
 
 <script>
+  import { base } from '$app/paths';
   import Tabs from '$lib/components/docs/Tabs.svelte';
   import Callout from '$lib/components/docs/Callout.svelte';
 </script>
@@ -41,7 +42,7 @@ helm install argoplane deploy/helm/argoplane/ \
 
 This deploys the **metrics** and **backups** extensions by default. Networking is disabled by default (requires Cilium).
 
-After install, configure ArgoCD to route extension requests. See [ArgoCD Configuration](/deployment/argocd-configuration) for the full walkthrough, or use the quick setup below.
+After install, configure ArgoCD to route extension requests. See <a href="{base}/deployment/argocd-configuration">ArgoCD Configuration</a> for the full walkthrough, or use the quick setup below.
 
 ### Quick setup (all-in-one)
 
@@ -74,7 +75,7 @@ kubectl -n argocd patch cm argocd-rbac-cm --type merge -p '{
 kubectl -n argocd rollout restart deployment argocd-server
 ```
 
-For custom styles, branding, init containers, and Kustomize/GitOps examples, see [ArgoCD Configuration](/deployment/argocd-configuration).
+For custom styles, branding, init containers, and Kustomize/GitOps examples, see <a href="{base}/deployment/argocd-configuration">ArgoCD Configuration</a>.
 
 ## Configuration
 
@@ -111,7 +112,7 @@ extensions:
     # No external URL needed; reads Kubernetes Events API directly
 ```
 
-Setting `enabled: false` skips the backend Deployment, Service, proxy routing, and RBAC for that extension. To also prevent the UI bundle from loading in ArgoCD, set the `ENABLED_EXTENSIONS` env var on the UI extensions init container. See [Loading only enabled UI bundles](/deployment/argocd-configuration#loading-only-enabled-ui-bundles) for details.
+Setting `enabled: false` skips the backend Deployment, Service, proxy routing, and RBAC for that extension. To also prevent the UI bundle from loading in ArgoCD, set the `ENABLED_EXTENSIONS` env var on the UI extensions init container. See <a href="{base}/deployment/argocd-configuration#loading-only-enabled-ui-bundles">Loading only enabled UI bundles</a> for details.
 
 Enable networking:
 
@@ -321,6 +322,6 @@ The Helm chart is for production and staging environments. The Makefile handles 
 
 ## Next
 
-- [ArgoCD Configuration](/deployment/argocd-configuration): detailed proxy routing and RBAC setup
-- [CI/CD Pipeline](/deployment/ci-cd): GitHub Actions workflows, release process, and container registry
-- [Architecture](/architecture): how extensions work under the hood
+- <a href="{base}/deployment/argocd-configuration">ArgoCD Configuration</a>: detailed proxy routing and RBAC setup
+- <a href="{base}/deployment/ci-cd">CI/CD Pipeline</a>: GitHub Actions workflows, release process, and container registry
+- <a href="{base}/architecture">Architecture</a>: how extensions work under the hood

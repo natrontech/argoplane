@@ -20,7 +20,7 @@ The source of truth. All development happens here.
 
 - **Repository**: [github.com/natrontech/argoplane](https://github.com/natrontech/argoplane)
 - **Issues**: bug reports, feature requests, and discussions
-- **Pull requests**: contributions welcome (see [contributing guide](/contributing))
+- **Pull requests**: contributions welcome (see <a href="{base}/contributing">contributing guide</a>)
 - **Releases**: extension bundles and backend images
 
 Star the repo if you find ArgoPlane useful. It helps others discover the project.

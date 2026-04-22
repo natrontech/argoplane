@@ -3,6 +3,10 @@ title: ArgoPlane Documentation
 description: A package of ArgoCD UI extensions
 ---
 
+<script>
+  import { base } from '$app/paths';
+</script>
+
 # ArgoPlane
 
 ArgoPlane is a package of ArgoCD UI extensions. It adds resource tabs, app views, and status panels so developers can see metrics, logs, backups, network flows, vulnerabilities, and events without leaving ArgoCD.
@@ -22,13 +26,13 @@ No separate app. No extra auth layer. Each extension is independent and can be i
 
 ## Current extensions
 
-- **[Metrics](/extensions/metrics)**: CPU, memory, request rates, and custom Prometheus queries per resource
-- **[Backups](/extensions/backups)**: Velero backup schedules, status, and restore triggers
-- **[Networking](/extensions/networking)**: Cilium network policies and Hubble flow visibility
-- **[Logs](/extensions/logs)**: Loki log search, severity detection, volume charts
-- **[Vulnerabilities](/extensions/vulnerabilities)**: Trivy Operator image CVEs, config audit, exposed secrets, SBOM
-- **[Events](/extensions/events)**: Kubernetes events per resource and application
+- **[Metrics]({base}/extensions/metrics)**: CPU, memory, request rates, and custom Prometheus queries per resource
+- **[Backups]({base}/extensions/backups)**: Velero backup schedules, status, and restore triggers
+- **[Networking]({base}/extensions/networking)**: Cilium network policies and Hubble flow visibility
+- **[Logs]({base}/extensions/logs)**: Loki log search, severity detection, volume charts
+- **[Vulnerabilities]({base}/extensions/vulnerabilities)**: Trivy Operator image CVEs, config audit, exposed secrets, SBOM
+- **[Events]({base}/extensions/events)**: Kubernetes events per resource and application
 
 ## Quick start
 
-Head to [Getting Started](/getting-started) to set up ArgoPlane in your cluster, or read the [Architecture](/architecture) overview to understand how extensions work.
+Head to [Getting Started]({base}/getting-started) to set up ArgoPlane in your cluster, or read the [Architecture]({base}/architecture) overview to understand how extensions work.
