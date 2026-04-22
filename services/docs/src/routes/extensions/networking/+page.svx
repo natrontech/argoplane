@@ -55,7 +55,7 @@ The networking backend queries Cilium/Hubble:
 
 | Environment Variable | Required | Default | Description |
 |---------------------|----------|---------|-------------|
-| `HUBBLE_ADDRESS` | No | `hubble-relay.kube-system:4245` | Hubble relay address |
+| `HUBBLE_RELAY_URL` | No | _(empty)_ | Hubble relay URL (e.g. `hubble-relay.kube-system.svc:80`) |
 | `PORT` | No | `8082` | HTTP server port |
 | `LOG_LEVEL` | No | `info` | Log level |
 
