@@ -3,7 +3,8 @@
 	import { siteConfig } from '$lib/config/site';
 	import { onMount } from 'svelte';
 	import SearchDialog from './SearchDialog.svelte';
-	import { Menu, PanelLeftClose, PanelLeftOpen, Sun, Moon, Github, Star } from 'lucide-svelte';
+	import { Menu, PanelLeftClose, PanelLeftOpen, Sun, Moon, Star } from 'lucide-svelte';
+	import Github from 'lucide-svelte/icons/github';
 
 	let { onToggleSidebar, onToggleSidebarCollapse, onToggleTheme, isDark, sidebarCollapsed }: {
 		onToggleSidebar: () => void;
