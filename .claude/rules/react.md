@@ -47,10 +47,14 @@ Every extension entry point registers via `window.extensionsAPI`:
 System-level extensions add sidebar pages. Use them for aggregated, cross-app views:
 
 ```typescript
+// ArgoCD v3 actual signature: (component, title, path, icon)
+// path = URL path for this page (e.g. '/my-page')
+// icon = FontAwesome class string (4th arg, NOT an options object)
 window.extensionsAPI.registerSystemLevelExtension(
   OverviewComponent,
   'ArgoPlane',
-  { icon: 'fa-th-large' }
+  '/argoplane',
+  'fa-th-large'
 );
 ```
 

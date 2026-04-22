@@ -3,6 +3,7 @@ import {
   EndpointSummary,
   FlowsResponse,
   ResourceRef,
+  ServiceMapResponse,
 } from './types';
 
 function headers(appNamespace: string, appName: string, project: string) {
@@ -43,6 +44,25 @@ export async function fetchEndpoints(
   const params = new URLSearchParams({ namespace });
   if (pods && pods.length > 0) params.set('pods', pods.join(','));
   const response = await fetch(`/extensions/networking/api/v1/endpoints?${params}`, {
+    headers: headers(appNamespace, appName, project),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchServiceMap(
+  namespace: string,
+  appNamespace: string,
+  appName: string,
+  project: string,
+  since: string = '5m',
+  pods?: string[]
+): Promise<ServiceMapResponse> {
+  const params = new URLSearchParams({ namespace, since });
+  if (pods && pods.length > 0) params.set('pods', pods.join(','));
+  const response = await fetch(`/extensions/networking/api/v1/service-map?${params}`, {
     headers: headers(appNamespace, appName, project),
   });
   if (!response.ok) {

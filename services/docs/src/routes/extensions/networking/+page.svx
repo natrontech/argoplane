@@ -18,12 +18,15 @@ The extension registers as:
 
 ### Application view
 
-When viewing an Application, the Networking view shows:
+When viewing an Application, the Networking view shows four tabs:
 
-- CiliumNetworkPolicies applied to the application's namespace
-- CiliumClusterwideNetworkPolicies affecting the namespace
-- Cross-namespace traffic flows (via Hubble)
-- Policy rule details (ingress/egress, endpoints, ports)
+**Flows** — raw Hubble flows in table form (individual or aggregated). Filterable by verdict (forwarded/dropped), direction (ingress/egress), and time range. Dropped flows link to the matching CiliumNetworkPolicy and explain the drop reason.
+
+**Service Map** — visual topology graph of workload-to-workload traffic, built from the same Hubble data. Nodes represent Deployments/StatefulSets (grouped by pod labels), edges are labeled with `protocol:port` and color-coded by verdict: green (forwarded), red (dropped), yellow (mixed). Layout is auto-computed using dagre. Supports zoom, pan, and drag to rearrange.
+
+**Policies** — CiliumNetworkPolicies and CiliumClusterwideNetworkPolicies applied to the namespace, with ownership (app vs. platform) and drop counts.
+
+**Allowed Traffic** — per-pod allowed ingress/egress rules derived from active policies.
 
 ### Pod resource tab
 
@@ -50,6 +53,7 @@ The networking backend queries Cilium/Hubble:
 |----------|-------------|
 | `GET /api/v1/policies` | List network policies for an application |
 | `GET /api/v1/flows` | Query Hubble flows for a namespace or pod |
+| `GET /api/v1/service-map` | Aggregated workload-to-workload connections (service map) |
 
 ### Configuration
 

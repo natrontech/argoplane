@@ -73,6 +73,7 @@ func main() {
 	endpointsHandler := handler.NewEndpointsHandler(dynClient)
 	identitiesHandler := handler.NewIdentitiesHandler(dynClient)
 	flowsHandler := handler.NewFlowsHandler(flowBuffer)
+	serviceMapHandler := handler.NewServiceMapHandler(flowBuffer, dynClient)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/policies", policiesHandler.HandleNamespaced)
@@ -81,6 +82,7 @@ func main() {
 	mux.HandleFunc("GET /api/v1/endpoints", endpointsHandler.Handle)
 	mux.HandleFunc("GET /api/v1/identities", identitiesHandler.Handle)
 	mux.HandleFunc("GET /api/v1/flows", flowsHandler.Handle)
+	mux.HandleFunc("GET /api/v1/service-map", serviceMapHandler.Handle)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})

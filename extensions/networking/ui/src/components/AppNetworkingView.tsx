@@ -16,6 +16,7 @@ import {
 } from '@argoplane/shared';
 import { useStickyScope } from '@argoplane/shared';
 import { fetchPoliciesWithOwnership, fetchEndpoints, fetchFlows } from '../api';
+import { ServiceMapTab } from './ServiceMapTab';
 import {
   PolicySummary,
   PolicyRule,
@@ -271,7 +272,7 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
   const [sortField, setSortField] = React.useState<SortField>('time');
   const [sortDir, setSortDir] = React.useState<SortDir>('desc');
   const [page, setPage] = React.useState(0);
-  const [activeTab, setActiveTab] = React.useState<'flows' | 'policies' | 'allowed'>('flows');
+  const [activeTab, setActiveTab] = React.useState<'flows' | 'policies' | 'allowed' | 'map'>('flows');
   const [expandedFlowIdx, setExpandedFlowIdx] = React.useState<number | null>(null);
   const [expandedPolicy, setExpandedPolicy] = React.useState<string | null>(null);
   const [aggregated, setAggregated] = React.useState(false);
@@ -401,6 +402,7 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
         <button style={tab(activeTab === 'flows')} onClick={() => { setActiveTab('flows'); setSearch(''); }}>Flows {hubbleAvailable && `(${flows.length})`}</button>
         <button style={tab(activeTab === 'policies')} onClick={() => { setActiveTab('policies'); setSearch(''); }}>Policies ({policies.length})</button>
         <button style={tab(activeTab === 'allowed')} onClick={() => setActiveTab('allowed')}>Allowed Traffic</button>
+        <button style={tab(activeTab === 'map')} onClick={() => setActiveTab('map')}>Service Map</button>
       </div>
 
       {/* === Flows tab === */}
@@ -530,6 +532,20 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* === Service Map tab === */}
+      {activeTab === 'map' && (
+        <div style={{ ...tabContent, overflowY: 'hidden' }}>
+          <ServiceMapTab
+            namespace={namespace}
+            appNamespace={appNamespace}
+            appName={appName}
+            project={project}
+            since={timeRange}
+            scopedPods={scopedPods}
+          />
         </div>
       )}
 

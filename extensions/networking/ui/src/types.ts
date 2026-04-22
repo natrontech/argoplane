@@ -74,3 +74,30 @@ export interface ResourceRef {
 export type VerdictFilter = 'all' | 'forwarded' | 'dropped' | 'error';
 export type DirectionFilter = 'all' | 'ingress' | 'egress';
 export type TimeRange = '5m' | '15m' | '1h';
+
+// ─── Service Map ────────────────────────────────────────────────────────────
+
+export interface ServiceMapNode {
+  id: string;
+  label: string;
+  kind: 'workload' | 'external' | 'world';
+  namespace?: string;
+  pods?: string[];
+}
+
+export interface ServiceMapEdge {
+  id: string;
+  source: string;
+  target: string;
+  protocol: string;
+  port: number;
+  forwarded: number;
+  dropped: number;
+  verdict: 'forwarded' | 'dropped' | 'mixed';
+}
+
+export interface ServiceMapResponse {
+  nodes: ServiceMapNode[];
+  edges: ServiceMapEdge[];
+  hubble: boolean;
+}

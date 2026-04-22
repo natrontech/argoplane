@@ -4,6 +4,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: traffic-allowed
+  namespace: argoplane-demo
 spec:
   replicas: 1
   selector:
@@ -38,6 +39,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: traffic-blocked
+  namespace: argoplane-demo
 spec:
   replicas: 1
   selector:

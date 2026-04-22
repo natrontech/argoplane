@@ -5,6 +5,7 @@ apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
   name: guestbook-policy
+  namespace: argoplane-demo
   annotations:
     description: "Allow ingress only from pods with role=frontend-client on port 80. Allow egress to DNS, kube-apiserver, and HTTPS."
 spec:
@@ -44,6 +45,7 @@ apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
   name: traffic-generator-egress
+  namespace: argoplane-demo
   annotations:
     description: "Restrict traffic-allowed egress to guestbook-ui:80 and DNS. Prevents lateral movement."
 spec:

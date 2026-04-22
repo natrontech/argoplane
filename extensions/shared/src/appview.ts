@@ -100,6 +100,8 @@ const tabBar: React.CSSProperties = {
   borderBottom: `1px solid ${colors.gray200}`,
   marginBottom: spacing[4],
   gap: 0,
+  overflowX: 'auto',
+  flexShrink: 0,
 };
 
 const tabBase: React.CSSProperties = {
