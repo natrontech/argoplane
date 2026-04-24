@@ -7,7 +7,7 @@ log "Installing Loki + Alloy for log aggregation"
 
 # Add Grafana Helm repo
 helm repo add grafana https://grafana.github.io/helm-charts 2>/dev/null || true
-helm repo update
+helm repo update grafana
 
 # Install Loki in single-binary mode (lightweight, dev-friendly)
 log "Installing Loki (single-binary mode)"
@@ -35,13 +35,6 @@ helm upgrade --install loki grafana/loki \
     --set read.replicas=0 \
     --set write.replicas=0 \
     --wait --timeout 180s
-
-# Install Alloy (replaces deprecated Promtail) to ship pod logs to Loki
-log "Installing Alloy (log shipper)"
-helm upgrade --install alloy grafana/alloy \
-    --namespace "${MONITORING_NS}" \
-    --set alloy.configMap.create=false \
-    --wait --timeout 120s
 
 # Create Alloy config to discover and ship pod logs to Loki
 log "Configuring Alloy to ship logs to Loki"
@@ -98,9 +91,12 @@ data:
     }
 EOF
 
-# Restart Alloy to pick up the config
-kubectl -n "${MONITORING_NS}" rollout restart daemonset alloy 2>/dev/null || true
-kubectl -n "${MONITORING_NS}" rollout status daemonset alloy --timeout=120s 2>/dev/null || true
+# Install Alloy (replaces deprecated Promtail) to ship pod logs to Loki
+log "Installing Alloy (log shipper)"
+helm upgrade --install alloy grafana/alloy \
+    --namespace "${MONITORING_NS}" \
+    --set alloy.configMap.create=false \
+    --wait --timeout 120s
 
 log "Loki + Alloy installed in namespace '${MONITORING_NS}'"
 log "Loki API: http://loki.${MONITORING_NS}.svc:3100"

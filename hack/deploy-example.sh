@@ -15,7 +15,7 @@ kubectl create namespace argoplane-demo 2>/dev/null || true
 kubectl create namespace velero 2>/dev/null || true
 
 log "Applying demo manifests directly (local dev)"
-kubectl apply -f "$DEMO_DIR/manifests/" -n argoplane-demo
+kubectl apply -f "$DEMO_DIR/manifests/"
 
 log "Applying platform-managed policies (clusterwide + namespace)"
 kubectl apply -f "$DEMO_DIR/platform-policies.yaml"

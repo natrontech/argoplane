@@ -74,7 +74,7 @@ kubectl -n "${VELERO_NS}" run minio-setup --rm -i --restart=Never \
 # Install Velero via Helm
 log "Installing Velero"
 helm repo add vmware-tanzu https://vmware-tanzu.github.io/helm-charts 2>/dev/null || true
-helm repo update
+helm repo update vmware-tanzu
 
 # Create credentials secret
 kubectl -n "${VELERO_NS}" apply -f - <<'EOF'

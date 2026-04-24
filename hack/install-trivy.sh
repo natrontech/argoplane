@@ -5,7 +5,7 @@ log() { echo "==> $*"; }
 
 log "Installing Trivy Operator"
 helm repo add aqua https://aquasecurity.github.io/helm-charts 2>/dev/null || true
-helm repo update
+helm repo update aqua
 
 # Write a temporary values file to avoid Helm --set comma escaping issues.
 VALUES_FILE=$(mktemp)

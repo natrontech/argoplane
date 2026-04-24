@@ -70,7 +70,7 @@ argocd-portforward: ## Port-forward ArgoCD UI to localhost:8080
 prometheus: cluster ## Install kube-prometheus-stack (idempotent)
 	@echo "==> Installing Prometheus stack"
 	@helm repo add prometheus-community https://prometheus-community.github.io/helm-charts 2>/dev/null || true
-	@helm repo update
+	@helm repo update prometheus-community
 	@helm upgrade --install kube-prometheus prometheus-community/kube-prometheus-stack \
 		--namespace monitoring --create-namespace \
 		--set grafana.enabled=false \
@@ -95,7 +95,7 @@ trivy: cluster ## Install Trivy Operator (idempotent)
 crossplane: cluster ## Install Crossplane (idempotent)
 	@echo "==> Installing Crossplane"
 	@helm repo add crossplane-stable https://charts.crossplane.io/stable 2>/dev/null || true
-	@helm repo update
+	@helm repo update crossplane-stable
 	@helm upgrade --install crossplane crossplane-stable/crossplane \
 		--namespace crossplane-system --create-namespace \
 		--wait --timeout 120s
@@ -104,7 +104,7 @@ crossplane: cluster ## Install Crossplane (idempotent)
 external-secrets: cluster ## Install External Secrets Operator (idempotent)
 	@echo "==> Installing External Secrets Operator"
 	@helm repo add external-secrets https://charts.external-secrets.io 2>/dev/null || true
-	@helm repo update
+	@helm repo update external-secrets
 	@helm upgrade --install external-secrets external-secrets/external-secrets \
 		--namespace external-secrets --create-namespace \
 		--set installCRDs=true \
