@@ -71,6 +71,25 @@ Each extension can be enabled or disabled individually in `values.yaml`. The cha
 
 See the [deployment docs](services/docs/) for full configuration details.
 
+## RBAC
+
+ArgoCD requires explicit `extensions, invoke` permission in `argocd-rbac-cm`. AppProject role policies are ignored for this check — it must be in the global config map.
+
+```csv
+g, your-oidc-group-id, role:your-role
+p, role:your-role, applications, get, your-project/*, allow
+p, role:your-role, extensions, invoke, metrics, allow
+p, role:your-role, extensions, invoke, backups, allow
+p, role:your-role, extensions, invoke, networking, allow
+p, role:your-role, extensions, invoke, logs, allow
+p, role:your-role, extensions, invoke, vulnerabilities, allow
+p, role:your-role, extensions, invoke, events, allow
+```
+
+`applications, get` is a prerequisite: ArgoCD rejects extension calls for applications the user cannot read.
+
+**Security note:** ArgoCD uses a single `extensions, invoke` permission for all HTTP methods. A user with invoke access can call any endpoint the backend exposes — including write operations like backup triggers and restores. Scope `applications, get` as narrowly as your setup allows.
+
 ## Development
 
 ```sh
