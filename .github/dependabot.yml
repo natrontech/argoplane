@@ -14,6 +14,8 @@ updates:
       - /tests
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
     groups:
       go-dependencies:
         patterns:
@@ -36,6 +38,8 @@ updates:
       - /extensions/argoplane/ui
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
     # React runtime is provided by ArgoCD (v3.x ships React 18) and marked
     # external in webpack configs. Bumping our types ahead of ArgoCD is
     # risky and pointless. TypeScript majors need hands-on migration too.
@@ -76,6 +80,8 @@ updates:
     directory: /services/docs
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
     groups:
       npm-dependencies:
         patterns:
@@ -94,6 +100,8 @@ updates:
       - /services/docs
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
     groups:
       docker-dependencies:
         patterns:
@@ -104,6 +112,8 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
     groups:
       github-actions:
         patterns:
