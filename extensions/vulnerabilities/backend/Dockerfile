@@ -5,7 +5,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -o /vulnerabilities-backend ./cmd/
 
-FROM alpine:3.23.4
+FROM alpine:3.24.1
 RUN apk --no-cache add ca-certificates
 COPY --from=builder /vulnerabilities-backend /usr/local/bin/vulnerabilities-backend
 USER 65534:65534
