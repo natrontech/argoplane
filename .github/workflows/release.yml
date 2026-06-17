@@ -36,7 +36,7 @@ jobs:
       matrix:
         extension: [metrics, backups, networking, logs, vulnerabilities, events]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       - uses: docker/setup-buildx-action@v4
 
@@ -73,7 +73,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [meta]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       - uses: actions/setup-node@v6
         with:
@@ -136,7 +136,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [meta]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       - uses: docker/setup-buildx-action@v4
 
@@ -173,7 +173,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [meta, backend-images, ui-extensions-image, docs-image]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       - uses: azure/setup-helm@v5
 
