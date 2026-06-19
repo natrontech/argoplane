@@ -14,22 +14,22 @@ import (
 // ReportsHandler handles vulnerability report queries.
 type ReportsHandler struct {
 	client dynamic.Interface
+	auth   *Authorizer
 }
 
 // NewReportsHandler creates a new ReportsHandler.
-func NewReportsHandler(client dynamic.Interface) *ReportsHandler {
-	return &ReportsHandler{client: client}
+func NewReportsHandler(client dynamic.Interface, auth *Authorizer) *ReportsHandler {
+	return &ReportsHandler{client: client, auth: auth}
 }
 
 // Handle returns vulnerability reports filtered by namespace.
 // Optional query params: resource (e.g. "guestbook-ui-84774bdc6f"), kind (e.g. "ReplicaSet").
 func (h *ReportsHandler) Handle(w http.ResponseWriter, r *http.Request) {
-	if !requireAppHeader(w, r) {
-		return
-	}
-
 	namespace := r.URL.Query().Get("namespace")
 	if !validateNamespace(w, namespace) {
+		return
+	}
+	if !h.auth.AuthorizeNamespace(w, r, namespace) {
 		return
 	}
 
@@ -38,7 +38,7 @@ func (h *ReportsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	auditLog(r, "vulnerability.reports", namespace, "resource", resourceFilter, "kind", kindFilter)
 
-	list, err := h.client.Resource(types.VulnerabilityReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{})
+	list, err := h.client.Resource(types.VulnerabilityReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{Limit: 500})
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "failed to list vulnerability reports")
 		return

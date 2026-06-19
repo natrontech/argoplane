@@ -18,11 +18,12 @@ import (
 type RestoresHandler struct {
 	client          dynamic.Interface
 	veleroNamespace string
+	auth            *Authorizer
 }
 
 // NewRestoresHandler creates a new RestoresHandler.
-func NewRestoresHandler(client dynamic.Interface, veleroNamespace string) *RestoresHandler {
-	return &RestoresHandler{client: client, veleroNamespace: veleroNamespace}
+func NewRestoresHandler(client dynamic.Interface, veleroNamespace string, auth *Authorizer) *RestoresHandler {
+	return &RestoresHandler{client: client, veleroNamespace: veleroNamespace, auth: auth}
 }
 
 // Handle lists restores, optionally filtered by backup name.
@@ -30,6 +31,11 @@ func (h *RestoresHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
 	if namespace == "" {
 		WriteError(w, http.StatusBadRequest, "namespace is required")
+		return
+	}
+
+	// Per-app read: only namespaces the calling Application manages.
+	if !h.auth.AuthorizeNamespace(w, r, namespace) {
 		return
 	}
 
@@ -82,6 +88,17 @@ func (h *RestoresHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Mutation: the target namespace must be managed by the calling Application.
+	allowed, ok := h.auth.Allowed(w, r)
+	if !ok {
+		return
+	}
+	if _, ok := allowed[req.Namespace]; !ok {
+		auditLog(r, "restore.rejected.namespace", req.Namespace, "backup", req.BackupName)
+		WriteError(w, http.StatusForbidden, "namespace not managed by this application")
+		return
+	}
+
 	// Security: reject namespace mappings that target namespaces other than the
 	// requested one. Without this check, a user could map a foreign namespace
 	// from a platform-wide backup into their own namespace.
@@ -110,6 +127,16 @@ func (h *RestoresHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		auditLog(r, "restore.rejected.namespace_not_in_backup", req.Namespace,
 			"backup", req.BackupName, "backupNamespaces", backupIncluded)
 		WriteError(w, http.StatusForbidden, "backup does not cover the requested namespace")
+		return
+	}
+
+	// Security: the source backup itself must be app-scoped (non-empty
+	// includedNamespaces) and every namespace it covers must be managed by this
+	// Application. This blocks restoring FROM a platform-wide backup.
+	if !namespacesSubsetOf(backupIncluded, allowed) {
+		auditLog(r, "restore.rejected.backup_not_app_scoped", req.Namespace,
+			"backup", req.BackupName, "backupNamespaces", backupIncluded)
+		WriteError(w, http.StatusForbidden, "backup is not scoped to namespaces managed by this application")
 		return
 	}
 
@@ -180,6 +207,7 @@ func (h *RestoresHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	slog.Info("restore created", "name", created.GetName(), "backup", req.BackupName)
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	WriteJSON(w, map[string]string{
 		"name":    created.GetName(),

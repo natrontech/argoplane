@@ -14,11 +14,12 @@ import (
 // IdentitiesHandler handles requests for Cilium identity data.
 type IdentitiesHandler struct {
 	client dynamic.Interface
+	auth   *Authorizer
 }
 
 // NewIdentitiesHandler creates a new IdentitiesHandler.
-func NewIdentitiesHandler(client dynamic.Interface) *IdentitiesHandler {
-	return &IdentitiesHandler{client: client}
+func NewIdentitiesHandler(client dynamic.Interface, auth *Authorizer) *IdentitiesHandler {
+	return &IdentitiesHandler{client: client, auth: auth}
 }
 
 // Handle returns CiliumIdentities filtered by namespace.
@@ -27,6 +28,10 @@ func (h *IdentitiesHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
 	if namespace == "" {
 		WriteError(w, http.StatusBadRequest, "namespace is required")
+		return
+	}
+
+	if !h.auth.AuthorizeNamespace(w, r, namespace) {
 		return
 	}
 

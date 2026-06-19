@@ -1,23 +1,28 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/natrontech/argoplane/extensions/metrics/backend/internal/prometheus"
+	"github.com/natrontech/argoplane/extensions/metrics/backend/internal/query"
 )
 
 // Pods handles per-pod metric breakdown requests.
 type Pods struct {
 	prom *prometheus.Client
+	auth *Authorizer
 }
 
 // NewPods creates a pods metrics handler.
-func NewPods(prom *prometheus.Client) *Pods {
-	return &Pods{prom: prom}
+func NewPods(prom *prometheus.Client, auth *Authorizer) *Pods {
+	return &Pods{prom: prom, auth: auth}
 }
 
 type podMetric struct {
@@ -52,13 +57,20 @@ func (h *Pods) Handle(w http.ResponseWriter, r *http.Request) {
 		kind = "Deployment"
 	}
 
+	if !h.auth.AuthorizeNamespace(w, r, namespace) {
+		return
+	}
+
 	username := r.Header.Get("Argocd-Username")
 	slog.Debug("pod breakdown request", "namespace", namespace, "name", name, "kind", kind, "pods", podsParam, "user", username)
+
+	ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
+	defer cancel()
 
 	var podSelector string
 	if podsParam != "" {
 		pods := strings.Split(podsParam, ",")
-		podSelector = fmt.Sprintf(`namespace="%s",pod=~"%s"`, namespace, strings.Join(pods, "|"))
+		podSelector = fmt.Sprintf(`namespace="%s",pod=~"%s"`, query.EscapePromQLLabel(namespace), quoteRegexAlternation(pods))
 	} else {
 		podSelector = podSelectorForKind(namespace, name, kind)
 	}
@@ -74,15 +86,25 @@ func (h *Pods) Handle(w http.ResponseWriter, r *http.Request) {
 	txQuery := fmt.Sprintf(`sum by (pod) (rate(container_network_transmit_bytes_total{%s}[5m]))`, podSelector)
 	restartQuery := fmt.Sprintf(`sum by (pod) (kube_pod_container_status_restarts_total{%s})`, podSelector)
 
-	cpuSamples, _ := h.prom.Query(r.Context(), cpuQuery)
-	cpuReqSamples, _ := h.prom.Query(r.Context(), cpuReqQuery)
-	cpuLimSamples, _ := h.prom.Query(r.Context(), cpuLimQuery)
-	memSamples, _ := h.prom.Query(r.Context(), memQuery)
-	memReqSamples, _ := h.prom.Query(r.Context(), memReqQuery)
-	memLimSamples, _ := h.prom.Query(r.Context(), memLimQuery)
-	rxSamples, _ := h.prom.Query(r.Context(), rxQuery)
-	txSamples, _ := h.prom.Query(r.Context(), txQuery)
-	restartSamples, _ := h.prom.Query(r.Context(), restartQuery)
+	// queryOrLog runs an instant query and logs (rather than swallows) any error,
+	// returning partial results so a single failed query doesn't drop the whole table.
+	queryOrLog := func(name, q string) []prometheus.Sample {
+		samples, err := h.prom.Query(ctx, q)
+		if err != nil {
+			slog.Warn("pod breakdown query failed", "metric", name, "error", err)
+		}
+		return samples
+	}
+
+	cpuSamples := queryOrLog("cpu", cpuQuery)
+	cpuReqSamples := queryOrLog("cpuRequest", cpuReqQuery)
+	cpuLimSamples := queryOrLog("cpuLimit", cpuLimQuery)
+	memSamples := queryOrLog("memory", memQuery)
+	memReqSamples := queryOrLog("memoryRequest", memReqQuery)
+	memLimSamples := queryOrLog("memoryLimit", memLimQuery)
+	rxSamples := queryOrLog("netRx", rxQuery)
+	txSamples := queryOrLog("netTx", txQuery)
+	restartSamples := queryOrLog("restarts", restartQuery)
 
 	// Build per-pod map
 	pods := make(map[string]*podMetric)
@@ -174,10 +196,22 @@ func (h *Pods) Handle(w http.ResponseWriter, r *http.Request) {
 }
 
 func podSelectorForKind(namespace, name, kind string) string {
+	ns := query.EscapePromQLLabel(namespace)
 	switch kind {
 	case "Pod":
-		return fmt.Sprintf(`namespace="%s",pod="%s"`, namespace, name)
+		return fmt.Sprintf(`namespace="%s",pod="%s"`, ns, query.EscapePromQLLabel(name))
 	default:
-		return fmt.Sprintf(`namespace="%s",pod=~"%s-.*"`, namespace, name)
+		return fmt.Sprintf(`namespace="%s",pod=~"%s-.*"`, ns, regexp.QuoteMeta(name))
 	}
+}
+
+// quoteRegexAlternation builds a safe regex alternation (a|b|c) from a list of
+// user-supplied pod names, quoting each so they cannot inject regex or break out
+// of the matcher.
+func quoteRegexAlternation(values []string) string {
+	quoted := make([]string, len(values))
+	for i, v := range values {
+		quoted[i] = regexp.QuoteMeta(v)
+	}
+	return strings.Join(quoted, "|")
 }

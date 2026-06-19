@@ -44,6 +44,12 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
   const isPod = kind === 'Pod';
   const showPod = !isPod;
 
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   // Debounce search text: only update debouncedSearch after 500ms of no typing
   React.useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchText), 500);
@@ -72,20 +78,21 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
 
     fetchLogs(queryParams, appNamespace, appName, project)
       .then((logsResp) => {
+        if (!mountedRef.current) return;
         setEntries(logsResp.entries || []);
         setTotalEntries(logsResp.stats?.totalEntries || logsResp.entries?.length || 0);
         setError(null);
       })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err) => { if (mountedRef.current) setError(err.message); })
+      .finally(() => { if (mountedRef.current) setLoading(false); });
   }, [namespace, name, kind, isPod, selectedContainer, debouncedSearch, activeSeverities, timeSelection, appNamespace, appName, project]);
 
   // Fetch containers for the dropdown
   React.useEffect(() => {
     if (!namespace) return;
     fetchLabelValues('container', namespace, appNamespace, appName, project)
-      .then((vals) => setContainers(vals || []))
-      .catch(() => setContainers([]));
+      .then((vals) => { if (mountedRef.current) setContainers(vals || []); })
+      .catch(() => { if (mountedRef.current) setContainers([]); });
   }, [namespace, appNamespace, appName, project]);
 
   // Fetch data when filters change (but not on every keystroke thanks to debounce)

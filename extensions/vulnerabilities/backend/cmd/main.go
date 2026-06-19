@@ -43,12 +43,13 @@ func main() {
 	}
 
 	// Create handlers.
-	reportsHandler := handler.NewReportsHandler(dynClient)
-	overviewHandler := handler.NewOverviewHandler(dynClient)
-	auditHandler := handler.NewAuditHandler(dynClient)
-	secretsHandler := handler.NewSecretsHandler(dynClient)
-	sbomHandler := handler.NewSbomHandler(dynClient)
-	exportHandler := handler.NewExportHandler(dynClient)
+	auth := handler.NewAuthorizer(dynClient)
+	reportsHandler := handler.NewReportsHandler(dynClient, auth)
+	overviewHandler := handler.NewOverviewHandler(dynClient, auth)
+	auditHandler := handler.NewAuditHandler(dynClient, auth)
+	secretsHandler := handler.NewSecretsHandler(dynClient, auth)
+	sbomHandler := handler.NewSbomHandler(dynClient, auth)
+	exportHandler := handler.NewExportHandler(dynClient, auth)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/reports", reportsHandler.Handle)

@@ -62,6 +62,12 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
     return treePodNames.length > 0 ? treePodNames : undefined;
   }, [scope, treePodNames]);
 
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const fetchAll = React.useCallback(() => {
     if (!namespace) return;
 
@@ -74,12 +80,13 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
 
     Promise.all([metricsP, podsP])
       .then(([resp, podList]) => {
+        if (!mountedRef.current) return;
         setSummary(resp.summary || []);
         setPods(podList || []);
         setError(null);
       })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err) => { if (mountedRef.current) setError(err.message); })
+      .finally(() => { if (mountedRef.current) setLoading(false); });
   }, [namespace, appNamespace, appName, project, treePodNames, treeDeployments, scope, scopedPodNames]);
 
   React.useEffect(() => {

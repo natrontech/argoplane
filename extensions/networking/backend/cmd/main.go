@@ -69,10 +69,11 @@ func main() {
 	}
 
 	// Create handlers.
-	policiesHandler := handler.NewPoliciesHandler(dynClient)
-	endpointsHandler := handler.NewEndpointsHandler(dynClient)
-	identitiesHandler := handler.NewIdentitiesHandler(dynClient)
-	flowsHandler := handler.NewFlowsHandler(flowBuffer)
+	auth := handler.NewAuthorizer(dynClient)
+	policiesHandler := handler.NewPoliciesHandler(dynClient, auth)
+	endpointsHandler := handler.NewEndpointsHandler(dynClient, auth)
+	identitiesHandler := handler.NewIdentitiesHandler(dynClient, auth)
+	flowsHandler := handler.NewFlowsHandler(flowBuffer, auth)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/policies", policiesHandler.HandleNamespaced)

@@ -1,6 +1,9 @@
 package query
 
-import "fmt"
+import (
+	"fmt"
+	"regexp"
+)
 
 // NamedQuery pairs a human-readable name with a PromQL expression.
 type NamedQuery struct {
@@ -65,12 +68,14 @@ func ResourceMetrics(namespace, name, kind string) []NamedQuery {
 
 // podSelectorForKind builds the Prometheus label selector based on resource kind.
 func podSelectorForKind(namespace, name, kind string) string {
+	ns := EscapePromQLLabel(namespace)
 	switch kind {
 	case "Pod":
-		return fmt.Sprintf(`namespace="%s",pod="%s"`, namespace, name)
+		return fmt.Sprintf(`namespace="%s",pod="%s"`, ns, EscapePromQLLabel(name))
 	default:
 		// Deployments create pods like "name-<replicaset>-<hash>"
 		// StatefulSets create pods like "name-0", "name-1"
-		return fmt.Sprintf(`namespace="%s",pod=~"%s-.*"`, namespace, name)
+		// name is a regex anchor here, so quote it for the regex matcher.
+		return fmt.Sprintf(`namespace="%s",pod=~"%s-.*"`, ns, regexp.QuoteMeta(name))
 	}
 }

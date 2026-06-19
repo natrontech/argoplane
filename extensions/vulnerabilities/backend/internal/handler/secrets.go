@@ -15,19 +15,16 @@ import (
 // SecretsHandler handles exposed secret report queries.
 type SecretsHandler struct {
 	client dynamic.Interface
+	auth   *Authorizer
 }
 
 // NewSecretsHandler creates a new SecretsHandler.
-func NewSecretsHandler(client dynamic.Interface) *SecretsHandler {
-	return &SecretsHandler{client: client}
+func NewSecretsHandler(client dynamic.Interface, auth *Authorizer) *SecretsHandler {
+	return &SecretsHandler{client: client, auth: auth}
 }
 
 // HandleOverview returns an aggregated exposed secret overview for a namespace.
 func (h *SecretsHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
-	if !requireAppHeader(w, r) {
-		return
-	}
-
 	var req struct {
 		Namespace string   `json:"namespace"`
 		Resources []string `json:"resources,omitempty"`
@@ -41,10 +38,13 @@ func (h *SecretsHandler) HandleOverview(w http.ResponseWriter, r *http.Request) 
 	if !validateNamespace(w, req.Namespace) {
 		return
 	}
+	if !h.auth.AuthorizeNamespace(w, r, req.Namespace) {
+		return
+	}
 
 	auditLog(r, "secrets.overview", req.Namespace)
 
-	listOpts := metav1.ListOptions{LabelSelector: resourceLabelSelector(req.Resources)}
+	listOpts := metav1.ListOptions{Limit: 500, LabelSelector: resourceLabelSelector(req.Resources)}
 	list, err := h.client.Resource(types.ExposedSecretReportGVR).Namespace(req.Namespace).List(r.Context(), listOpts)
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "failed to list exposed secret reports")

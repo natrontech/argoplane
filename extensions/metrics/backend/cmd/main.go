@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
 
 	"github.com/natrontech/argoplane/extensions/metrics/backend/internal/config"
 	"github.com/natrontech/argoplane/extensions/metrics/backend/internal/handler"
@@ -47,13 +49,26 @@ func main() {
 		dashCfg = config.DefaultConfig()
 	}
 
+	kubeConfig, err := rest.InClusterConfig()
+	if err != nil {
+		slog.Error("failed to create in-cluster config", "error", err)
+		os.Exit(1)
+	}
+
+	dynClient, err := dynamic.NewForConfig(kubeConfig)
+	if err != nil {
+		slog.Error("failed to create dynamic client", "error", err)
+		os.Exit(1)
+	}
+
 	promClient := prometheus.NewClient(cfg.PrometheusURL)
+	auth := handler.NewAuthorizer(dynClient)
 
 	// Existing handlers (backward compatible)
-	resourceHandler := handler.NewResource(promClient)
-	appHandler := handler.NewApp(promClient)
-	podsHandler := handler.NewPods(promClient)
-	perPodHandler := handler.NewPerPod(promClient)
+	resourceHandler := handler.NewResource(promClient, auth)
+	appHandler := handler.NewApp(promClient, auth)
+	podsHandler := handler.NewPods(promClient, auth)
+	perPodHandler := handler.NewPerPod(promClient, auth)
 
 	// Config-driven dashboard handler
 	dashboardHandler := handler.NewDashboard(promClient, dashCfg)

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -13,11 +14,12 @@ import (
 // Labels handles label discovery requests.
 type Labels struct {
 	loki *loki.Client
+	auth *Authorizer
 }
 
 // NewLabels creates a Labels handler.
-func NewLabels(loki *loki.Client) *Labels {
-	return &Labels{loki: loki}
+func NewLabels(loki *loki.Client, auth *Authorizer) *Labels {
+	return &Labels{loki: loki, auth: auth}
 }
 
 // HandleLabels processes GET /api/v1/logs/labels requests.
@@ -26,6 +28,9 @@ func (h *Labels) HandleLabels(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
 	if namespace == "" {
 		writeError(w, http.StatusBadRequest, "namespace is required")
+		return
+	}
+	if !h.auth.AuthorizeNamespace(w, r, namespace) {
 		return
 	}
 
@@ -42,13 +47,21 @@ func (h *Labels) HandleLabels(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if end.Sub(start) > maxTimeRange {
+		slog.Warn("clamping time range", "namespace", namespace, "requested", end.Sub(start).String(), "max", maxTimeRange.String())
+		start = end.Add(-maxTimeRange)
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), queryTimeout)
+	defer cancel()
+
 	var query string
 	if p := r.URL.Query().Get("pods"); p != "" {
 		query = logql.ForPods(namespace, strings.Split(p, ","), "")
 	} else {
 		query = logql.ForNamespace(namespace, "")
 	}
-	labels, err := h.loki.LabelsWithQuery(r.Context(), query, start, end)
+	labels, err := h.loki.LabelsWithQuery(ctx, query, start, end)
 	if err != nil {
 		slog.Warn("labels query failed", "error", err, "namespace", namespace)
 		writeError(w, http.StatusBadGateway, "failed to query labels")
@@ -72,6 +85,9 @@ func (h *Labels) HandleLabelValues(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "namespace is required")
 		return
 	}
+	if !h.auth.AuthorizeNamespace(w, r, namespace) {
+		return
+	}
 
 	end := time.Now()
 	start := end.Add(-1 * time.Hour)
@@ -86,6 +102,14 @@ func (h *Labels) HandleLabelValues(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if end.Sub(start) > maxTimeRange {
+		slog.Warn("clamping time range", "namespace", namespace, "requested", end.Sub(start).String(), "max", maxTimeRange.String())
+		start = end.Add(-maxTimeRange)
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), queryTimeout)
+	defer cancel()
+
 	var query string
 	if p := r.URL.Query().Get("pods"); p != "" {
 		query = logql.ForPods(namespace, strings.Split(p, ","), "")
@@ -93,7 +117,7 @@ func (h *Labels) HandleLabelValues(w http.ResponseWriter, r *http.Request) {
 		query = logql.ForNamespace(namespace, "")
 	}
 
-	values, err := h.loki.LabelValues(r.Context(), name, query, start, end)
+	values, err := h.loki.LabelValues(ctx, name, query, start, end)
 	if err != nil {
 		slog.Warn("label values query failed", "label", name, "error", err)
 		writeError(w, http.StatusBadGateway, "failed to query label values")

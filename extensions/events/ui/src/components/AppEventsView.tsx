@@ -40,6 +40,12 @@ export const AppEventsView: React.FC<AppViewProps> = ({ application }) => {
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
 
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   React.useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchText), 300);
     return () => clearTimeout(timer);
@@ -55,14 +61,15 @@ export const AppEventsView: React.FC<AppViewProps> = ({ application }) => {
       appNamespace, appName, project,
     )
       .then((resp) => {
+        if (!mountedRef.current) return;
         setEvents(resp.events || []);
         setTotalCount(resp.summary.total);
         setWarningCount(resp.summary.warnings);
         setNormalCount(resp.summary.normal);
         setError(null);
       })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err) => { if (mountedRef.current) setError(err.message); })
+      .finally(() => { if (mountedRef.current) setLoading(false); });
   }, [namespace, appNamespace, appName, project, typeFilter, since]);
 
   React.useEffect(() => {

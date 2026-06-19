@@ -414,13 +414,19 @@ const ScheduleDetail: React.FC<{
 }> = ({ schedule: s, namespace, appNamespace, appName, project, onTrigger, onPauseToggled }) => {
   const [toggling, setToggling] = React.useState(false);
 
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const handleTogglePause = async () => {
     setToggling(true);
     try {
       await toggleSchedulePause(s.name, !s.paused, namespace, appNamespace, appName, project);
       onPauseToggled();
     } catch { /* banner will be shown by parent */ }
-    setToggling(false);
+    if (mountedRef.current) setToggling(false);
   };
 
   return (
@@ -475,11 +481,17 @@ const BackupDetail: React.FC<{ backup: BackupSummary; appNamespace: string; appN
   const [pvbs, setPvbs] = React.useState<PodVolumeBackupSummary[]>([]);
   const [pvbsLoaded, setPvbsLoaded] = React.useState(false);
 
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   React.useEffect(() => {
     fetchPodVolumeBackups(b.name, appNamespace, appName, project)
-      .then(setPvbs)
-      .catch(() => setPvbs([]))
-      .finally(() => setPvbsLoaded(true));
+      .then((v) => { if (mountedRef.current) setPvbs(v); })
+      .catch(() => { if (mountedRef.current) setPvbs([]); })
+      .finally(() => { if (mountedRef.current) setPvbsLoaded(true); });
   }, [b.name, appNamespace, appName, project]);
 
   const openLogs = async (kind: 'BackupLog' | 'BackupResults') => {
@@ -487,11 +499,11 @@ const BackupDetail: React.FC<{ backup: BackupSummary; appNamespace: string; appN
     setLogsError(null);
     try {
       const result = await fetchLogs(b.name, kind, appNamespace, appName, project);
-      setLogsContent({ title: kind === 'BackupLog' ? 'Backup Logs' : 'Backup Results', text: result.content });
+      if (mountedRef.current) setLogsContent({ title: kind === 'BackupLog' ? 'Backup Logs' : 'Backup Results', text: result.content });
     } catch (err: any) {
-      setLogsError(`Could not fetch ${kind === 'BackupLog' ? 'logs' : 'results'}: ${err.message || 'unknown error'}. Velero DownloadRequest CRD may not be installed.`);
+      if (mountedRef.current) setLogsError(`Could not fetch ${kind === 'BackupLog' ? 'logs' : 'results'}: ${err.message || 'unknown error'}. Velero DownloadRequest CRD may not be installed.`);
     }
-    setLogsLoading(false);
+    if (mountedRef.current) setLogsLoading(false);
   };
 
   const handleDelete = async () => {
@@ -500,8 +512,10 @@ const BackupDetail: React.FC<{ backup: BackupSummary; appNamespace: string; appN
       await deleteBackup(b.name, appNamespace, appName, project);
       onDeleted();
     } catch { /* parent handles */ }
-    setDeleting(false);
-    setConfirmDelete(false);
+    if (mountedRef.current) {
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
   };
 
   return (
@@ -605,16 +619,22 @@ const RestoreDetail: React.FC<{ restore: RestoreSummary; appNamespace: string; a
   const [logsError, setLogsError] = React.useState<string | null>(null);
   const [logsContent, setLogsContent] = React.useState<{ title: string; text: string } | null>(null);
 
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const openLogs = async (kind: 'RestoreLog' | 'RestoreResults') => {
     setLogsLoading(true);
     setLogsError(null);
     try {
       const result = await fetchLogs(r.name, kind, appNamespace, appName, project);
-      setLogsContent({ title: kind === 'RestoreLog' ? 'Restore Logs' : 'Restore Results', text: result.content });
+      if (mountedRef.current) setLogsContent({ title: kind === 'RestoreLog' ? 'Restore Logs' : 'Restore Results', text: result.content });
     } catch (err: any) {
-      setLogsError(`Could not fetch ${kind === 'RestoreLog' ? 'logs' : 'results'}: ${err.message || 'unknown error'}. Velero DownloadRequest CRD may not be installed.`);
+      if (mountedRef.current) setLogsError(`Could not fetch ${kind === 'RestoreLog' ? 'logs' : 'results'}: ${err.message || 'unknown error'}. Velero DownloadRequest CRD may not be installed.`);
     }
-    setLogsLoading(false);
+    if (mountedRef.current) setLogsLoading(false);
   };
 
   return (
@@ -713,6 +733,12 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
       .map((n: any) => ({ group: n.group || '', kind: n.kind, namespace: n.namespace || '', name: n.name }));
   }, [tree]);
 
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const fetchAll = React.useCallback(() => {
     if (!namespace) return;
     Promise.all([
@@ -720,13 +746,28 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
       fetchBackups(namespace, appNamespace, appName, project).catch(() => [] as BackupSummary[]),
       fetchRestores(namespace, appNamespace, appName, project).catch(() => [] as RestoreSummary[]),
     ]).then(([ov, bk, rs]) => {
+      if (!mountedRef.current) return;
       if (ov) setOverview(ov);
       setAllBackups(bk);
       setAllRestores(rs);
       setError(null);
-    }).catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+    }).catch((err) => { if (mountedRef.current) setError(err.message); })
+      .finally(() => { if (mountedRef.current) setLoading(false); });
   }, [namespace, appNamespace, appName, project, resourceRefs]);
+
+  // Defer a refresh after a mutation, tracked so it can be cancelled on unmount.
+  const deferredTimers = React.useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  const deferredRefresh = React.useCallback((delay: number) => {
+    const id = setTimeout(() => {
+      deferredTimers.current.delete(id);
+      if (mountedRef.current) fetchAll();
+    }, delay);
+    deferredTimers.current.add(id);
+  }, [fetchAll]);
+  React.useEffect(() => {
+    const timers = deferredTimers.current;
+    return () => { timers.forEach(clearTimeout); timers.clear(); };
+  }, []);
 
   React.useEffect(() => { setLoading(true); fetchAll(); }, [fetchAll]);
 
@@ -754,11 +795,11 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
       setShowCreatePanel(false);
       setBanner({ variant: 'success', message: `Backup "${result.name}" created. It will appear in the Backups tab shortly.` });
       setActiveTab('backups');
-      setTimeout(fetchAll, 2000);
+      deferredRefresh(2000);
     } catch (err: any) {
       setBanner({ variant: 'error', message: `Failed to create backup: ${err.message || 'unknown error'}` });
     }
-  }, [namespace, appNamespace, appName, project, fetchAll]);
+  }, [namespace, appNamespace, appName, project, deferredRefresh]);
 
   const handleRestore = React.useCallback(async (options: RestoreOptions) => {
     if (!restoreTarget) return;
@@ -767,22 +808,22 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
       setRestoreTarget(null);
       setBanner({ variant: 'success', message: `Restore "${result.name}" started from backup "${restoreTarget.name}". It will appear in the Restores tab.` });
       setActiveTab('restores');
-      setTimeout(fetchAll, 2000);
+      deferredRefresh(2000);
     } catch (err: any) {
       setBanner({ variant: 'error', message: `Failed to create restore: ${err.message || 'unknown error'}` });
     }
-  }, [restoreTarget, namespace, appNamespace, appName, project, fetchAll]);
+  }, [restoreTarget, namespace, appNamespace, appName, project, deferredRefresh]);
 
   const handleTriggerFromSchedule = React.useCallback(async (scheduleName: string, ttl?: string) => {
     try {
       const result = await createBackup(namespace, appNamespace, appName, project, ttl || undefined, scheduleName);
       setBanner({ variant: 'success', message: `Backup "${result.name}" triggered from schedule "${scheduleName}".` });
       setActiveTab('backups');
-      setTimeout(fetchAll, 2000);
+      deferredRefresh(2000);
     } catch (err: any) {
       setBanner({ variant: 'error', message: `Failed to trigger backup: ${err.message || 'unknown error'}` });
     }
-  }, [namespace, appNamespace, appName, project, fetchAll]);
+  }, [namespace, appNamespace, appName, project, deferredRefresh]);
 
   if (loading) return <div style={panel}><Loading /></div>;
   if (error && !overview) return (
@@ -916,7 +957,7 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
                         </td>
                         <td style={tdStyle}>{s.backupCount}</td>
                       </tr>
-                      {expandedSchedule === s.name && <ScheduleDetail schedule={s} namespace={namespace} appNamespace={appNamespace} appName={appName} project={project} onTrigger={handleTriggerFromSchedule} onPauseToggled={() => setTimeout(fetchAll, 1000)} />}
+                      {expandedSchedule === s.name && <ScheduleDetail schedule={s} namespace={namespace} appNamespace={appNamespace} appName={appName} project={project} onTrigger={handleTriggerFromSchedule} onPauseToggled={() => deferredRefresh(1000)} />}
                     </React.Fragment>
                   ))}
                 </tbody>
@@ -989,7 +1030,7 @@ export const AppBackupsView: React.FC<{ application: any; tree?: any }> = ({ app
                             )}
                           </td>
                         </tr>
-                        {isExpanded && <BackupDetail backup={b} appNamespace={appNamespace} appName={appName} project={project} onDeleted={() => { setBanner({ variant: 'success', message: `Delete request created for backup "${b.name}".` }); setTimeout(fetchAll, 2000); }} />}
+                        {isExpanded && <BackupDetail backup={b} appNamespace={appNamespace} appName={appName} project={project} onDeleted={() => { setBanner({ variant: 'success', message: `Delete request created for backup "${b.name}".` }); deferredRefresh(2000); }} />}
                       </React.Fragment>
                     );
                   })}

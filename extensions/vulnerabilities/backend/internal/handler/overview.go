@@ -14,21 +14,18 @@ import (
 // OverviewHandler handles app-level vulnerability aggregation.
 type OverviewHandler struct {
 	client dynamic.Interface
+	auth   *Authorizer
 }
 
 // NewOverviewHandler creates a new OverviewHandler.
-func NewOverviewHandler(client dynamic.Interface) *OverviewHandler {
-	return &OverviewHandler{client: client}
+func NewOverviewHandler(client dynamic.Interface, auth *Authorizer) *OverviewHandler {
+	return &OverviewHandler{client: client, auth: auth}
 }
 
 // Handle returns an aggregated vulnerability overview for an application's namespace.
 // Trivy Operator creates reports per ReplicaSet/DaemonSet/StatefulSet, not per Pod,
 // so we simply list all reports in the namespace and deduplicate by image.
 func (h *OverviewHandler) Handle(w http.ResponseWriter, r *http.Request) {
-	if !requireAppHeader(w, r) {
-		return
-	}
-
 	var req types.OverviewRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request body")
@@ -39,10 +36,13 @@ func (h *OverviewHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	if !validateNamespace(w, req.Namespace) {
 		return
 	}
+	if !h.auth.AuthorizeNamespace(w, r, req.Namespace) {
+		return
+	}
 
 	auditLog(r, "vulnerability.overview", req.Namespace)
 
-	listOpts := metav1.ListOptions{LabelSelector: resourceLabelSelector(req.Resources)}
+	listOpts := metav1.ListOptions{Limit: 500, LabelSelector: resourceLabelSelector(req.Resources)}
 	list, err := h.client.Resource(types.VulnerabilityReportGVR).Namespace(req.Namespace).List(r.Context(), listOpts)
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "failed to list vulnerability reports")

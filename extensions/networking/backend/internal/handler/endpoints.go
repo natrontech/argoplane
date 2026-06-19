@@ -15,11 +15,12 @@ import (
 // EndpointsHandler handles requests for Cilium endpoint data.
 type EndpointsHandler struct {
 	client dynamic.Interface
+	auth   *Authorizer
 }
 
 // NewEndpointsHandler creates a new EndpointsHandler.
-func NewEndpointsHandler(client dynamic.Interface) *EndpointsHandler {
-	return &EndpointsHandler{client: client}
+func NewEndpointsHandler(client dynamic.Interface, auth *Authorizer) *EndpointsHandler {
+	return &EndpointsHandler{client: client, auth: auth}
 }
 
 // Handle returns CiliumEndpoints for a namespace.
@@ -27,6 +28,10 @@ func (h *EndpointsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
 	if namespace == "" {
 		WriteError(w, http.StatusBadRequest, "namespace is required")
+		return
+	}
+
+	if !h.auth.AuthorizeNamespace(w, r, namespace) {
 		return
 	}
 

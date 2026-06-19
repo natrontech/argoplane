@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"sort"
@@ -13,14 +14,21 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+// eventListLimit caps the number of events fetched per List call.
+const eventListLimit = 500
+
+// requestTimeout bounds the time spent serving a single events request.
+const requestTimeout = 15 * time.Second
+
 // EventsHandler handles Kubernetes event queries.
 type EventsHandler struct {
 	client kubernetes.Interface
+	auth   *Authorizer
 }
 
 // NewEventsHandler creates a new events handler.
-func NewEventsHandler(client kubernetes.Interface) *EventsHandler {
-	return &EventsHandler{client: client}
+func NewEventsHandler(client kubernetes.Interface, auth *Authorizer) *EventsHandler {
+	return &EventsHandler{client: client, auth: auth}
 }
 
 // EventResponse is the JSON response for the events endpoint.
@@ -104,12 +112,12 @@ func eventFirstTimestamp(e *corev1.Event) time.Time {
 
 // Handle serves GET /api/v1/events.
 func (h *EventsHandler) Handle(w http.ResponseWriter, r *http.Request) {
-	if !requireAppHeader(w, r) {
+	namespace := r.URL.Query().Get("namespace")
+	if !validateNamespace(w, namespace) {
 		return
 	}
 
-	namespace := r.URL.Query().Get("namespace")
-	if !validateNamespace(w, namespace) {
+	if !h.auth.AuthorizeNamespace(w, r, namespace) {
 		return
 	}
 
@@ -128,7 +136,10 @@ func (h *EventsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	cutoff := time.Now().Add(-since)
 
-	events, err := h.client.CoreV1().Events(namespace).List(r.Context(), metav1.ListOptions{})
+	ctx, cancel := context.WithTimeout(r.Context(), requestTimeout)
+	defer cancel()
+
+	events, err := h.client.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{Limit: eventListLimit})
 	if err != nil {
 		slog.Error("failed to list events", "error", err, "namespace", namespace)
 		WriteError(w, http.StatusInternalServerError, "failed to list events")

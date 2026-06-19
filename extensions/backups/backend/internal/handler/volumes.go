@@ -16,11 +16,35 @@ import (
 type VolumesHandler struct {
 	client          dynamic.Interface
 	veleroNamespace string
+	auth            *Authorizer
 }
 
 // NewVolumesHandler creates a new VolumesHandler.
-func NewVolumesHandler(client dynamic.Interface, veleroNamespace string) *VolumesHandler {
-	return &VolumesHandler{client: client, veleroNamespace: veleroNamespace}
+func NewVolumesHandler(client dynamic.Interface, veleroNamespace string, auth *Authorizer) *VolumesHandler {
+	return &VolumesHandler{client: client, veleroNamespace: veleroNamespace, auth: auth}
+}
+
+// authorizeResource resolves the namespaces covered by the named backup/restore
+// and requires they are all managed by the calling Application. The kind argument
+// is the DownloadRequest-style kind ("BackupLog" / "RestoreLog") used to pick the
+// resource type. It writes a 403/404 and returns false when access is denied.
+func (h *VolumesHandler) authorizeResource(w http.ResponseWriter, r *http.Request, kind, name string) bool {
+	allowed, ok := h.auth.Allowed(w, r)
+	if !ok {
+		return false
+	}
+	namespaces, err := resourceNamespaces(r.Context(), h.client, h.veleroNamespace, kind, name)
+	if err != nil {
+		slog.Warn("pod volume request: target resource not found", "name", name, "kind", kind, "error", err)
+		WriteError(w, http.StatusNotFound, "backup or restore not found")
+		return false
+	}
+	if !namespacesSubsetOf(namespaces, allowed) {
+		auditLog(r, "podvolume.rejected", "", "name", name, "kind", kind, "namespaces", namespaces)
+		WriteError(w, http.StatusForbidden, "resource is not scoped to namespaces managed by this application")
+		return false
+	}
+	return true
 }
 
 // HandleBackups lists PodVolumeBackups for a given backup name.
@@ -28,6 +52,11 @@ func (h *VolumesHandler) HandleBackups(w http.ResponseWriter, r *http.Request) {
 	backup := r.URL.Query().Get("backup")
 	if backup == "" {
 		WriteError(w, http.StatusBadRequest, "backup is required")
+		return
+	}
+
+	// Per-app read: the backup must be scoped to namespaces this Application manages.
+	if !h.authorizeResource(w, r, "BackupLog", backup) {
 		return
 	}
 
@@ -60,6 +89,11 @@ func (h *VolumesHandler) HandleRestores(w http.ResponseWriter, r *http.Request) 
 	restore := r.URL.Query().Get("restore")
 	if restore == "" {
 		WriteError(w, http.StatusBadRequest, "restore is required")
+		return
+	}
+
+	// Per-app read: the restore must be scoped to namespaces this Application manages.
+	if !h.authorizeResource(w, r, "RestoreLog", restore) {
 		return
 	}
 

@@ -18,11 +18,12 @@ import (
 // PoliciesHandler handles requests for Cilium network policy data.
 type PoliciesHandler struct {
 	client dynamic.Interface
+	auth   *Authorizer
 }
 
 // NewPoliciesHandler creates a new PoliciesHandler.
-func NewPoliciesHandler(client dynamic.Interface) *PoliciesHandler {
-	return &PoliciesHandler{client: client}
+func NewPoliciesHandler(client dynamic.Interface, auth *Authorizer) *PoliciesHandler {
+	return &PoliciesHandler{client: client, auth: auth}
 }
 
 // policiesWithOwnershipRequest is the JSON body for the ownership-aware endpoint.
@@ -42,6 +43,10 @@ func (h *PoliciesHandler) HandleWithOwnership(w http.ResponseWriter, r *http.Req
 
 	if req.Namespace == "" {
 		WriteError(w, http.StatusBadRequest, "namespace is required")
+		return
+	}
+
+	if !h.auth.AuthorizeNamespace(w, r, req.Namespace) {
 		return
 	}
 
@@ -112,6 +117,10 @@ func (h *PoliciesHandler) HandleNamespaced(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	if !h.auth.AuthorizeNamespace(w, r, namespace) {
+		return
+	}
+
 	username := r.Header.Get("Argocd-Username")
 	slog.Debug("policies request", "namespace", namespace, "user", username)
 
@@ -133,6 +142,8 @@ func (h *PoliciesHandler) HandleNamespaced(w http.ResponseWriter, r *http.Reques
 }
 
 // HandleClusterwide returns CiliumClusterwideNetworkPolicies (legacy GET endpoint).
+// Not namespace-gated: Cilium clusterwide policies are cluster-scoped (no namespace),
+// so this stays open, gated only by ArgoCD's extensions-invoke RBAC.
 func (h *PoliciesHandler) HandleClusterwide(w http.ResponseWriter, r *http.Request) {
 	username := r.Header.Get("Argocd-Username")
 	slog.Debug("clusterwide policies request", "user", username)
