@@ -110,8 +110,14 @@ const chevronStyle = (expanded: boolean): React.CSSProperties => ({
   transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
 });
 
+// Stable identity for an event, independent of its position in the array.
+// A refresh may reorder events, so we never key expansion state on the index.
+function eventKey(event: KubeEvent): string {
+  return `${event.involvedObject.namespace}/${event.involvedObject.kind}/${event.involvedObject.name}/${event.reason}/${event.firstTimestamp}`;
+}
+
 export const EventsTable: React.FC<EventsTableProps> = ({ events, loading, error, onRetry }) => {
-  const [expandedRows, setExpandedRows] = React.useState<Set<number>>(new Set());
+  const [expandedRows, setExpandedRows] = React.useState<Set<string>>(new Set());
 
   // Tick every 30s so timeAgo labels refresh.
   const [, setTick] = React.useState(0);
@@ -120,19 +126,13 @@ export const EventsTable: React.FC<EventsTableProps> = ({ events, loading, error
     return () => clearInterval(id);
   }, []);
 
-  // Collapse expanded rows when the event list changes (e.g. filter or refresh).
-  const eventFingerprint = events.length + (events[0]?.lastTimestamp || '');
-  React.useEffect(() => {
-    setExpandedRows(new Set());
-  }, [eventFingerprint]);
-
-  const toggleRow = (index: number) => {
+  const toggleRow = (key: string) => {
     setExpandedRows((prev) => {
       const next = new Set(prev);
-      if (next.has(index)) {
-        next.delete(index);
+      if (next.has(key)) {
+        next.delete(key);
       } else {
-        next.add(index);
+        next.add(key);
       }
       return next;
     });
@@ -168,14 +168,15 @@ export const EventsTable: React.FC<EventsTableProps> = ({ events, loading, error
 
   const rows: React.ReactElement[] = [];
   events.forEach((event, i) => {
-    const expanded = expandedRows.has(i);
+    const key = eventKey(event);
+    const expanded = expandedRows.has(key);
 
     // Main row
     rows.push(
       React.createElement('tr', {
-        key: `row-${i}`,
+        key: `row-${key}-${i}`,
         style: clickableRowStyle,
-        onClick: () => toggleRow(i),
+        onClick: () => toggleRow(key),
       },
         React.createElement('td', { style: cellStyle },
           React.createElement('span', {
@@ -218,7 +219,7 @@ export const EventsTable: React.FC<EventsTableProps> = ({ events, loading, error
     // Expanded detail row
     if (expanded) {
       rows.push(
-        React.createElement('tr', { key: `detail-${i}`, style: expandedRowStyle },
+        React.createElement('tr', { key: `detail-${key}-${i}`, style: expandedRowStyle },
           React.createElement('td', {
             colSpan: 7,
             style: expandedCellStyle,

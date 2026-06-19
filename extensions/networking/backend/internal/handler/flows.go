@@ -15,12 +15,13 @@ import (
 // between UI refresh intervals.
 type FlowsHandler struct {
 	buffer *hubble.FlowBuffer
+	auth   *Authorizer
 }
 
 // NewFlowsHandler creates a new FlowsHandler. If buffer is nil,
 // the handler returns an empty response indicating Hubble is not configured.
-func NewFlowsHandler(buffer *hubble.FlowBuffer) *FlowsHandler {
-	return &FlowsHandler{buffer: buffer}
+func NewFlowsHandler(buffer *hubble.FlowBuffer, auth *Authorizer) *FlowsHandler {
+	return &FlowsHandler{buffer: buffer, auth: auth}
 }
 
 // Handle returns recent flows for a namespace from the flow buffer.
@@ -28,6 +29,10 @@ func (h *FlowsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
 	if namespace == "" {
 		WriteError(w, http.StatusBadRequest, "namespace is required")
+		return
+	}
+
+	if !h.auth.AuthorizeNamespace(w, r, namespace) {
 		return
 	}
 

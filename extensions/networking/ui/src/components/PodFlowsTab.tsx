@@ -144,6 +144,12 @@ export const PodFlowsTab: React.FC<{ resource: any; tree?: any; application: any
   }, [treeNodeKeys]);
 
 
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const fetchData = React.useCallback(() => {
     if (!namespace) return;
     const flowsP = fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter, directionFilter)
@@ -155,13 +161,20 @@ export const PodFlowsTab: React.FC<{ resource: any; tree?: any; application: any
 
     Promise.all([flowsP, policiesP, endpointsP])
       .then(([fl, pol, ep]) => {
+        if (!mountedRef.current) return;
+        // If every request failed, surface an error instead of silently keeping stale data.
+        if (fl === null && pol === null && ep === null) {
+          setError('Failed to load networking data');
+          setLoading(false);
+          return;
+        }
         if (fl !== null) setFlowsResponse(fl);
         if (pol !== null) setPolicies(pol);
         if (ep !== null) setEndpoints(ep);
         setError(null);
       })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err) => { if (mountedRef.current) setError(err.message); })
+      .finally(() => { if (mountedRef.current) setLoading(false); });
   }, [namespace, appNamespace, appName, project, resourceRefs, timeRange, verdictFilter, directionFilter]);
 
   React.useEffect(() => { setLoading(true); fetchData(); }, [fetchData]);

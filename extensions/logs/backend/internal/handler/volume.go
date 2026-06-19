@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -13,11 +14,12 @@ import (
 // Volume handles log volume requests.
 type Volume struct {
 	loki *loki.Client
+	auth *Authorizer
 }
 
 // NewVolume creates a Volume handler.
-func NewVolume(loki *loki.Client) *Volume {
-	return &Volume{loki: loki}
+func NewVolume(loki *loki.Client, auth *Authorizer) *Volume {
+	return &Volume{loki: loki, auth: auth}
 }
 
 type volumeResponse struct {
@@ -31,6 +33,9 @@ func (h *Volume) Handle(w http.ResponseWriter, r *http.Request) {
 	namespace := q.Get("namespace")
 	if namespace == "" {
 		writeError(w, http.StatusBadRequest, "namespace is required")
+		return
+	}
+	if !h.auth.AuthorizeNamespace(w, r, namespace) {
 		return
 	}
 
@@ -58,6 +63,11 @@ func (h *Volume) Handle(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if end.Sub(start) > maxTimeRange {
+		slog.Warn("clamping time range", "namespace", namespace, "requested", end.Sub(start).String(), "max", maxTimeRange.String())
+		start = end.Add(-maxTimeRange)
+	}
+
 	// Calculate step based on time range
 	duration := end.Sub(start)
 	step := calculateStep(duration)
@@ -74,7 +84,10 @@ func (h *Volume) Handle(w http.ResponseWriter, r *http.Request) {
 	username := r.Header.Get("Argocd-Username")
 	slog.Debug("volume query", "namespace", namespace, "query", volumeQuery, "user", username)
 
-	points, err := h.loki.VolumeRange(r.Context(), volumeQuery, start, end, step)
+	ctx, cancel := context.WithTimeout(r.Context(), queryTimeout)
+	defer cancel()
+
+	points, err := h.loki.VolumeRange(ctx, volumeQuery, start, end, step)
 	if err != nil {
 		slog.Warn("volume query failed", "error", err, "query", volumeQuery)
 		writeError(w, http.StatusBadGateway, "failed to query log volume")

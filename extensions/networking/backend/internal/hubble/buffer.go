@@ -93,10 +93,16 @@ func (b *FlowBuffer) Flows(ctx context.Context, req FlowsRequest) ([]FlowSummary
 	// Prune flows older than retention period.
 	cutoff := time.Now().Add(-b.retention)
 	for key, f := range nsFlows {
-		t, parseErr := time.Parse(time.RFC3339, f.Time)
+		t, parseErr := time.Parse(time.RFC3339Nano, f.Time)
 		if parseErr != nil || t.Before(cutoff) {
 			delete(nsFlows, key)
 		}
+	}
+
+	// ponytail: drop the namespace's map entry once it's empty so the top-level
+	// flows map doesn't grow unbounded across every namespace ever requested.
+	if len(nsFlows) == 0 {
+		delete(b.flows, req.Namespace)
 	}
 
 	// If buffer exceeds max, keep only the newest entries.
@@ -108,7 +114,7 @@ func (b *FlowBuffer) Flows(ctx context.Context, req FlowsRequest) ([]FlowSummary
 	windowCutoff := time.Now().Add(-req.Since)
 	result := make([]FlowSummary, 0, min(len(nsFlows), int(req.Limit)))
 	for _, f := range nsFlows {
-		t, parseErr := time.Parse(time.RFC3339, f.Time)
+		t, parseErr := time.Parse(time.RFC3339Nano, f.Time)
 		if parseErr != nil || t.Before(windowCutoff) {
 			continue
 		}

@@ -28,6 +28,12 @@ export const EventsPanel: React.FC<ExtensionProps> = ({ resource, application })
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
 
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const fetchAll = React.useCallback(() => {
     if (!namespace || !name || !kind) return;
 
@@ -36,11 +42,12 @@ export const EventsPanel: React.FC<ExtensionProps> = ({ resource, application })
       appNamespace, appName, project,
     )
       .then((resp) => {
+        if (!mountedRef.current) return;
         setEvents(resp.events || []);
         setError(null);
       })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err) => { if (mountedRef.current) setError(err.message); })
+      .finally(() => { if (mountedRef.current) setLoading(false); });
   }, [namespace, name, kind, appNamespace, appName, project, since]);
 
   React.useEffect(() => {

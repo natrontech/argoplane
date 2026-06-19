@@ -118,23 +118,31 @@ export const BackupDetailTab: React.FC<{ resource: any; tree?: any; application:
   const inProgress = phase === 'InProgress' || phase === 'New';
   const itemPercent = totalItems > 0 ? Math.round((itemsBackedUp / totalItems) * 100) : 0;
 
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   React.useEffect(() => {
     fetchPodVolumeBackups(backupName, appNamespace, appName, project)
-      .then(setPvbs)
-      .catch(() => setPvbs([]))
-      .finally(() => setPvbsLoaded(true));
+      .then((v) => { if (mountedRef.current) setPvbs(v); })
+      .catch(() => { if (mountedRef.current) setPvbs([]); })
+      .finally(() => { if (mountedRef.current) setPvbsLoaded(true); });
   }, [backupName, appNamespace, appName, project]);
 
   const handleDelete = React.useCallback(async () => {
     setDeleting(true);
     try {
       await deleteBackup(backupName, appNamespace, appName, project);
-      setDeleteMsg(`Delete request created for backup "${backupName}".`);
-      setConfirmDelete(false);
+      if (mountedRef.current) {
+        setDeleteMsg(`Delete request created for backup "${backupName}".`);
+        setConfirmDelete(false);
+      }
     } catch (err: any) {
-      setDeleteMsg(`Failed to delete: ${err.message || 'unknown error'}`);
+      if (mountedRef.current) setDeleteMsg(`Failed to delete: ${err.message || 'unknown error'}`);
     }
-    setDeleting(false);
+    if (mountedRef.current) setDeleting(false);
   }, [backupName, appNamespace, appName, project]);
 
   const openLogs = React.useCallback(async (kind: 'BackupLog' | 'BackupResults') => {
@@ -142,19 +150,19 @@ export const BackupDetailTab: React.FC<{ resource: any; tree?: any; application:
     setLogsError(null);
     try {
       const result = await fetchLogs(backupName, kind, appNamespace, appName, project);
-      setLogsContent({ title: kind === 'BackupLog' ? 'Backup Logs' : 'Backup Results', text: result.content });
+      if (mountedRef.current) setLogsContent({ title: kind === 'BackupLog' ? 'Backup Logs' : 'Backup Results', text: result.content });
     } catch (err: any) {
-      setLogsError(`Could not fetch ${kind === 'BackupLog' ? 'logs' : 'results'}: ${err.message || 'unknown error'}. Velero DownloadRequest CRD may not be installed.`);
+      if (mountedRef.current) setLogsError(`Could not fetch ${kind === 'BackupLog' ? 'logs' : 'results'}: ${err.message || 'unknown error'}. Velero DownloadRequest CRD may not be installed.`);
     }
-    setLogsLoading(false);
+    if (mountedRef.current) setLogsLoading(false);
   }, [backupName, appNamespace, appName, project]);
 
   const loadRestores = React.useCallback(() => {
     if (!backupNs) return;
     fetchRestores(backupNs, appNamespace, appName, project, backupName)
-      .then(setRestores)
-      .catch(() => setRestores([]))
-      .finally(() => setLoading(false));
+      .then((r) => { if (mountedRef.current) setRestores(r); })
+      .catch(() => { if (mountedRef.current) setRestores([]); })
+      .finally(() => { if (mountedRef.current) setLoading(false); });
   }, [backupNs, appNamespace, appName, project, backupName]);
 
   React.useEffect(() => { setLoading(true); loadRestores(); }, [loadRestores]);
@@ -166,6 +174,13 @@ export const BackupDetailTab: React.FC<{ resource: any; tree?: any; application:
     return () => clearInterval(i);
   }, [inProgress, loadRestores]);
 
+  // Track deferred refresh timers so they can be cancelled on unmount.
+  const deferredTimers = React.useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  React.useEffect(() => {
+    const timers = deferredTimers.current;
+    return () => { timers.forEach(clearTimeout); timers.clear(); };
+  }, []);
+
   const [restoreError, setRestoreError] = React.useState<string | null>(null);
 
   const handleRestore = React.useCallback(async () => {
@@ -173,11 +188,15 @@ export const BackupDetailTab: React.FC<{ resource: any; tree?: any; application:
     setRestoreError(null);
     try {
       await createRestore(backupName, backupNs, appNamespace, appName, project);
-      setTimeout(loadRestores, 2000);
+      const id = setTimeout(() => {
+        deferredTimers.current.delete(id);
+        if (mountedRef.current) loadRestores();
+      }, 2000);
+      deferredTimers.current.add(id);
     } catch (err: any) {
-      setRestoreError(`Failed to create restore: ${err.message || 'unknown error'}`);
+      if (mountedRef.current) setRestoreError(`Failed to create restore: ${err.message || 'unknown error'}`);
     } finally {
-      setRestoring(false);
+      if (mountedRef.current) setRestoring(false);
     }
   }, [backupName, backupNs, appNamespace, appName, project, loadRestores]);
 

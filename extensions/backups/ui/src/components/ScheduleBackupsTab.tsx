@@ -96,28 +96,46 @@ export const ScheduleBackupsTab: React.FC<{ resource: any; tree?: any; applicati
   // Use the first included namespace or the app's destination namespace as the target.
   const targetNamespace = includedNs.length > 0 ? includedNs[0] : application?.spec?.destination?.namespace || '';
 
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  // Keep local paused state in sync when ArgoCD pushes an updated resource.
+  React.useEffect(() => {
+    setCurrentPaused(resource?.spec?.paused || false);
+  }, [resource?.spec?.paused]);
+
   const loadBackups = React.useCallback(() => {
     if (!targetNamespace) return;
     // Fetch backups filtered by target namespace AND this schedule name.
     fetchBackups(targetNamespace, appNamespace, appName, project, scheduleName)
-      .then(setBackups)
-      .catch(() => setBackups([]))
-      .finally(() => setLoading(false));
+      .then((b) => { if (mountedRef.current) setBackups(b); })
+      .catch(() => { if (mountedRef.current) setBackups([]); })
+      .finally(() => { if (mountedRef.current) setLoading(false); });
   }, [targetNamespace, appNamespace, appName, project, scheduleName]);
 
   React.useEffect(() => { setLoading(true); loadBackups(); }, [loadBackups]);
   React.useEffect(() => { const i = setInterval(loadBackups, REFRESH_INTERVAL); return () => clearInterval(i); }, [loadBackups]);
+
+  // Track deferred refresh timers so they can be cancelled on unmount.
+  const deferredTimers = React.useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  React.useEffect(() => {
+    const timers = deferredTimers.current;
+    return () => { timers.forEach(clearTimeout); timers.clear(); };
+  }, []);
 
   const handleTogglePause = React.useCallback(async () => {
     setToggling(true);
     setTriggerError(null);
     try {
       await toggleSchedulePause(scheduleName, !currentPaused, targetNamespace, appNamespace, appName, project);
-      setCurrentPaused(!currentPaused);
+      if (mountedRef.current) setCurrentPaused(!currentPaused);
     } catch (err: any) {
-      setTriggerError(`Failed to ${currentPaused ? 'resume' : 'pause'} schedule: ${err.message || 'unknown error'}`);
+      if (mountedRef.current) setTriggerError(`Failed to ${currentPaused ? 'resume' : 'pause'} schedule: ${err.message || 'unknown error'}`);
     } finally {
-      setToggling(false);
+      if (mountedRef.current) setToggling(false);
     }
   }, [scheduleName, currentPaused, targetNamespace, appNamespace, appName, project]);
 
@@ -126,11 +144,15 @@ export const ScheduleBackupsTab: React.FC<{ resource: any; tree?: any; applicati
     setTriggerError(null);
     try {
       await createBackup(targetNamespace, appNamespace, appName, project, ttl !== '-' ? ttl : undefined);
-      setTimeout(loadBackups, 2000);
+      const id = setTimeout(() => {
+        deferredTimers.current.delete(id);
+        if (mountedRef.current) loadBackups();
+      }, 2000);
+      deferredTimers.current.add(id);
     } catch (err: any) {
-      setTriggerError(`Failed to trigger backup: ${err.message || 'unknown error'}`);
+      if (mountedRef.current) setTriggerError(`Failed to trigger backup: ${err.message || 'unknown error'}`);
     } finally {
-      setTriggering(false);
+      if (mountedRef.current) setTriggering(false);
     }
   }, [targetNamespace, appNamespace, appName, project, ttl, loadBackups]);
 

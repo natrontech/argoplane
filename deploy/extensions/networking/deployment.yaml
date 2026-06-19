@@ -94,6 +94,10 @@ rules:
       - ciliumendpoints
       - ciliumidentities
     verbs: ["get", "list", "watch"]
+  # Reads ArgoCD Applications to authorize namespace scoping.
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications"]
+    verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

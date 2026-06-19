@@ -23,6 +23,7 @@ func podFilter(pods []string) string {
 // AppMetrics returns PromQL queries aggregated across containers in a namespace.
 // When pods is non-empty, queries are scoped to only those pods.
 func AppMetrics(namespace string, pods []string) []NamedQuery {
+	namespace = EscapePromQLLabel(namespace)
 	pf := podFilter(pods)
 	return []NamedQuery{
 		{

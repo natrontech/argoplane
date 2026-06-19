@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -15,11 +16,12 @@ import (
 // Resource handles per-workload metric requests.
 type Resource struct {
 	prom *prometheus.Client
+	auth *Authorizer
 }
 
 // NewResource creates a resource metrics handler.
-func NewResource(prom *prometheus.Client) *Resource {
-	return &Resource{prom: prom}
+func NewResource(prom *prometheus.Client, auth *Authorizer) *Resource {
+	return &Resource{prom: prom, auth: auth}
 }
 
 // instantMetric is returned for non-range queries.
@@ -56,24 +58,31 @@ func (h *Resource) Handle(w http.ResponseWriter, r *http.Request) {
 		kind = "Deployment"
 	}
 
+	if !h.auth.AuthorizeNamespace(w, r, namespace) {
+		return
+	}
+
 	username := r.Header.Get("Argocd-Username")
 	slog.Debug("resource metrics request", "namespace", namespace, "name", name, "kind", kind, "range", timeRange, "user", username)
+
+	ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
+	defer cancel()
 
 	queries := query.ResourceMetrics(namespace, name, kind)
 	w.Header().Set("Content-Type", "application/json")
 
 	if timeRange != "" {
-		h.handleRange(w, r, queries, timeRange)
+		h.handleRange(ctx, w, queries, timeRange)
 	} else {
-		h.handleInstant(w, r, queries)
+		h.handleInstant(ctx, w, queries)
 	}
 }
 
-func (h *Resource) handleInstant(w http.ResponseWriter, r *http.Request, queries []query.NamedQuery) {
+func (h *Resource) handleInstant(ctx context.Context, w http.ResponseWriter, queries []query.NamedQuery) {
 	var results []instantMetric
 
 	for _, q := range queries {
-		samples, err := h.prom.Query(r.Context(), q.Query)
+		samples, err := h.prom.Query(ctx, q.Query)
 		if err != nil {
 			slog.Warn("query failed", "name", q.Name, "error", err)
 			results = append(results, instantMetric{
@@ -99,7 +108,7 @@ func (h *Resource) handleInstant(w http.ResponseWriter, r *http.Request, queries
 	json.NewEncoder(w).Encode(results)
 }
 
-func (h *Resource) handleRange(w http.ResponseWriter, r *http.Request, queries []query.NamedQuery, timeRange string) {
+func (h *Resource) handleRange(ctx context.Context, w http.ResponseWriter, queries []query.NamedQuery, timeRange string) {
 	end := time.Now()
 	start, step := rangeParams(timeRange, end)
 
@@ -111,7 +120,7 @@ func (h *Resource) handleRange(w http.ResponseWriter, r *http.Request, queries [
 			continue
 		}
 
-		series, err := h.prom.QueryRange(r.Context(), q.Query, start, end, step)
+		series, err := h.prom.QueryRange(ctx, q.Query, start, end, step)
 		if err != nil {
 			slog.Warn("range query failed", "name", q.Name, "error", err)
 			results = append(results, timeSeriesMetric{

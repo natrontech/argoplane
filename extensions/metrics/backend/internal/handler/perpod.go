@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -10,16 +11,18 @@ import (
 	"time"
 
 	"github.com/natrontech/argoplane/extensions/metrics/backend/internal/prometheus"
+	"github.com/natrontech/argoplane/extensions/metrics/backend/internal/query"
 )
 
 // PerPod handles per-pod time series requests for multi-line charts.
 type PerPod struct {
 	prom *prometheus.Client
+	auth *Authorizer
 }
 
 // NewPerPod creates a per-pod time series handler.
-func NewPerPod(prom *prometheus.Client) *PerPod {
-	return &PerPod{prom: prom}
+func NewPerPod(prom *prometheus.Client, auth *Authorizer) *PerPod {
+	return &PerPod{prom: prom, auth: auth}
 }
 
 type perPodSeries struct {
@@ -53,8 +56,15 @@ func (h *PerPod) Handle(w http.ResponseWriter, r *http.Request) {
 		kind = "Deployment"
 	}
 
+	if !h.auth.AuthorizeNamespace(w, r, namespace) {
+		return
+	}
+
 	username := r.Header.Get("Argocd-Username")
 	slog.Debug("per-pod series", "namespace", namespace, "name", name, "kind", kind, "range", timeRange, "user", username)
+
+	ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
+	defer cancel()
 
 	end := time.Now()
 	start, step := rangeParams(timeRange, end)
@@ -73,11 +83,11 @@ func (h *PerPod) Handle(w http.ResponseWriter, r *http.Request) {
 	var podSelector string
 	if podsParam != "" {
 		pods := strings.Split(podsParam, ",")
-		podSelector = fmt.Sprintf(`namespace="%s",pod=~"%s"`, namespace, strings.Join(pods, "|"))
+		podSelector = fmt.Sprintf(`namespace="%s",pod=~"%s"`, query.EscapePromQLLabel(namespace), quoteRegexAlternation(pods))
 	} else if name != "" {
 		podSelector = podSelectorForKind(namespace, name, kind)
 	} else {
-		podSelector = fmt.Sprintf(`namespace="%s"`, namespace)
+		podSelector = fmt.Sprintf(`namespace="%s"`, query.EscapePromQLLabel(namespace))
 	}
 
 	type metricDef struct {
@@ -112,7 +122,7 @@ func (h *PerPod) Handle(w http.ResponseWriter, r *http.Request) {
 	var results []perPodSeries
 
 	for _, m := range metrics {
-		allSeries, err := h.prom.QueryRange(r.Context(), m.query, start, end, step)
+		allSeries, err := h.prom.QueryRange(ctx, m.query, start, end, step)
 		if err != nil {
 			slog.Warn("per-pod range query failed", "metric", m.name, "error", err)
 			results = append(results, perPodSeries{Metric: m.name, Unit: displayUnit(m.unit), Timestamps: tsStrings, Pods: []podTimeline{}})

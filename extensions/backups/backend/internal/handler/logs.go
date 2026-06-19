@@ -26,6 +26,7 @@ import (
 type LogsHandler struct {
 	client          dynamic.Interface
 	veleroNamespace string
+	auth            *Authorizer
 	httpClient      *http.Client
 }
 
@@ -37,7 +38,7 @@ type TLSConfig struct {
 
 // NewLogsHandler creates a new LogsHandler. If tlsCfg is non-nil, the HTTP client
 // is configured with a custom CA bundle or skips TLS verification.
-func NewLogsHandler(client dynamic.Interface, veleroNamespace string, tlsCfg *TLSConfig) *LogsHandler {
+func NewLogsHandler(client dynamic.Interface, veleroNamespace string, auth *Authorizer, tlsCfg *TLSConfig) *LogsHandler {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 
 	if tlsCfg != nil {
@@ -63,6 +64,7 @@ func NewLogsHandler(client dynamic.Interface, veleroNamespace string, tlsCfg *TL
 	return &LogsHandler{
 		client:          client,
 		veleroNamespace: veleroNamespace,
+		auth:            auth,
 		httpClient:      &http.Client{Timeout: 30 * time.Second, Transport: transport},
 	}
 }
@@ -89,6 +91,25 @@ func (h *LogsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 	if !validKinds[kind] {
 		WriteError(w, http.StatusBadRequest, "kind must be one of: BackupLog, RestoreLog, BackupResults, RestoreResults")
+		return
+	}
+
+	// Resolve the namespaces the target backup/restore covers and require they are
+	// all managed by the calling Application. This blocks downloading logs/results
+	// of another tenant's or a platform-wide (cluster-scoped) backup/restore.
+	allowed, ok := h.auth.Allowed(w, r)
+	if !ok {
+		return
+	}
+	targetNamespaces, err := resourceNamespaces(r.Context(), h.client, h.veleroNamespace, kind, name)
+	if err != nil {
+		slog.Warn("logs request: target resource not found", "name", name, "kind", kind, "error", err)
+		WriteError(w, http.StatusNotFound, "backup or restore not found")
+		return
+	}
+	if !namespacesSubsetOf(targetNamespaces, allowed) {
+		auditLog(r, "logs.rejected", "", "name", name, "kind", kind, "namespaces", targetNamespaces)
+		WriteError(w, http.StatusForbidden, "resource is not scoped to namespaces managed by this application")
 		return
 	}
 
@@ -128,6 +149,15 @@ func (h *LogsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Clean up the DownloadRequest no matter how this handler returns (best effort).
+	// Deferring right after Create ensures it is removed even on poll timeout or
+	// request cancellation, which previously leaked the object.
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = h.client.Resource(types.DownloadRequestGVR).Namespace(h.veleroNamespace).Delete(ctx, drName, metav1.DeleteOptions{})
+	}()
+
 	// Poll for the download URL (Velero fills it in status.downloadURL).
 	downloadURL, err := h.pollDownloadURL(r.Context(), created.GetName())
 	if err != nil {
@@ -135,13 +165,6 @@ func (h *LogsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, http.StatusGatewayTimeout, "download request timed out waiting for URL")
 		return
 	}
-
-	// Clean up the DownloadRequest (best effort).
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		_ = h.client.Resource(types.DownloadRequestGVR).Namespace(h.veleroNamespace).Delete(ctx, drName, metav1.DeleteOptions{})
-	}()
 
 	// Fetch the content from the pre-signed URL and return it inline.
 	content, err := h.fetchContent(r.Context(), downloadURL)

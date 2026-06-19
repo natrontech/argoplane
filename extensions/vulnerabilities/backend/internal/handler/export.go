@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/csv"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,24 +12,44 @@ import (
 	"github.com/natrontech/argoplane/extensions/vulnerabilities/backend/internal/types"
 )
 
+// writeCSVRow writes a single CSV row, logging and returning false on failure
+// so the caller can stop instead of silently producing a truncated file.
+func writeCSVRow(w *csv.Writer, row []string) bool {
+	if err := w.Write(row); err != nil {
+		slog.Error("failed to write csv row", "error", err)
+		return false
+	}
+	return true
+}
+
+// flushCSV flushes the writer, logging and returning false on failure.
+func flushCSV(w *csv.Writer) bool {
+	w.Flush()
+	if err := w.Error(); err != nil {
+		slog.Error("failed to flush csv", "error", err)
+		return false
+	}
+	return true
+}
+
 // ExportHandler handles CSV export of vulnerability and audit reports.
 type ExportHandler struct {
 	client dynamic.Interface
+	auth   *Authorizer
 }
 
 // NewExportHandler creates a new ExportHandler.
-func NewExportHandler(client dynamic.Interface) *ExportHandler {
-	return &ExportHandler{client: client}
+func NewExportHandler(client dynamic.Interface, auth *Authorizer) *ExportHandler {
+	return &ExportHandler{client: client, auth: auth}
 }
 
 // Handle exports reports as CSV based on the type query parameter.
 func (h *ExportHandler) Handle(w http.ResponseWriter, r *http.Request) {
-	if !requireAppHeader(w, r) {
-		return
-	}
-
 	namespace := r.URL.Query().Get("namespace")
 	if !validateNamespace(w, namespace) {
+		return
+	}
+	if !h.auth.AuthorizeNamespace(w, r, namespace) {
 		return
 	}
 
@@ -51,7 +72,7 @@ func (h *ExportHandler) Handle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ExportHandler) exportVulnerabilities(w http.ResponseWriter, r *http.Request, namespace string) {
-	list, err := h.client.Resource(types.VulnerabilityReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{})
+	list, err := h.client.Resource(types.VulnerabilityReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{Limit: 500})
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "failed to list vulnerability reports")
 		return
@@ -62,7 +83,9 @@ func (h *ExportHandler) exportVulnerabilities(w http.ResponseWriter, r *http.Req
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=vulnerabilities-%s.csv", safeName))
 
 	writer := csv.NewWriter(w)
-	writer.Write([]string{"Image", "Tag", "Container", "CVE", "Severity", "Score", "Package", "Installed", "Fixed", "Title", "Link"})
+	if !writeCSVRow(writer, []string{"Image", "Tag", "Container", "CVE", "Severity", "Score", "Package", "Installed", "Fixed", "Title", "Link"}) {
+		return
+	}
 
 	seen := make(map[string]bool)
 	for _, item := range list.Items {
@@ -73,7 +96,7 @@ func (h *ExportHandler) exportVulnerabilities(w http.ResponseWriter, r *http.Req
 		}
 		seen[imageKey] = true
 		for _, v := range report.Vulnerabilities {
-			writer.Write([]string{
+			if !writeCSVRow(writer, []string{
 				report.Image,
 				report.Tag,
 				report.ContainerName,
@@ -85,15 +108,17 @@ func (h *ExportHandler) exportVulnerabilities(w http.ResponseWriter, r *http.Req
 				v.FixedVersion,
 				v.Title,
 				v.PrimaryLink,
-			})
+			}) {
+				return
+			}
 		}
 	}
 
-	writer.Flush()
+	flushCSV(writer)
 }
 
 func (h *ExportHandler) exportSecrets(w http.ResponseWriter, r *http.Request, namespace string) {
-	list, err := h.client.Resource(types.ExposedSecretReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{})
+	list, err := h.client.Resource(types.ExposedSecretReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{Limit: 500})
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "failed to list exposed secret reports")
 		return
@@ -104,7 +129,9 @@ func (h *ExportHandler) exportSecrets(w http.ResponseWriter, r *http.Request, na
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=exposed-secrets-%s.csv", safeName))
 
 	writer := csv.NewWriter(w)
-	writer.Write([]string{"Image", "Tag", "Container", "RuleID", "Severity", "Category", "Title", "Target", "Match"})
+	if !writeCSVRow(writer, []string{"Image", "Tag", "Container", "RuleID", "Severity", "Category", "Title", "Target", "Match"}) {
+		return
+	}
 
 	seen := make(map[string]bool)
 	for _, item := range list.Items {
@@ -115,7 +142,7 @@ func (h *ExportHandler) exportSecrets(w http.ResponseWriter, r *http.Request, na
 		}
 		seen[imageKey] = true
 		for _, s := range report.Secrets {
-			writer.Write([]string{
+			if !writeCSVRow(writer, []string{
 				report.Image,
 				report.Tag,
 				report.ContainerName,
@@ -125,15 +152,17 @@ func (h *ExportHandler) exportSecrets(w http.ResponseWriter, r *http.Request, na
 				s.Title,
 				s.Target,
 				s.Match,
-			})
+			}) {
+				return
+			}
 		}
 	}
 
-	writer.Flush()
+	flushCSV(writer)
 }
 
 func (h *ExportHandler) exportSbom(w http.ResponseWriter, r *http.Request, namespace string) {
-	list, err := h.client.Resource(types.SbomReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{})
+	list, err := h.client.Resource(types.SbomReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{Limit: 500})
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "failed to list sbom reports")
 		return
@@ -144,7 +173,9 @@ func (h *ExportHandler) exportSbom(w http.ResponseWriter, r *http.Request, names
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=sbom-%s.csv", safeName))
 
 	writer := csv.NewWriter(w)
-	writer.Write([]string{"Image", "Tag", "Component", "Version", "Type", "PURL"})
+	if !writeCSVRow(writer, []string{"Image", "Tag", "Component", "Version", "Type", "PURL"}) {
+		return
+	}
 
 	seen := make(map[string]bool)
 	for _, item := range list.Items {
@@ -155,22 +186,24 @@ func (h *ExportHandler) exportSbom(w http.ResponseWriter, r *http.Request, names
 		}
 		seen[imageKey] = true
 		for _, c := range report.Components {
-			writer.Write([]string{
+			if !writeCSVRow(writer, []string{
 				report.Image,
 				report.Tag,
 				c.Name,
 				c.Version,
 				c.Type,
 				c.Purl,
-			})
+			}) {
+				return
+			}
 		}
 	}
 
-	writer.Flush()
+	flushCSV(writer)
 }
 
 func (h *ExportHandler) exportAudit(w http.ResponseWriter, r *http.Request, namespace string) {
-	list, err := h.client.Resource(types.ConfigAuditReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{})
+	list, err := h.client.Resource(types.ConfigAuditReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{Limit: 500})
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "failed to list config audit reports")
 		return
@@ -181,7 +214,9 @@ func (h *ExportHandler) exportAudit(w http.ResponseWriter, r *http.Request, name
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=config-audit-%s.csv", safeName))
 
 	writer := csv.NewWriter(w)
-	writer.Write([]string{"Resource", "Kind", "CheckID", "Severity", "Title", "Description", "Remediation"})
+	if !writeCSVRow(writer, []string{"Resource", "Kind", "CheckID", "Severity", "Title", "Description", "Remediation"}) {
+		return
+	}
 
 	// Deduplicate by resource kind+name (old ReplicaSets from rollouts).
 	seen := make(map[string]bool)
@@ -193,7 +228,7 @@ func (h *ExportHandler) exportAudit(w http.ResponseWriter, r *http.Request, name
 		}
 		seen[key] = true
 		for _, c := range report.Checks {
-			writer.Write([]string{
+			if !writeCSVRow(writer, []string{
 				report.ResourceName,
 				report.ResourceKind,
 				c.CheckID,
@@ -201,9 +236,11 @@ func (h *ExportHandler) exportAudit(w http.ResponseWriter, r *http.Request, name
 				c.Title,
 				c.Description,
 				c.Remediation,
-			})
+			}) {
+				return
+			}
 		}
 	}
 
-	writer.Flush()
+	flushCSV(writer)
 }

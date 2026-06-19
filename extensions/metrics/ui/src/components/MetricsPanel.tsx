@@ -39,6 +39,12 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
 
   const isWorkload = kind === 'Deployment' || kind === 'StatefulSet';
 
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const fetchAll = React.useCallback(() => {
     if (!namespace || !name) return;
 
@@ -56,12 +62,13 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
 
     Promise.all(promises)
       .then(([instant, podList]) => {
+        if (!mountedRef.current) return;
         setMetrics(instant);
         setPods(podList);
         setError(null);
       })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err) => { if (mountedRef.current) setError(err.message); })
+      .finally(() => { if (mountedRef.current) setLoading(false); });
   }, [namespace, name, kind, isWorkload, appNamespace, appName, project]);
 
   React.useEffect(() => {

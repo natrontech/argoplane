@@ -15,19 +15,16 @@ import (
 // AuditHandler handles config audit report queries.
 type AuditHandler struct {
 	client dynamic.Interface
+	auth   *Authorizer
 }
 
 // NewAuditHandler creates a new AuditHandler.
-func NewAuditHandler(client dynamic.Interface) *AuditHandler {
-	return &AuditHandler{client: client}
+func NewAuditHandler(client dynamic.Interface, auth *Authorizer) *AuditHandler {
+	return &AuditHandler{client: client, auth: auth}
 }
 
 // HandleOverview returns an aggregated config audit overview for a namespace.
 func (h *AuditHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
-	if !requireAppHeader(w, r) {
-		return
-	}
-
 	var req types.AuditOverviewRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request body")
@@ -38,10 +35,13 @@ func (h *AuditHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
 	if !validateNamespace(w, req.Namespace) {
 		return
 	}
+	if !h.auth.AuthorizeNamespace(w, r, req.Namespace) {
+		return
+	}
 
 	auditLog(r, "audit.overview", req.Namespace)
 
-	listOpts := metav1.ListOptions{LabelSelector: resourceLabelSelector(req.Resources)}
+	listOpts := metav1.ListOptions{Limit: 500, LabelSelector: resourceLabelSelector(req.Resources)}
 	list, err := h.client.Resource(types.ConfigAuditReportGVR).Namespace(req.Namespace).List(r.Context(), listOpts)
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "failed to list config audit reports")

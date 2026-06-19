@@ -33,14 +33,21 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({
 
   const podsKey = pods ? pods.join(',') : '';
 
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const fetchData = React.useCallback(() => {
     fetchGraphData(applicationName, groupKind, row, graph.name, namespace, name, duration, appNamespace, appName, project, pods)
       .then((resp) => {
+        if (!mountedRef.current) return;
         setData(resp);
         setError(null);
       })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err) => { if (mountedRef.current) setError(err.message); })
+      .finally(() => { if (mountedRef.current) setLoading(false); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applicationName, groupKind, row, graph.name, namespace, name, duration, appNamespace, appName, project, podsKey]);
 

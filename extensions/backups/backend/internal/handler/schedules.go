@@ -18,14 +18,18 @@ import (
 type SchedulesHandler struct {
 	client          dynamic.Interface
 	veleroNamespace string
+	auth            *Authorizer
 }
 
 // NewSchedulesHandler creates a new SchedulesHandler.
-func NewSchedulesHandler(client dynamic.Interface, veleroNamespace string) *SchedulesHandler {
-	return &SchedulesHandler{client: client, veleroNamespace: veleroNamespace}
+func NewSchedulesHandler(client dynamic.Interface, veleroNamespace string, auth *Authorizer) *SchedulesHandler {
+	return &SchedulesHandler{client: client, veleroNamespace: veleroNamespace, auth: auth}
 }
 
-// Handle lists schedules covering a given namespace.
+// Handle lists schedules covering a given namespace. This is a read-only listing
+// that intentionally surfaces both app-owned and platform schedules (the UI
+// distinguishes ownership for display), so it is not namespace-gated; access is
+// already governed by ArgoCD's extension invoke RBAC.
 func (h *SchedulesHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
 	if namespace == "" {
@@ -90,11 +94,17 @@ func (h *SchedulesHandler) HandleTogglePause(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// The schedule must have the app-owned single-namespace shape (rejects empty
+	// or multi-namespace platform schedules) AND that namespace must be one the
+	// calling Application manages.
 	included := nestedStringSlice(scheduleObj.Object, "spec", "template", "includedNamespaces")
 	if !isScheduleAppOwned(included, req.Namespace) {
 		auditLog(r, "schedule.pause.rejected.platform", req.Namespace,
 			"schedule", name, "includedNamespaces", included)
 		WriteError(w, http.StatusForbidden, "cannot modify platform-managed schedules")
+		return
+	}
+	if !h.auth.AuthorizeNamespace(w, r, req.Namespace) {
 		return
 	}
 
