@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"sort"
@@ -16,6 +17,11 @@ import (
 
 // eventListLimit caps the number of events fetched per List call.
 const eventListLimit = 500
+
+// maxEvents bounds the total events accumulated across paginated List calls.
+// ponytail: 5000 covers even busy namespaces within the default 1h event TTL;
+// raise it or add server-side field selectors if that ever proves too small.
+const maxEvents = 5000
 
 // requestTimeout bounds the time spent serving a single events request.
 const requestTimeout = 15 * time.Second
@@ -69,20 +75,36 @@ type Summary struct {
 	Normal   int `json:"normal"`
 }
 
+// maxSinceDays caps the since parameter so the duration cannot overflow
+// (or produce a cutoff in the future via negative values).
+const maxSinceDays = 3650
+
 // parseSince parses a duration string like "1h", "6h", "24h", "7d" into a time.Duration.
 func parseSince(s string) (time.Duration, error) {
 	if s == "" {
 		return time.Hour, nil // default 1h
 	}
-	// Handle day suffix
+	var d time.Duration
 	if strings.HasSuffix(s, "d") {
 		days, err := strconv.Atoi(strings.TrimSuffix(s, "d"))
 		if err != nil {
 			return 0, err
 		}
-		return time.Duration(days) * 24 * time.Hour, nil
+		if days <= 0 || days > maxSinceDays {
+			return 0, fmt.Errorf("since out of range: %s", s)
+		}
+		d = time.Duration(days) * 24 * time.Hour
+	} else {
+		var err error
+		d, err = time.ParseDuration(s)
+		if err != nil {
+			return 0, err
+		}
 	}
-	return time.ParseDuration(s)
+	if d <= 0 || d > maxSinceDays*24*time.Hour {
+		return 0, fmt.Errorf("since out of range: %s", s)
+	}
+	return d, nil
 }
 
 // eventTimestamp returns the most relevant timestamp for an event.
@@ -139,14 +161,25 @@ func (h *EventsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), requestTimeout)
 	defer cancel()
 
-	events, err := h.client.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{Limit: eventListLimit})
-	if err != nil {
-		slog.Error("failed to list events", "error", err, "namespace", namespace)
-		WriteError(w, http.StatusInternalServerError, "failed to list events")
-		return
+	// Page through the full event list: the API server returns events in
+	// name order, so a single capped List call could drop the newest events.
+	var items []corev1.Event
+	opts := metav1.ListOptions{Limit: eventListLimit}
+	for {
+		events, err := h.client.CoreV1().Events(namespace).List(ctx, opts)
+		if err != nil {
+			slog.Error("failed to list events", "error", err, "namespace", namespace)
+			WriteError(w, http.StatusInternalServerError, "failed to list events")
+			return
+		}
+		items = append(items, events.Items...)
+		if events.Continue == "" || len(items) >= maxEvents {
+			break
+		}
+		opts.Continue = events.Continue
 	}
 
-	result := filterAndConvert(events.Items, kind, name, eventType, cutoff)
+	result := filterAndConvert(items, kind, name, eventType, cutoff)
 
 	WriteJSON(w, result)
 }
@@ -171,6 +204,15 @@ func filterAndConvert(items []corev1.Event, kind, name, eventType string, cutoff
 		if name != "" && e.InvolvedObject.Name != name {
 			continue
 		}
+
+		// Count the summary over all events in scope, before the type filter,
+		// so the summary cards reflect the full picture.
+		if e.Type == corev1.EventTypeWarning {
+			warnings++
+		} else {
+			normal++
+		}
+
 		if eventType != "" && e.Type != eventType {
 			continue
 		}
@@ -198,12 +240,6 @@ func filterAndConvert(items []corev1.Event, kind, name, eventType string, cutoff
 			},
 		}
 
-		if e.Type == corev1.EventTypeWarning {
-			warnings++
-		} else {
-			normal++
-		}
-
 		filtered = append(filtered, ev)
 	}
 
@@ -215,7 +251,7 @@ func filterAndConvert(items []corev1.Event, kind, name, eventType string, cutoff
 	return EventResponse{
 		Events: filtered,
 		Summary: Summary{
-			Total:    len(filtered),
+			Total:    warnings + normal,
 			Warnings: warnings,
 			Normal:   normal,
 		},
