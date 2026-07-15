@@ -55,7 +55,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
 feat(metrics): add Prometheus range query support
-fix(backups): handle nil schedule in status panel
+fix(networking): handle nil flow in policy tab
 docs: update extension API reference
 ```
 
@@ -73,7 +73,6 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`
 extensions/          # ArgoCD UI extensions (React + Go)
   shared/            # Shared React component library
   metrics/           # Prometheus metrics
-  backups/           # Velero backup/restore
   networking/        # Cilium/Hubble network flows
   logs/              # Loki log aggregation
   vulnerabilities/   # Trivy Operator scanning

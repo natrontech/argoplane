@@ -20,7 +20,7 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`
 
 ```
 feat(metrics): add Prometheus range query support
-fix(backups): handle nil schedule in status panel
+fix(networking): handle nil flow in policy tab
 docs: update extension API reference
 ci: add arm64 build to release workflow
 refactor(networking): extract flow parser into separate package

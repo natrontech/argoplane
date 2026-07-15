@@ -4,15 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**ArgoPlane** is a collection of ArgoCD UI extensions. It surfaces operational data — metrics, logs, backups, network flows, vulnerabilities, events — inside ArgoCD's UI as resource tabs, app views, and status panels. Each extension is independent and can be deployed on its own.
+**ArgoPlane** is a collection of ArgoCD UI extensions. It surfaces operational data — metrics, logs, network flows, vulnerabilities, events — inside ArgoCD's UI as resource tabs, app views, and status panels. Each extension is independent and can be deployed on its own.
 
 ## Core Idea
 
-Developers deploying through ArgoCD can see if their app is synced. What they can't see: logs, alerts, backup status, network flows, or policy violations. ArgoPlane extensions surface that operational visibility directly in ArgoCD.
+Developers deploying through ArgoCD can see if their app is synced. What they can't see: logs, alerts, network flows, or policy violations. ArgoPlane extensions surface that operational visibility directly in ArgoCD.
 
 Extensions fall into two categories:
 
-- **Observe**: workload visibility (metrics, logs, traces, backups, alerts, networking)
+- **Observe**: workload visibility (metrics, logs, traces, alerts, networking, events)
 - **Secure**: security and compliance (policies, certificates)
 
 ## Architecture
@@ -22,7 +22,7 @@ Extensions fall into two categories:
 Every ArgoPlane extension follows the same pattern:
 
 1. **React/TypeScript UI extension** registered via `window.extensionsAPI` (resource tabs, status panels, system-level pages, app views, top bar actions)
-2. **Go backend service** that queries the underlying system (Prometheus, Velero, Cilium, etc.)
+2. **Go backend service** that queries the underlying system (Prometheus, Cilium, Loki, etc.)
 3. **ArgoCD proxy extension** that routes `/extensions/<name>/*` requests from the UI to the Go backend
 
 ### Key Components
@@ -30,7 +30,6 @@ Every ArgoPlane extension follows the same pattern:
 - **ArgoCD v3.3.3**: GitOps engine, UI host, RBAC, proxy extension routing
 - **Prometheus**: Metrics and alerts (metrics + alerts extensions)
 - **Loki**: Log aggregation (logs extension)
-- **Velero**: Backup/restore (backups extension)
 - **Cilium/Hubble**: Network visibility (networking extension)
 - **Trivy Operator**: Image vulnerability scanning, config audit, exposed secrets, SBOM (vulnerabilities extension)
 - **Kyverno**: Policy enforcement (policies extension, planned)
@@ -43,7 +42,7 @@ Extensions rely on ArgoCD's native RBAC and AppProjects for tenant isolation. Id
 
 ### State
 
-No database. All state comes from Kubernetes (ArgoCD Applications, CRDs, operator resources) and upstream systems (Prometheus, Velero, Loki, etc.).
+No database. All state comes from Kubernetes (ArgoCD Applications, CRDs, operator resources) and upstream systems (Prometheus, Loki, Hubble, etc.).
 
 ## Monorepo Structure
 
@@ -59,9 +58,6 @@ extensions/
   metrics/
     ui/              # React/TypeScript extension bundle
     backend/         # Go service querying Prometheus
-  backups/
-    ui/
-    backend/         # Go service querying Velero
   networking/
     ui/
     backend/         # Go service querying Cilium/Hubble
@@ -92,7 +88,9 @@ docs/
 
 ## Current Scope
 
-**Done:** Metrics (Prometheus), Backups (Velero), Networking (Cilium/Hubble), Logs (Loki), Vulnerabilities (Trivy Operator), Events (Kubernetes Events API)
+**Done:** Metrics (Prometheus), Networking (Cilium/Hubble), Logs (Loki), Vulnerabilities (Trivy Operator), Events (Kubernetes Events API)
+
+**Removed:** Backups (Velero) — deprecated and removed in v1.5.0; the extension saw no real usage.
 
 **Next:** Alerts (Prometheus Rules / Alertmanager), Policies (Kyverno)
 

@@ -5,7 +5,6 @@
 Each extension is a self-contained module under `extensions/<name>/`:
 
 - `extensions/metrics/` - Prometheus metrics integration
-- `extensions/backups/` - Velero backup/restore visibility
 - `extensions/networking/` - Cilium/Hubble network flows
 - `extensions/logs/` - Loki log aggregation
 - `extensions/vulnerabilities/` - Trivy Operator vulnerability scanning
@@ -18,9 +17,9 @@ Each extension is a self-contained module under `extensions/<name>/`:
 
 Concise, precise, consistent. Use domain terminology.
 
-- **Plural for collections**: `backups`, `metrics`, `scans`
-- **Singular for single items**: `backup(id)`, `metric(name)`
-- **Action verbs for mutations**: `TriggerBackup`, `RestoreBackup`
+- **Plural for collections**: `flows`, `metrics`, `scans`
+- **Singular for single items**: `event(id)`, `metric(name)`
+- **Action verbs for mutations**: `TogglePause`, `TriggerScan`
 - **No obscure abbreviations**: prefer clarity over brevity
 
 Extension APIs are served via ArgoCD's proxy: `/extensions/<name>/api/v1/...`
@@ -29,7 +28,7 @@ Extension APIs are served via ArgoCD's proxy: `/extensions/<name>/api/v1/...`
 
 Each extension backend is a Go HTTP server that:
 
-1. Queries the underlying system (Prometheus API, Velero CRDs, etc.)
+1. Queries the underlying system (Prometheus API, Trivy CRDs, etc.)
 2. Exposes a JSON HTTP API consumed by the UI extension via ArgoCD's proxy
 3. Receives ArgoCD identity headers (`Argocd-Username`, `Argocd-User-Id`, `Argocd-User-Groups`, `Argocd-Target-Cluster-URL`, `Argocd-Target-Cluster-Name`)
 
@@ -48,7 +47,7 @@ server, err := metrics.NewServer(
 
 ## File Organization
 
-Feature-based (group by domain), not layer-based. A `backup.go` file contains types, functions, and methods related to backups.
+Feature-based (group by domain), not layer-based. A `flows.go` file contains types, functions, and methods related to flows.
 
 ## Configuration
 

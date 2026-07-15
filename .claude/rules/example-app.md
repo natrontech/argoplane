@@ -20,12 +20,11 @@ Three things must happen for an extension to work in the dev environment:
 
 ## Current Coverage
 
-The demo app uses the public `argocd-example-apps/guestbook` repo as the ArgoCD Application source, then layers on extra resources (CiliumNetworkPolicies, Velero schedule) via kubectl.
+The demo app uses the public `argocd-example-apps/guestbook` repo as the ArgoCD Application source, then layers on extra resources (CiliumNetworkPolicies, traffic generators) via kubectl.
 
 | Extension | Registration Type | Triggered By | Demo Resource |
 |-----------|------------------|--------------|---------------|
 | **Metrics** | Resource tab (Deployment, StatefulSet, Pod) + System-level page | `apps/Deployment`, `apps/StatefulSet`, `/Pod` + sidebar | `guestbook-ui` Deployment |
-| **Backups** | App view (application detail) + Status panel + Schedule resource tab + Backup resource tab | Any ArgoCD Application + `velero.io/Schedule` + `velero.io/Backup` | `argoplane-demo` Application + 1 app Schedule (`argoplane-demo-daily` in velero ns, RespectNamespace=true) + 2 platform Schedules (`platform-nightly-all`, `platform-weekly-compliance`) + BSL details + trigger backup from schedule + granular restore + logs/results download |
 | **Networking** | App view (application detail) + Pod resource tab | Any ArgoCD Application + `/Pod` | `guestbook-ui` Deployment + 2 app CiliumNetworkPolicies + 2 platform CiliumClusterwideNetworkPolicies + 2 platform CiliumNetworkPolicies + cross-ns traffic + Hubble flows |
 | **Logs** | Resource tab (Pod, Deployment, StatefulSet) + App view (Log Explorer) | `apps/Deployment`, `apps/StatefulSet`, `/Pod` + Any ArgoCD Application | `guestbook-ui` Deployment pods (requires Loki + Alloy collecting logs) |
 | **Vulnerabilities** | App view (4 tabs: Vulnerabilities, Config Audit, Exposed Secrets, SBOM) | Any ArgoCD Application | `guestbook-ui` Deployment images (requires Trivy Operator scanning workloads) |

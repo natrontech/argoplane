@@ -21,7 +21,7 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: argoplane-{{ $name }}
+  name: {{ $.Release.Name }}-{{ $name }}
   labels:
     {{- include "argoplane.extensionLabels" (dict "name" $name "root" $) | nindent 4 }}
 rules:
@@ -30,13 +30,13 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: argoplane-{{ $name }}
+  name: {{ $.Release.Name }}-{{ $name }}
   labels:
     {{- include "argoplane.extensionLabels" (dict "name" $name "root" $) | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: argoplane-{{ $name }}
+  name: {{ $.Release.Name }}-{{ $name }}
 subjects:
   - kind: ServiceAccount
     name: argoplane-{{ $name }}-backend

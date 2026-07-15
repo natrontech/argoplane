@@ -5,7 +5,7 @@
 <h1 align="center">ArgoPlane</h1>
 
 <p align="center">
-  <strong>An ArgoCD extension package. Metrics, logs, backups, network flows, vulnerabilities, and events — all inside ArgoCD.</strong>
+  <strong>An ArgoCD extension package. Metrics, logs, network flows, vulnerabilities, and events — all inside ArgoCD.</strong>
 </p>
 
 <p align="center">
@@ -18,7 +18,7 @@
 
 ---
 
-ArgoPlane is a collection of ArgoCD UI extensions. It adds resource tabs, app views, and status panels so developers can see metrics, logs, backups, network flows, vulnerabilities, and events without leaving ArgoCD. Nothing more, nothing less. Each extension is independent and can be installed on its own.
+ArgoPlane is a collection of ArgoCD UI extensions. It adds resource tabs, app views, and status panels so developers can see metrics, logs, network flows, vulnerabilities, and events without leaving ArgoCD. Nothing more, nothing less. Each extension is independent and can be installed on its own.
 
 https://github.com/user-attachments/assets/b9c4a296-9d05-46ca-b421-7011a22bf9b9
 
@@ -27,7 +27,6 @@ https://github.com/user-attachments/assets/b9c4a296-9d05-46ca-b421-7011a22bf9b9
 | Category | Extension | What it shows | Status | Preview |
 |----------|-----------|---------------|--------|---------|
 | **Observe** | Metrics | CPU, memory, request rates, latency (Prometheus) | ✅ | <img src="assets/demo/application_metrics.png"/><br><img src="assets/demo/pod_metrics.png"/> |
-| **Observe** | Backups | Backup status, schedules, restore triggers (Velero) | ✅ | <img src="assets/demo/application_backup.png"/> |
 | **Observe** | Networking | Traffic flows, network policies (Cilium/Hubble) | ✅ | <img src="assets/demo/application_network_flows.png"/><br><img src="assets/demo/application_network_flows_dropped.png"/> |
 | **Observe** | Logs | Log search, severity detection, volume charts (Loki) | ✅ | <img src="assets/demo/application_logs.png"/><br><img src="assets/demo/pod_logs.png"/> |
 | **Secure** | Vulnerabilities | Image CVEs, config audit, exposed secrets, SBOM (Trivy Operator) | ✅ | <img src="assets/demo/application_vulnerabilities.png"/><br><img src="assets/demo/application_configuration_audit.png"/><br><img src="assets/demo/application_exposed_secrets.png"/><br><img src="assets/demo/application_sbom.png"/> |
@@ -39,7 +38,7 @@ Each extension is independently toggleable. Install only what you need.
 
 ## How it works
 
-Every extension follows the same pattern: a **React/TypeScript UI** registers tabs and views via ArgoCD's extension API, a **Go backend** queries the underlying system (Prometheus, Velero, Loki, etc.), and ArgoCD's **proxy extension** mechanism routes requests from the UI to the backend. Extensions inherit ArgoCD's authentication and RBAC. No extra auth layer required.
+Every extension follows the same pattern: a **React/TypeScript UI** registers tabs and views via ArgoCD's extension API, a **Go backend** queries the underlying system (Prometheus, Loki, Hubble, etc.), and ArgoCD's **proxy extension** mechanism routes requests from the UI to the backend. Extensions inherit ArgoCD's authentication and RBAC. No extra auth layer required.
 
 ```
 ArgoCD UI
@@ -50,7 +49,6 @@ ArgoCD UI
 │
 │   React/TS ──proxy──▶ Go backends
 │                        ├── Prometheus
-│                        ├── Velero
 │                        ├── Cilium/Hubble
 │                        ├── Loki
 │                        ├── Trivy Operator
@@ -79,7 +77,6 @@ ArgoCD requires explicit `extensions, invoke` permission in `argocd-rbac-cm`. Ap
 g, your-oidc-group-id, role:your-role
 p, role:your-role, applications, get, your-project/*, allow
 p, role:your-role, extensions, invoke, metrics, allow
-p, role:your-role, extensions, invoke, backups, allow
 p, role:your-role, extensions, invoke, networking, allow
 p, role:your-role, extensions, invoke, logs, allow
 p, role:your-role, extensions, invoke, vulnerabilities, allow
@@ -88,7 +85,7 @@ p, role:your-role, extensions, invoke, events, allow
 
 `applications, get` is a prerequisite: ArgoCD rejects extension calls for applications the user cannot read.
 
-**Security note:** ArgoCD uses a single `extensions, invoke` permission for all HTTP methods. A user with invoke access can call any endpoint the backend exposes — including write operations like backup triggers and restores. Scope `applications, get` as narrowly as your setup allows.
+**Security note:** ArgoCD uses a single `extensions, invoke` permission for all HTTP methods. A user with invoke access can call any endpoint the backend exposes. Scope `applications, get` as narrowly as your setup allows.
 
 ## Development
 
