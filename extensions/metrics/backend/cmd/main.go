@@ -71,7 +71,7 @@ func main() {
 	perPodHandler := handler.NewPerPod(promClient, auth)
 
 	// Config-driven dashboard handler
-	dashboardHandler := handler.NewDashboard(promClient, dashCfg)
+	dashboardHandler := handler.NewDashboard(promClient, dashCfg, auth)
 
 	mux := http.NewServeMux()
 
