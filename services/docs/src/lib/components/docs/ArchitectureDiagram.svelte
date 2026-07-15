@@ -121,8 +121,8 @@
             </div>
             <div class="ext-sep"></div>
             <div class="ext-item">
-              <span class="ext-name">Backups</span>
-              <span class="node-sub">Schedules, Restores</span>
+              <span class="ext-name">Logs</span>
+              <span class="node-sub">Search, Severity, Labels</span>
             </div>
           </div>
         </div>
@@ -162,8 +162,8 @@
           <span class="node-sub">PromQL</span>
         </div>
         <div class="source source-blue">
-          <span class="source-name">Velero</span>
-          <span class="node-sub">CRDs</span>
+          <span class="source-name">Loki</span>
+          <span class="node-sub">LogQL</span>
         </div>
         <div class="source source-blue">
           <span class="source-name">Cilium</span>

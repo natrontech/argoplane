@@ -29,6 +29,7 @@ func (h *SecretsHandler) HandleOverview(w http.ResponseWriter, r *http.Request) 
 		Namespace string   `json:"namespace"`
 		Resources []string `json:"resources,omitempty"`
 	}
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request body")
 		return

@@ -7,64 +7,128 @@ description: Networking extension backend API reference
 
 The networking backend exposes a JSON HTTP API consumed by the UI extension via ArgoCD's proxy at `/extensions/networking/`.
 
+## Authorization
+
+Every data endpoint requires the `Argocd-Application-Name` header (`namespace:name` format, set automatically by ArgoCD's proxy). The backend returns `403` if the header is missing or if the requested namespace is not managed by that Application (its destination namespace plus namespaces in `status.resources`). The backend needs `get` on `applications.argoproj.io` for this lookup; the Helm chart grants it by default.
+
 ## Endpoints
 
-### List policies
+### Policies with ownership
 
 ```
-GET /api/v1/policies?namespace={ns}&app={appName}
+POST /api/v1/policies-with-ownership
 ```
 
-List Cilium network policies for an application or namespace.
+Returns all Cilium network policies affecting a namespace (namespace-scoped and clusterwide), each tagged with ownership: `app` if the policy belongs to the calling Application's resource tree, `platform` otherwise.
+
+**Request body:**
+
+```json
+{
+  "namespace": "default",
+  "resources": [
+    { "group": "cilium.io", "kind": "CiliumNetworkPolicy", "namespace": "default", "name": "allow-guestbook-ingress" }
+  ]
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `namespace` | string | Yes | Kubernetes namespace to list policies for |
+| `resources` | array | No | The Application's resource tree refs (`group`, `kind`, `namespace`, `name`), used to tag ownership |
+
+**Response:**
+
+```json
+[
+  {
+    "name": "allow-guestbook-ingress",
+    "namespace": "default",
+    "description": "Allow ingress to guestbook",
+    "endpointSelector": { "app": "guestbook-ui" },
+    "hasIngress": true,
+    "hasEgress": false,
+    "ingressRuleCount": 2,
+    "egressRuleCount": 0,
+    "ingressRules": [
+      { "peers": ["app=frontend"], "ports": ["TCP:80"] }
+    ],
+    "creationTimestamp": "2026-03-15T10:30:00Z",
+    "ownership": "app",
+    "scope": "namespace"
+  },
+  {
+    "name": "platform-default-deny",
+    "hasIngress": false,
+    "hasEgress": true,
+    "ingressRuleCount": 0,
+    "egressRuleCount": 1,
+    "egressRules": [
+      { "peers": ["kube-dns"], "ports": ["UDP:53"] }
+    ],
+    "creationTimestamp": "2026-03-10T08:00:00Z",
+    "ownership": "platform",
+    "scope": "clusterwide"
+  }
+]
+```
+
+`scope` is `namespace` (CiliumNetworkPolicy) or `clusterwide` (CiliumClusterwideNetworkPolicy). Rule peers cover endpoint selectors, CIDRs, entities, and FQDNs; `"any"` means unrestricted.
+
+### List endpoints
+
+```
+GET /api/v1/endpoints?namespace={ns}&pods={pods}
+```
+
+Returns CiliumEndpoints for a namespace, including identity, IPs, and policy enforcement state.
 
 **Parameters:**
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `namespace` | string | No | Filter by namespace |
-| `app` | string | No | Filter by ArgoCD application name |
+| `namespace` | string | Yes | Kubernetes namespace |
+| `pods` | string | No | Comma-separated pod names to filter (app-scoped mode) |
 
 **Response:**
 
 ```json
-{
-  "policies": [
-    {
-      "name": "allow-guestbook-ingress",
-      "namespace": "default",
-      "kind": "CiliumNetworkPolicy",
-      "endpointSelector": { "matchLabels": { "app": "guestbook-ui" } },
-      "ingressRuleCount": 2,
-      "egressRuleCount": 0
-    }
-  ],
-  "clusterPolicies": [
-    {
-      "name": "platform-default-deny",
-      "kind": "CiliumClusterwideNetworkPolicy",
-      "endpointSelector": {},
-      "ingressRuleCount": 0,
-      "egressRuleCount": 1
-    }
-  ]
-}
+[
+  {
+    "name": "guestbook-ui-abc123",
+    "namespace": "default",
+    "endpointId": 1234,
+    "identityId": 56789,
+    "ipv4": "10.0.1.5",
+    "ingressEnforcement": "true",
+    "egressEnforcement": "false",
+    "state": "ready",
+    "labels": { "k8s:app": "guestbook-ui" },
+    "namedPorts": [
+      { "name": "http", "port": 80, "protocol": "TCP" }
+    ]
+  }
+]
 ```
 
 ### Query flows
 
 ```
-GET /api/v1/flows?namespace={ns}&pod={podName}&since={duration}
+GET /api/v1/flows?namespace={ns}&since={duration}&limit={n}&verdict={verdict}&direction={direction}&pods={pods}
 ```
 
-Query Hubble network flows.
+Returns recent Hubble flows for a namespace from the backend's flow buffer.
 
 **Parameters:**
 
-| Name | Type | Required | Description |
-|------|------|----------|-------------|
-| `namespace` | string | No | Filter by namespace |
-| `pod` | string | No | Filter by pod name |
-| `since` | string | No | Time window (e.g., `5m`, `1h`) |
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `namespace` | string | Yes | - | Kubernetes namespace |
+| `since` | string | No | `5m` | Time window as Go duration (`5m`, `1h`) |
+| `limit` | integer | No | `100` | Max flows (capped at 1000) |
+| `verdict` | string | No | - | Filter: `FORWARDED`, `DROPPED`, `ERROR` |
+| `direction` | string | No | - | Filter by flow direction |
+| `pods` | string | No | - | Comma-separated pod names; keeps flows where source or destination matches |
 
 **Response:**
 
@@ -73,20 +137,37 @@ Query Hubble network flows.
   "flows": [
     {
       "time": "2026-03-15T10:30:00Z",
-      "source": { "namespace": "default", "pod": "guestbook-ui-abc123", "ip": "10.0.1.5" },
-      "destination": { "namespace": "default", "pod": "redis-master-def456", "ip": "10.0.1.10", "port": 6379 },
       "verdict": "FORWARDED",
-      "protocol": "TCP"
+      "direction": "EGRESS",
+      "sourceNamespace": "default",
+      "sourcePod": "guestbook-ui-abc123",
+      "sourceIP": "10.0.1.5",
+      "destNamespace": "default",
+      "destPod": "redis-master-def456",
+      "destIP": "10.0.1.10",
+      "protocol": "TCP",
+      "destPort": 6379,
+      "summary": "TCP Flags: SYN",
+      "isReply": false
     }
-  ]
+  ],
+  "hubble": true,
+  "summary": { "total": 42, "forwarded": 40, "dropped": 2, "error": 0 }
 }
 ```
+
+If Hubble Relay is not configured, the response is `{ "flows": [], "hubble": false, "message": "Hubble Relay is not configured" }`.
 
 ## Error responses
 
 ```json
 {
-  "error": "hubble_unavailable",
-  "message": "Hubble relay not reachable"
+  "error": "namespace is required"
 }
 ```
+
+| Status | Description |
+|--------|-------------|
+| 400 | Missing or invalid parameter, or invalid request body |
+| 403 | Namespace authorization failed (missing header or namespace not managed by the Application) |
+| 500 | Kubernetes API or Hubble query failed |

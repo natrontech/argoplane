@@ -35,6 +35,20 @@ export interface ExtensionProps {
   application: any;
 }
 
+/**
+ * Stable identity for a log entry across refreshes: timestamp plus a short
+ * hash of the line content. Never keyed on the array index, which would
+ * reset expansion state whenever a refresh shifts entries.
+ */
+export function logEntryKey(e: LogEntry): string {
+  const s = `${e.line}|${e.labels?.pod || ''}|${e.labels?.container || ''}`;
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  }
+  return `${e.timestamp}-${h}`;
+}
+
 /** Resolve a TimeSelection to { start, end } Date objects */
 export function resolveTimeSelection(sel: TimeSelection): { start: Date; end: Date } {
   if (sel.type === 'absolute' && sel.from && sel.to) {

@@ -12,9 +12,9 @@ ArgoCD v3.x provides six registration methods. ArgoPlane uses most of them:
 
 | Method | Where it appears | Used by |
 |--------|-----------------|---------|
-| `registerResourceExtension` | Tab on a K8s resource's sliding panel | Metrics, Backups, Networking, Logs, Vulnerabilities, Events |
-| `registerAppViewExtension` | Full-page view in app details | Metrics, Backups, Networking, Logs, Vulnerabilities, Events |
-| `registerStatusPanelExtension` | Compact widget in app header status bar | Metrics, Backups, Networking |
+| `registerResourceExtension` | Tab on a K8s resource's sliding panel | Metrics, Networking, Logs, Vulnerabilities, Events |
+| `registerAppViewExtension` | Full-page view in app details | Metrics, Networking, Logs, Vulnerabilities, Events |
+| `registerStatusPanelExtension` | Compact widget in app header status bar | Metrics, Networking |
 | `registerSystemLevelExtension` | Sidebar page (global, not tied to any app) | ArgoPlane Overview (planned) |
 | `registerTopBarActionMenuExt` | Action button in top toolbar | (reserved for future use) |
 | Application tab (`registerResourceExtension` with `argoproj.io/Application`) | Tab on Application resource | (reserved for future use) |
@@ -24,7 +24,6 @@ ArgoCD v3.x provides six registration methods. ArgoPlane uses most of them:
 | Category | Domain | Description | Backend | Extension Points |
 |----------|--------|-------------|---------|-----------------|
 | Observe | **metrics** | CPU, memory, request rates, latency, custom PromQL queries | Prometheus | Resource tabs (Deployment, StatefulSet, Pod) + App view + Status panel |
-| Observe | **backups** | Backup status, schedules, restore triggers, BSL details, pod volume backups | Velero | App view + Status panel + Resource tabs (Schedule, Backup) |
 | Observe | **networking** | Traffic flows (Hubble), network policies, app vs platform ownership | Cilium/Hubble | App view + Status panel + Resource tabs (Pod, CiliumNetworkPolicy, CiliumClusterwideNetworkPolicy) |
 | Observe | **logs** | Historical log search, label-based filtering, severity detection, time range selection, volume charts. No live tail (ArgoCD's built-in Logs tab handles real-time pod streaming; Loki's tail API uses WebSocket which the proxy extension mechanism does not support). | Loki | Resource tabs (Pod, Deployment, StatefulSet) + App view |
 | Secure | **vulnerabilities** | Image vulnerability scanning (CVEs), config audit, exposed secrets detection, SBOM inventory. Per-image severity breakdown, CSV export, deduplication across ReplicaSets. | Trivy Operator (K8s API) | App view (4 tabs: Vulnerabilities, Config Audit, Exposed Secrets, SBOM) |
@@ -41,7 +40,7 @@ ArgoCD v3.x provides six registration methods. ArgoPlane uses most of them:
 
 | Feature | Extension Point | Description |
 |---------|----------------|-------------|
-| **ArgoPlane Overview** | `registerSystemLevelExtension` | Sidebar page with aggregated health: all apps' sync status, top alerts, recent failed backups, cluster CPU/memory. Platform engineer's dashboard inside ArgoCD. |
+| **ArgoPlane Overview** | `registerSystemLevelExtension` | Sidebar page with aggregated health: all apps' sync status, top alerts, cluster CPU/memory. Platform engineer's dashboard inside ArgoCD. |
 | **Alerts Dashboard** | `registerSystemLevelExtension` | All firing/pending alerts across all apps. Filter by team, namespace, severity. Global view of what's wrong. |
 
 ## Future

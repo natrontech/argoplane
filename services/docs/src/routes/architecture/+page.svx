@@ -18,7 +18,7 @@ ArgoPlane is a collection of ArgoCD UI extensions, not a standalone application.
 Every ArgoPlane extension has three parts:
 
 1. **UI extension** (React/TypeScript): registers tabs, status panels, or pages via `window.extensionsAPI`
-2. **Backend service** (Go): queries the underlying system (Prometheus, Velero, Cilium) and exposes an HTTP API
+2. **Backend service** (Go): queries the underlying system (Prometheus, Loki, Cilium) and exposes an HTTP API
 3. **Proxy extension config**: ArgoCD routes `/extensions/<name>/*` requests from the UI to the Go backend
 
 ```
@@ -32,7 +32,7 @@ ArgoPlane has no database. All state is derived from external systems:
 
 - **Kubernetes API**: platform capabilities, ArgoCD Applications, operator resources
 - **Prometheus**: metrics data
-- **Velero**: backup/restore status
+- **Loki**: log data
 - **Cilium/Hubble**: network policies and flows
 - **Git**: GitOps repos (via ArgoCD)
 - **OIDC**: user identity (via ArgoCD)
@@ -50,8 +50,13 @@ Backend services receive these headers from ArgoCD's proxy:
 | `Argocd-Username` | Authenticated username |
 | `Argocd-User-Id` | User identifier |
 | `Argocd-User-Groups` | Comma-separated group list |
+| `Argocd-Application-Name` | Calling application in `namespace:name` format |
 | `Argocd-Target-Cluster-Name` | Target cluster name |
 | `Argocd-Target-Cluster-URL` | Target cluster API URL |
+
+### Namespace scoping
+
+Every backend enforces namespace-level authorization on its data endpoints. The `Argocd-Application-Name` header (set automatically by ArgoCD's proxy) identifies the calling Application. The backend looks up that Application via the Kubernetes API and only serves data for namespaces it manages: the destination namespace plus any namespace in `status.resources`. Requests for other namespaces get a `403`.
 
 ## Extension registration types
 
@@ -67,7 +72,7 @@ ArgoCD v3 supports several extension registration methods:
 
 ## Loose coupling
 
-Extensions are independent. The metrics extension doesn't know about the backups extension. Each owns its domain. They share nothing except the ArgoCD proxy mechanism and the shared React component library (`@argoplane/shared`).
+Extensions are independent. The metrics extension doesn't know about the logs extension. Each owns its domain. They share nothing except the ArgoCD proxy mechanism and the shared React component library (`@argoplane/shared`).
 
 ## Design principles
 

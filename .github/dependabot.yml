@@ -6,7 +6,6 @@ updates:
   - package-ecosystem: gomod
     directories:
       - /extensions/metrics/backend
-      - /extensions/backups/backend
       - /extensions/networking/backend
       - /extensions/logs/backend
       - /extensions/vulnerabilities/backend
@@ -30,7 +29,6 @@ updates:
     directories:
       - /extensions/shared
       - /extensions/metrics/ui
-      - /extensions/backups/ui
       - /extensions/networking/ui
       - /extensions/logs/ui
       - /extensions/vulnerabilities/ui
@@ -91,7 +89,6 @@ updates:
   - package-ecosystem: docker
     directories:
       - /extensions/metrics/backend
-      - /extensions/backups/backend
       - /extensions/networking/backend
       - /extensions/logs/backend
       - /extensions/vulnerabilities/backend

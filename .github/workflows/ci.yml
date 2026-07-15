@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        extension: [metrics, backups, networking, logs, vulnerabilities, events]
+        extension: [metrics, networking, logs, vulnerabilities, events]
     steps:
       - uses: actions/checkout@v6.0.3
 
@@ -43,6 +43,10 @@ jobs:
       - name: Vet
         working-directory: extensions/${{ matrix.extension }}/backend
         run: go vet ./...
+
+      - name: Test
+        working-directory: extensions/${{ matrix.extension }}/backend
+        run: go test ./...
 
       - name: Build
         working-directory: extensions/${{ matrix.extension }}/backend
@@ -70,7 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        extension: [metrics, backups, networking, logs, vulnerabilities, events, argoplane]
+        extension: [metrics, networking, logs, vulnerabilities, events, argoplane]
     steps:
       - uses: actions/checkout@v6.0.3
 
@@ -140,7 +144,7 @@ jobs:
     needs: [ui-build]
     strategy:
       matrix:
-        extension: [metrics, backups, networking, logs, vulnerabilities, events]
+        extension: [metrics, networking, logs, vulnerabilities, events]
     steps:
       - uses: actions/checkout@v6.0.3
 

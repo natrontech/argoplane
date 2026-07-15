@@ -14,7 +14,7 @@ import {
 } from '@argoplane/shared';
 import { useStickyScope } from '@argoplane/shared';
 import { fetchLogs, fetchLabelValues } from '../api';
-import { LogEntry, Severity, TimeSelection, resolveTimeSelection } from '../types';
+import { LogEntry, Severity, TimeSelection, logEntryKey, resolveTimeSelection } from '../types';
 import { LogLine } from './LogLine';
 import { LogToolbar } from './LogToolbar';
 
@@ -31,7 +31,9 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
   const [containers, setContainers] = React.useState<string[]>([]);
   const [pods, setPods] = React.useState<string[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [loaded, setLoaded] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [paused, setPaused] = React.useState(false);
   const [totalEntries, setTotalEntries] = React.useState(0);
 
   const [selectedContainer, setSelectedContainer] = React.useState('');
@@ -52,7 +54,10 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
 
-  const treePodNames = React.useMemo(() => extractPodNames(tree, namespace), [tree, namespace]);
+  // The tree object gets a fresh identity on every app refresh, so derive a
+  // stable string key from the pod names and memoize the array on that.
+  const podsKey = extractPodNames(tree, namespace).join('|');
+  const treePodNames = React.useMemo(() => (podsKey ? podsKey.split('|') : []), [podsKey]);
   const scopedPods = scope === 'app' && treePodNames.length > 0 ? treePodNames : undefined;
 
   const mountedRef = React.useRef(true);
@@ -61,14 +66,33 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
     return () => { mountedRef.current = false; };
   }, []);
 
+  const abortRef = React.useRef<AbortController | null>(null);
+  React.useEffect(() => () => abortRef.current?.abort(), []);
+
   // Debounce search text: only update debouncedSearch after 500ms of no typing
   React.useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchText), 500);
     return () => clearTimeout(timer);
   }, [searchText]);
 
+  const noSeverities = activeSeverities.size === 0;
+
   const fetchAll = React.useCallback(() => {
-    if (!namespace) return;
+    if (!namespace) {
+      setLoading(false);
+      return;
+    }
+
+    abortRef.current?.abort();
+
+    if (activeSeverities.size === 0) {
+      // Nothing selected: skip the fetch instead of querying without a filter.
+      setEntries([]);
+      setTotalEntries(0);
+      setError(null);
+      setLoading(false);
+      return;
+    }
 
     const { start, end } = resolveTimeSelection(timeSelection);
 
@@ -88,15 +112,19 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
       pods: scopedPods,
     };
 
-    fetchLogs(queryParams, appNamespace, appName, project)
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    fetchLogs(queryParams, appNamespace, appName, project, controller.signal)
       .then((logsResp) => {
-        if (!mountedRef.current) return;
+        if (controller.signal.aborted) return;
         setEntries(logsResp.entries || []);
         setTotalEntries(logsResp.stats?.totalEntries || logsResp.entries?.length || 0);
         setError(null);
+        setLoaded(true);
       })
-      .catch((err) => { if (mountedRef.current) setError(err.message); })
-      .finally(() => { if (mountedRef.current) setLoading(false); });
+      .catch((err) => { if (!controller.signal.aborted) setError(err.message); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
   }, [namespace, selectedPod, selectedContainer, debouncedSearch, activeSeverities, timeSelection, appNamespace, appName, project, scopedPods]);
 
   // Fetch containers and pods for dropdowns
@@ -116,9 +144,10 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
   }, [fetchAll]);
 
   React.useEffect(() => {
+    if (paused) return;
     const interval = setInterval(fetchAll, REFRESH_INTERVAL);
     return () => clearInterval(interval);
-  }, [fetchAll]);
+  }, [fetchAll, paused]);
 
   const handleSeverityToggle = React.useCallback((severity: Severity) => {
     setActiveSeverities((prev) => {
@@ -136,9 +165,17 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
   const errorCount = entries.filter((e) => e.severity === 'error').length;
   const warnCount = entries.filter((e) => e.severity === 'warn').length;
 
-  if (loading) return <Loading />;
+  if (!namespace) {
+    return (
+      <div style={panel}>
+        <EmptyState message="No destination namespace configured for this application" />
+      </div>
+    );
+  }
 
-  if (error) {
+  if (loading && !loaded) return <Loading />;
+
+  if (error && !loaded) {
     return (
       <div style={panel}>
         <div style={{
@@ -174,7 +211,7 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
     <div style={{ ...panel, maxWidth: '100%', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 200px)', minHeight: 500 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <SectionHeader title="LOG EXPLORER" />
-        <ScopeToggle value={scope} onChange={(s) => { setScope(s); setLoading(true); }} />
+        <ScopeToggle value={scope} onChange={setScope} />
       </div>
 
       {/* Stats row */}
@@ -232,15 +269,25 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
         onSearchChange={setSearchText}
         timeSelection={timeSelection}
         onTimeSelectionChange={setTimeSelection}
-        onRefresh={() => { setLoading(true); fetchAll(); }}
+        onRefresh={fetchAll}
+        paused={paused}
+        onPauseToggle={() => setPaused((p) => !p)}
       />
+
+      {error && (
+        <div style={refreshErrorBanner}>
+          Refresh failed: {error}. Showing last loaded data.
+        </div>
+      )}
 
       <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
         {entries.length === 0 ? (
-          <EmptyState message="No logs found for the selected filters" />
+          <EmptyState message={noSeverities
+            ? 'No severities selected. Enable at least one severity to see logs.'
+            : 'No logs found for the selected filters'} />
         ) : (
-          entries.map((entry, i) => (
-            <LogLine key={`${entry.timestamp}-${i}`} entry={entry} showPod={true} />
+          entries.map((entry) => (
+            <LogLine key={logEntryKey(entry)} entry={entry} showPod={true} />
           ))
         )}
       </div>
@@ -273,4 +320,14 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
       )}
     </div>
   );
+};
+
+const refreshErrorBanner: React.CSSProperties = {
+  padding: `${spacing[1]}px ${spacing[3]}px`,
+  backgroundColor: colors.yellowLight,
+  borderBottom: `1px solid ${colors.yellow}`,
+  color: colors.yellowText,
+  fontFamily: fonts.mono,
+  fontSize: fontSize.xs,
+  flexShrink: 0,
 };

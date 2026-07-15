@@ -26,7 +26,7 @@ argocd:
       - role: admin
         extensions: ["*"]
       # - role: developer
-      #   extensions: ["metrics", "backups"]
+      #   extensions: ["metrics", "events"]
 
   # -- Custom ArgoPlane styles for ArgoCD UI
   # Deploys a ConfigMap with the ArgoPlane CSS theme and login wallpaper,
@@ -109,66 +109,6 @@ extensions:
       # Reads ArgoCD Applications to authorize that a requested namespace is
       # one the calling application manages (namespace scoping).
       rules:
-        - apiGroups: ["argoproj.io"]
-          resources: ["applications"]
-          verbs: ["get"]
-
-  backups:
-    enabled: true
-    image:
-      repository: ghcr.io/natrontech/argoplane-backups-backend
-      tag: ""
-      pullPolicy: IfNotPresent
-    replicas: 1
-    revisionHistoryLimit: 3
-    port: 8081
-    env:
-      VELERO_NAMESPACE: "velero"
-      LOG_LEVEL: "info"
-      # -- Set to "true" to skip TLS verification when fetching backup/restore logs
-      # from object storage with self-signed certificates.
-      # INSECURE_TLS: "true"
-      # -- Path to a CA certificate file for object storage TLS verification.
-      # Mount via extraVolumes/extraVolumeMounts if using a custom CA.
-      # CA_CERT_PATH: "/etc/ssl/certs/ca.crt"
-    extraEnv: []
-    resources:
-      requests:
-        cpu: 50m
-        memory: 64Mi
-      limits:
-        memory: 128Mi
-    podLabels: {}
-    podAnnotations: {}
-    priorityClassName: ""
-    podSecurityContext:
-      runAsNonRoot: true
-      seccompProfile:
-        type: RuntimeDefault
-    securityContext:
-      runAsNonRoot: true
-      runAsUser: 65534
-      allowPrivilegeEscalation: false
-      readOnlyRootFilesystem: true
-      capabilities:
-        drop: ["ALL"]
-    nodeSelector: {}
-    tolerations: []
-    affinity: {}
-    serviceAccount:
-      create: true
-      annotations: {}
-    rbac:
-      rules:
-        - apiGroups: ["velero.io"]
-          resources: ["schedules", "backups", "restores", "backupstoragelocations", "downloadrequests", "podvolumebackups", "podvolumerestores"]
-          verbs: ["get", "list", "watch"]
-        - apiGroups: ["velero.io"]
-          resources: ["backups", "restores", "downloadrequests", "deletebackuprequests"]
-          verbs: ["create", "delete"]
-        - apiGroups: ["velero.io"]
-          resources: ["schedules"]
-          verbs: ["patch"]
         - apiGroups: ["argoproj.io"]
           resources: ["applications"]
           verbs: ["get"]

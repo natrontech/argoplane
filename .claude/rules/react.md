@@ -37,8 +37,8 @@ Every extension entry point registers via `window.extensionsAPI`:
 | Type | Use for | Example |
 |------|---------|---------|
 | Resource tab | Per-resource operational data | Metrics for a Deployment, flows for a Pod |
-| App view | Per-app operational views | All backups for this app, all network flows |
-| Status panel | Health at a glance in app header | CPU/memory summary, backup status, flow stats |
+| App view | Per-app operational views | All network flows for this app, all events |
+| Status panel | Health at a glance in app header | CPU/memory summary, flow stats |
 | System-level | Cross-app dashboards (sidebar page) | ArgoPlane Overview, Alerts Dashboard |
 | Top bar action | Global action buttons | Cluster health summary, external links |
 
@@ -54,7 +54,7 @@ window.extensionsAPI.registerSystemLevelExtension(
 );
 ```
 
-Good for: cluster health dashboards, cross-app alert views, backup overview, network policy matrix.
+Good for: cluster health dashboards, cross-app alert views, network policy matrix.
 Not good for: service catalogs, multi-step forms, team management. ArgoCD's extension system is too constrained for those kinds of flows.
 
 ### Top Bar Action Menu
@@ -126,10 +126,10 @@ The `argocd.token` cookie is sent automatically. ArgoCD validates auth before pr
 
 ## Naming
 
-- **Components**: PascalCase (`MetricsPanel.tsx`, `BackupList.tsx`)
-- **Hooks**: `use` prefix (`useMetrics.ts`, `useBackups.ts`)
+- **Components**: PascalCase (`MetricsPanel.tsx`, `EventsTable.tsx`)
+- **Hooks**: `use` prefix (`useMetrics.ts`, `useEvents.ts`)
 - **Utilities**: camelCase (`formatBytes.ts`, `parseLabels.ts`)
-- **Types**: PascalCase, no `I` prefix (`BackupStatus`, `MetricQuery`)
+- **Types**: PascalCase, no `I` prefix (`FlowSummary`, `MetricQuery`)
 
 ## Styling
 

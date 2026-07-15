@@ -17,7 +17,8 @@ export async function fetchPoliciesWithOwnership(
   resources: ResourceRef[],
   appNamespace: string,
   appName: string,
-  project: string
+  project: string,
+  signal?: AbortSignal
 ): Promise<PolicySummary[]> {
   const response = await fetch('/extensions/networking/api/v1/policies-with-ownership', {
     method: 'POST',
@@ -26,6 +27,7 @@ export async function fetchPoliciesWithOwnership(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ namespace, resources }),
+    signal,
   });
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -38,12 +40,14 @@ export async function fetchEndpoints(
   appNamespace: string,
   appName: string,
   project: string,
-  pods?: string[]
+  pods?: string[],
+  signal?: AbortSignal
 ): Promise<EndpointSummary[]> {
   const params = new URLSearchParams({ namespace });
   if (pods && pods.length > 0) params.set('pods', pods.join(','));
   const response = await fetch(`/extensions/networking/api/v1/endpoints?${params}`, {
     headers: headers(appNamespace, appName, project),
+    signal,
   });
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -60,7 +64,8 @@ export async function fetchFlows(
   limit: number = 200,
   verdict: string = 'all',
   direction: string = 'all',
-  pods?: string[]
+  pods?: string[],
+  signal?: AbortSignal
 ): Promise<FlowsResponse> {
   const params = new URLSearchParams({
     namespace,
@@ -72,6 +77,7 @@ export async function fetchFlows(
   if (pods && pods.length > 0) params.set('pods', pods.join(','));
   const response = await fetch(`/extensions/networking/api/v1/flows?${params}`, {
     headers: headers(appNamespace, appName, project),
+    signal,
   });
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${response.statusText}`);

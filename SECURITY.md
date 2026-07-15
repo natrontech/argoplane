@@ -37,7 +37,7 @@ This policy covers:
 Out of scope:
 
 - ArgoCD itself (report to [argoproj/argo-cd](https://github.com/argoproj/argo-cd/security))
-- Third-party operators (Prometheus, Velero, Cilium, Trivy, etc.)
+- Third-party operators (Prometheus, Cilium, Trivy, etc.)
 - Vulnerabilities in dependencies that are already publicly disclosed (open a regular issue instead)
 
 ## Disclosure

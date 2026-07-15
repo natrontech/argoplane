@@ -9,6 +9,10 @@ The metrics backend exposes a JSON HTTP API consumed by the UI extension via Arg
 
 All requests receive ArgoCD identity headers (`Argocd-Username`, `Argocd-User-Id`, `Argocd-User-Groups`, `Argocd-Target-Cluster-URL`).
 
+## Authorization
+
+Every data endpoint requires the `Argocd-Application-Name` header (`namespace:name` format, set automatically by ArgoCD's proxy). The backend returns `403` if the header is missing or if the requested namespace is not managed by that Application (its destination namespace plus namespaces in `status.resources`). The backend needs `get` on `applications.argoproj.io` for this lookup; the Helm chart grants it by default.
+
 ## Config-driven dashboard endpoints
 
 These are the primary endpoints used by the config-driven dashboard system.
@@ -73,9 +77,10 @@ Executes a PromQL template for a specific graph and returns time series data.
 | `graph` | string | Yes | | Graph identifier from dashboard config |
 | `namespace` | string | Yes | | Kubernetes namespace |
 | `name` | string | Yes | | Resource name (workloads: `name-.*` pattern, pods: exact name) |
+| `pods` | string | No | | Comma-separated pod names; overrides `name` as the pod filter |
 | `duration` | string | No | `1h` | Time range: `1h`, `6h`, `24h`, `7d` |
 
-All query parameters are available as Go `text/template` variables in PromQL expressions (e.g., `{{.namespace}}`, `{{.name}}`, `{{.duration}}`).
+PromQL templates support the variables `{{.namespace}}`, `{{.name}}`, and `{{.podFilter}}` (built from `pods` or `name`). Values are escaped before substitution to prevent PromQL injection.
 
 **Response:**
 
@@ -97,7 +102,7 @@ Values are converted based on `yAxisUnit`: `bytes` to MiB, `bytes/s` to KB/s, `m
 
 ## Legacy endpoints
 
-These endpoints are still used by the summary cards, pod breakdown table, and query builder.
+These endpoints are still used by the summary cards, pod breakdown table, and per-pod charts.
 
 ### Resource metrics
 
@@ -156,6 +161,7 @@ Returns namespace-wide aggregate metrics (all pods in a namespace).
 |------|------|----------|---------|-------------|
 | `namespace` | string | Yes | | Kubernetes namespace |
 | `range` | string | No | (instant only) | Time range: `1h`, `6h`, `24h`, `7d` |
+| `pods` | string | No | | Comma-separated pod names to scope the aggregation |
 
 **Response:**
 
@@ -243,103 +249,6 @@ Returns per-pod time series for multi-line charts (CPU, Memory, Network RX, Netw
 ]
 ```
 
-### Custom query
-
-```
-GET /api/v1/query?query={promql}&range={range}
-```
-
-Executes an arbitrary PromQL query. Used by the interactive Query Builder.
-
-**Parameters:**
-
-| Name | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `query` | string | Yes | | PromQL expression |
-| `range` | string | No | (instant) | Time range: `1h`, `6h`, `24h`, `7d` |
-
-Queries containing `delete` or `drop` are rejected (403).
-
-**Instant response:**
-
-```json
-{
-  "samples": [
-    { "labels": { "pod": "guestbook-ui-abc123" }, "value": 12.5 }
-  ]
-}
-```
-
-**Range response:**
-
-```json
-{
-  "multiSeries": [
-    {
-      "label": "pod=guestbook-ui-abc123",
-      "series": [{ "time": "...", "value": 12.5 }]
-    }
-  ]
-}
-```
-
-### Discover metrics
-
-```
-GET /api/v1/discover?namespace={ns}&search={term}
-```
-
-Lists available Prometheus metric names, categorized and with auto-generated PromQL templates.
-
-**Parameters:**
-
-| Name | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `namespace` | string | No | | Filter to metrics with this namespace label |
-| `search` | string | No | | Case-insensitive substring filter |
-
-**Response** (max 100 results):
-
-```json
-[
-  {
-    "name": "container_cpu_usage_seconds_total",
-    "category": "cpu",
-    "query": "sum(rate(container_cpu_usage_seconds_total{namespace=\"default\"}[5m]))"
-  }
-]
-```
-
-Categories: `cpu`, `memory`, `network`, `disk`, `pod`, `node`, `deployment`, `statefulset`, `namespace`, `other`.
-
-### Label discovery
-
-```
-GET /api/v1/labels?metric={name}&label={label}&namespace={ns}
-```
-
-Returns label names or values for a Prometheus metric.
-
-**Parameters:**
-
-| Name | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `metric` | string | Yes | | Prometheus metric name |
-| `label` | string | No | | If set, returns values for this label. If omitted, returns label names. |
-| `namespace` | string | No | | Scope query to this namespace |
-
-**Label names response** (no `label` param):
-
-```json
-["pod", "container", "namespace", "node"]
-```
-
-**Label values response** (with `label` param):
-
-```json
-["guestbook-ui-abc123", "guestbook-ui-def456"]
-```
-
 ## Health check
 
 ```
@@ -356,4 +265,4 @@ All endpoints return errors as JSON:
 { "error": "description of what went wrong" }
 ```
 
-HTTP status codes: `400` for missing parameters, `403` for disallowed queries, `404` for config lookups that fail, `500` for internal errors.
+HTTP status codes: `400` for missing parameters, `403` when namespace authorization fails, `404` for config lookups that fail, `500` for internal errors.

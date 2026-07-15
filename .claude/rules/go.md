@@ -32,13 +32,13 @@ Always use full module paths. No relative imports.
 
 ## Naming
 
-- **Exported**: PascalCase (`CreateBackup`, `MetricQuery`, `NewServer`)
+- **Exported**: PascalCase (`CreateSilence`, `MetricQuery`, `NewServer`)
 - **Unexported**: camelCase (`parseLabels`, `buildQuery`)
 - **Constructors**: `New<Type>(...) (*Type, error)`
 - **Method receivers**: short names (`s *Server`, `c *Client`, `q *Querier`)
-- **Interfaces**: semantic names (Querier, BackupLister, MetricFetcher). No forced `-er` suffix.
-- **Packages**: single lowercase word (`metrics`, `backups`, `proxy`)
-- **No `Get`/`List` prefixes**: follow stdlib convention. `Backups()` not `GetBackups()` or `ListBackups()`. `Create`, `Delete`, `Trigger` verbs are fine since they denote actions.
+- **Interfaces**: semantic names (Querier, FlowReader, MetricFetcher). No forced `-er` suffix.
+- **Packages**: single lowercase word (`metrics`, `events`, `proxy`)
+- **No `Get`/`List` prefixes**: follow stdlib convention. `Flows()` not `GetFlows()` or `ListFlows()`. `Create`, `Delete`, `Trigger` verbs are fine since they denote actions.
 
 ## Error Handling
 
@@ -56,7 +56,7 @@ Always wrap with context using `%w`. Use `slog.Error()` before `os.Exit(1)` in m
 
 ```go
 slog.Info("querying prometheus", "url", config.PrometheusURL, "query", query)
-slog.Error("failed to fetch backups", "error", err, "namespace", ns)
+slog.Error("failed to fetch flows", "error", err, "namespace", ns)
 ```
 
 Levels: debug, info, warn, error.
@@ -80,8 +80,8 @@ Extension backends are HTTP servers (not gRPC). Use `net/http` stdlib:
 ```go
 mux := http.NewServeMux()
 mux.HandleFunc("GET /api/v1/metrics", s.handleMetrics)
-mux.HandleFunc("GET /api/v1/backups", s.handleBackups)
-mux.HandleFunc("POST /api/v1/backups/{name}/restore", s.handleRestore)
+mux.HandleFunc("GET /api/v1/flows", s.handleFlows)
+mux.HandleFunc("GET /api/v1/events", s.handleEvents)
 ```
 
 Use Go 1.22+ routing patterns with method and path parameters.
@@ -107,7 +107,7 @@ func clusterFromRequest(r *http.Request) (name, url string) {
 
 ## File Organization
 
-- **Naming**: feature-based (`backup.go`, `query.go`, `server.go`)
+- **Naming**: feature-based (`flows.go`, `query.go`, `server.go`)
 - **Generated code**: `.gen.go` suffix or `generated.go`
 - **Structure within file**: package decl, imports, types/interfaces, constructors, methods, helpers
 - **Tests**: `_test.go` suffix. Standard `testing` package.

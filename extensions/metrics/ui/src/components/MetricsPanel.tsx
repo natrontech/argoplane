@@ -15,12 +15,8 @@ import {
 } from '@argoplane/shared';
 import { fetchMetrics, fetchPodBreakdown } from '../api';
 import { ExtensionProps, MetricData, PodMetric } from '../types';
+import { SERIES_COLORS } from '../utils/palette';
 import { ConfigDashboard } from './ConfigDashboard';
-
-const SERIES_COLORS = [
-  '#00A2B3', '#f5a337', '#0c568f', '#63b343', '#1abe93',
-  '#bd19c6', '#fb44be', '#999966', '#80B300', '#1AB399',
-];
 
 const REFRESH_INTERVAL = 30_000;
 
@@ -28,6 +24,7 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
   const [metrics, setMetrics] = React.useState<MetricData[]>([]);
   const [pods, setPods] = React.useState<PodMetric[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [loaded, setLoaded] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const namespace = resource?.metadata?.namespace || '';
@@ -39,22 +36,26 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
 
   const isWorkload = kind === 'Deployment' || kind === 'StatefulSet';
 
-  const mountedRef = React.useRef(true);
-  React.useEffect(() => {
-    mountedRef.current = true;
-    return () => { mountedRef.current = false; };
-  }, []);
+  const abortRef = React.useRef<AbortController | null>(null);
+  React.useEffect(() => () => abortRef.current?.abort(), []);
 
   const fetchAll = React.useCallback(() => {
-    if (!namespace || !name) return;
+    if (!namespace || !name) {
+      setLoading(false);
+      return;
+    }
+
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     const promises: Promise<any>[] = [
-      fetchMetrics(namespace, name, kind, appNamespace, appName, project),
+      fetchMetrics(namespace, name, kind, appNamespace, appName, project, controller.signal),
     ];
 
     if (isWorkload) {
       promises.push(
-        fetchPodBreakdown(namespace, name, kind, appNamespace, appName, project).catch(() => []),
+        fetchPodBreakdown(namespace, name, kind, appNamespace, appName, project, undefined, controller.signal).catch(() => []),
       );
     } else {
       promises.push(Promise.resolve([]));
@@ -62,13 +63,14 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
 
     Promise.all(promises)
       .then(([instant, podList]) => {
-        if (!mountedRef.current) return;
+        if (controller.signal.aborted) return;
         setMetrics(instant);
         setPods(podList);
         setError(null);
+        setLoaded(true);
       })
-      .catch((err) => { if (mountedRef.current) setError(err.message); })
-      .finally(() => { if (mountedRef.current) setLoading(false); });
+      .catch((err) => { if (!controller.signal.aborted) setError(err.message); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
   }, [namespace, name, kind, isWorkload, appNamespace, appName, project]);
 
   React.useEffect(() => {
@@ -81,23 +83,33 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
     return () => clearInterval(interval);
   }, [fetchAll]);
 
-  if (loading) return <Loading />;
+  if (!namespace || !name) {
+    return <EmptyState message="No namespace or name available for this resource" />;
+  }
 
-  if (error) {
+  if (loading && !loaded) return <Loading />;
+
+  if (error && !loaded) {
     return (
-      <div style={{ ...panel, color: colors.red }}>
+      <div style={{ ...panel, color: colors.redText }}>
         <div style={{ marginBottom: spacing[2] }}>Failed to load metrics: {error}</div>
         <Button onClick={() => { setLoading(true); fetchAll(); }}>Retry</Button>
       </div>
     );
   }
 
-  if (metrics.length === 0) {
+  if (metrics.length === 0 && !error) {
     return <EmptyState message={`No metrics available for ${kind} ${namespace}/${name}`} />;
   }
 
   return (
     <div style={panel}>
+      {error && (
+        <div style={refreshErrorNote}>
+          Refresh failed: {error}. Showing last loaded data.
+        </div>
+      )}
+
       {/* Header */}
       <div style={headerRow}>
         <MetaRow items={[
@@ -191,6 +203,17 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
 };
 
 // --- Styles ---
+
+const refreshErrorNote: React.CSSProperties = {
+  padding: `${spacing[1]}px ${spacing[3]}px`,
+  marginBottom: spacing[3],
+  backgroundColor: colors.yellowLight,
+  border: `1px solid ${colors.yellow}`,
+  borderRadius: 4,
+  color: colors.yellowText,
+  fontFamily: fonts.mono,
+  fontSize: fontSize.xs,
+};
 
 const headerRow: React.CSSProperties = {
   display: 'flex',

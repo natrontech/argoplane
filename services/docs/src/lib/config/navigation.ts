@@ -14,7 +14,6 @@ export const navigation: NavItem[] = [
 		href: '/extensions/metrics',
 		children: [
 			{ title: 'Metrics', href: '/extensions/metrics' },
-			{ title: 'Backups', href: '/extensions/backups' },
 			{ title: 'Networking', href: '/extensions/networking' },
 			{ title: 'Logs', href: '/extensions/logs' },
 			{ title: 'Vulnerabilities', href: '/extensions/vulnerabilities' },
@@ -45,7 +44,6 @@ export const navigation: NavItem[] = [
 		href: '/api/metrics',
 		children: [
 			{ title: 'Metrics API', href: '/api/metrics' },
-			{ title: 'Backups API', href: '/api/backups' },
 			{ title: 'Networking API', href: '/api/networking' },
 			{ title: 'Logs API', href: '/api/logs' },
 			{ title: 'Vulnerabilities API', href: '/api/vulnerabilities' },

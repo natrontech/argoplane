@@ -56,16 +56,23 @@ export const TimeRangePicker: React.FC<TimeRangePickerProps> = ({ value, onChang
     }
   }, [tab, value]);
 
-  // Close on outside click
+  // Close on outside click or Escape
   React.useEffect(() => {
     if (!open) return;
-    const handler = (e: MouseEvent) => {
+    const clickHandler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', clickHandler);
+    document.addEventListener('keydown', keyHandler);
+    return () => {
+      document.removeEventListener('mousedown', clickHandler);
+      document.removeEventListener('keydown', keyHandler);
+    };
   }, [open]);
 
   const handleRelativeSelect = (range: RelativeRange) => {
@@ -73,15 +80,18 @@ export const TimeRangePicker: React.FC<TimeRangePickerProps> = ({ value, onChang
     setOpen(false);
   };
 
+  const invalidRange = !!customFrom && !!customTo &&
+    new Date(customFrom).getTime() > new Date(customTo).getTime();
+  const applyDisabled = !customFrom || !customTo || invalidRange;
+
   const handleApplyAbsolute = () => {
-    if (customFrom && customTo) {
-      onChange({
-        type: 'absolute',
-        from: new Date(customFrom).toISOString(),
-        to: new Date(customTo).toISOString(),
-      });
-      setOpen(false);
-    }
+    if (applyDisabled) return;
+    onChange({
+      type: 'absolute',
+      from: new Date(customFrom).toISOString(),
+      to: new Date(customTo).toISOString(),
+    });
+    setOpen(false);
   };
 
   const isActiveRelative = (range: RelativeRange) =>
@@ -92,6 +102,8 @@ export const TimeRangePicker: React.FC<TimeRangePickerProps> = ({ value, onChang
       {/* Trigger button */}
       <button
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-haspopup="true"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -263,18 +275,28 @@ export const TimeRangePicker: React.FC<TimeRangePickerProps> = ({ value, onChang
                   boxSizing: 'border-box',
                 }}
               />
+              {invalidRange && (
+                <div style={{
+                  fontFamily: fonts.mono,
+                  fontSize: fontSize.xs,
+                  color: colors.redText,
+                  marginBottom: spacing[2],
+                }}>
+                  "From" must be before "To"
+                </div>
+              )}
               <button
                 onClick={handleApplyAbsolute}
-                disabled={!customFrom || !customTo}
+                disabled={applyDisabled}
                 style={{
                   display: 'block',
                   width: '100%',
                   padding: `${spacing[2]}px 0`,
                   border: 'none',
                   borderRadius: 4,
-                  backgroundColor: (!customFrom || !customTo) ? colors.gray200 : colors.orange500,
-                  color: (!customFrom || !customTo) ? colors.gray500 : colors.white,
-                  cursor: (!customFrom || !customTo) ? 'not-allowed' : 'pointer',
+                  backgroundColor: applyDisabled ? colors.gray200 : colors.orange500,
+                  color: applyDisabled ? colors.gray500 : colors.white,
+                  cursor: applyDisabled ? 'not-allowed' : 'pointer',
                   fontFamily: fonts.mono,
                   fontSize: fontSize.xs,
                   fontWeight: 600,

@@ -2,7 +2,7 @@
 # Copy selected UI extension bundles to /tmp/extensions/.
 #
 # Set ENABLED_EXTENSIONS to a comma-separated list of extension names
-# to copy only those bundles (e.g. "metrics,backups,argoplane").
+# to copy only those bundles (e.g. "metrics,events,argoplane").
 # If ENABLED_EXTENSIONS is empty or unset, all bundles are copied.
 
 set -e

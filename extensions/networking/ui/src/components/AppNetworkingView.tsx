@@ -198,6 +198,11 @@ function aggregateFlows(flows: FlowSummary[]): AggregatedFlow[] {
 // Sorting
 // ============================================================
 
+/** Stable identity for a flow, so row expansion survives poll-driven reordering. */
+function flowIdentity(f: FlowSummary): string {
+  return `${f.time}|${f.direction}|${f.sourcePod || f.sourceIP || ''}|${f.destPod || f.destDNS || f.destIP || ''}|${f.protocol}|${f.destPort}`;
+}
+
 type SortField = 'time' | 'verdict' | 'direction' | 'source' | 'dest' | 'protocol' | 'port';
 type SortDir = 'asc' | 'desc';
 
@@ -272,23 +277,38 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
   const [sortDir, setSortDir] = React.useState<SortDir>('desc');
   const [page, setPage] = React.useState(0);
   const [activeTab, setActiveTab] = React.useState<'flows' | 'policies' | 'allowed'>('flows');
-  const [expandedFlowIdx, setExpandedFlowIdx] = React.useState<number | null>(null);
+  const [expandedFlowKey, setExpandedFlowKey] = React.useState<string | null>(null);
   const [expandedPolicy, setExpandedPolicy] = React.useState<string | null>(null);
   const [aggregated, setAggregated] = React.useState(false);
-  const [scope, setScope] = useStickyScope();
+  const [scope, setScope] = useStickyScope('networking');
 
   const namespace = application?.spec?.destination?.namespace || '';
   const appName = application?.metadata?.name || '';
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
 
-  const treePodNames = React.useMemo(() => extractPodNames(tree, namespace), [tree, namespace]);
+  // ArgoCD passes a fresh tree object on every app refresh. Memoize derived
+  // arrays on stable string keys so identical content keeps identical identity
+  // and doesn't re-trigger fetches.
+  const treePodNamesKey = extractPodNames(tree, namespace).sort().join('|');
+  const treePodNames = React.useMemo(
+    () => (treePodNamesKey ? treePodNamesKey.split('|') : []),
+    [treePodNamesKey],
+  );
   const scopedPods = scope === 'app' && treePodNames.length > 0 ? treePodNames : undefined;
 
+  const resourceRefsKey: string = !tree?.nodes ? '' : tree.nodes
+    .filter((n: any) => n.namespace === namespace || !n.namespace)
+    .map((n: any) => `${n.group || ''}/${n.kind}/${n.namespace || ''}/${n.name}`)
+    .sort()
+    .join('|');
   const resourceRefs = React.useMemo<ResourceRef[]>(() => {
-    if (!tree?.nodes) return [];
-    return tree.nodes.filter((n: any) => n.namespace === namespace || !n.namespace).map((n: any) => ({ group: n.group || '', kind: n.kind, namespace: n.namespace || '', name: n.name }));
-  }, [tree, namespace]);
+    if (!resourceRefsKey) return [];
+    return resourceRefsKey.split('|').map((k) => {
+      const [group, kind, ns, name] = k.split('/');
+      return { group, kind, namespace: ns, name };
+    });
+  }, [resourceRefsKey]);
 
   const treeNodeKeys = React.useMemo(() => {
     const keys = new Set<string>();
@@ -310,14 +330,15 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
     return () => { mountedRef.current = false; };
   }, []);
 
-  const fetchAll = React.useCallback(() => {
+  const fetchAll = React.useCallback((signal?: AbortSignal) => {
     if (!namespace) return;
     Promise.all([
-      fetchPoliciesWithOwnership(namespace, resourceRefs, appNamespace, appName, project).catch(() => null),
-      fetchEndpoints(namespace, appNamespace, appName, project, scopedPods).catch(() => null),
-      fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter, directionFilter, scopedPods).catch(() => null),
+      fetchPoliciesWithOwnership(namespace, resourceRefs, appNamespace, appName, project, signal).catch(() => null),
+      fetchEndpoints(namespace, appNamespace, appName, project, scopedPods, signal).catch(() => null),
+      fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter, directionFilter, scopedPods, signal).catch(() => null),
     ]).then(([pol, ep, fl]) => {
-      if (!mountedRef.current) return;
+      // Drop stale responses: a newer fetch (new filters) may already be in flight.
+      if (!mountedRef.current || signal?.aborted) return;
       // If every request failed, surface an error instead of silently keeping stale data.
       if (pol === null && ep === null && fl === null) {
         setError('Failed to load networking data');
@@ -330,13 +351,18 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
       if (fl !== null) setFlowsResponse(fl);
       setError(null);
     })
-      .catch((err) => { if (mountedRef.current) setError(err.message); })
-      .finally(() => { if (mountedRef.current) setLoading(false); });
+      .catch((err) => { if (mountedRef.current && !signal?.aborted) setError(err.message); })
+      .finally(() => { if (mountedRef.current && !signal?.aborted) setLoading(false); });
   }, [namespace, appNamespace, appName, project, resourceRefs, timeRange, verdictFilter, directionFilter, scope, scopedPods]);
 
-  React.useEffect(() => { setLoading(true); fetchAll(); }, [fetchAll]);
-  React.useEffect(() => { const i = setInterval(fetchAll, REFRESH_INTERVAL); return () => clearInterval(i); }, [fetchAll]);
-  React.useEffect(() => { setPage(0); setExpandedFlowIdx(null); }, [search, sortField, sortDir, verdictFilter, directionFilter, timeRange, aggregated]);
+  React.useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    fetchAll(controller.signal);
+    const i = setInterval(() => fetchAll(controller.signal), REFRESH_INTERVAL);
+    return () => { controller.abort(); clearInterval(i); };
+  }, [fetchAll]);
+  React.useEffect(() => { setPage(0); setExpandedFlowKey(null); }, [search, sortField, sortDir, verdictFilter, directionFilter, timeRange, aggregated]);
 
   const flows = flowsResponse?.flows || [];
   const flowSummary = flowsResponse?.summary;
@@ -380,7 +406,9 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
 
   const applyFilter = (value: string) => { setSearch(value); setActiveTab('flows'); };
 
-  if (loading) return <div style={panel}><Loading /></div>;
+  // Full-view loading only before the first data arrives; refreshes keep the view.
+  const hasData = flowsResponse !== null || policies.length > 0 || endpoints.length > 0;
+  if (loading && !hasData) return <div style={panel}><Loading /></div>;
   if (error) return <div style={panel}><div style={{ color: colors.redText, marginBottom: spacing[2] }}>Failed to load: {error}</div><Button onClick={() => { setLoading(true); fetchAll(); }}>Retry</Button></div>;
 
   return (
@@ -431,6 +459,7 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
               <EmptyState message={search ? 'No flows match your search' : `No flows in the last ${timeRange}`} />
             ) : aggregated ? (
               /* Aggregated view */
+              <>
               <div style={tableWrap}>
                 <table style={tableStyle}>
                   <thead><tr>
@@ -461,6 +490,14 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
                   </tbody>
                 </table>
               </div>
+              {totalPages > 1 && (
+                <div style={paginationRow}>
+                  <button style={pageBtn} disabled={page === 0} onClick={() => setPage(page - 1)}>Prev</button>
+                  <span style={pageLabelS}>{page + 1} / {totalPages}</span>
+                  <button style={pageBtn} disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>Next</button>
+                </div>
+              )}
+              </>
             ) : (
               /* Individual flows */
               <>
@@ -479,10 +516,10 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
                     </tr></thead>
                     <tbody>
                       {(pageFlows as FlowSummary[]).map((f, i) => {
-                        const globalIdx = page * PAGE_SIZE + i;
+                        const fk = flowIdentity(f);
                         return (
                           <FlowRow
-                            key={`${f.time}-${globalIdx}`}
+                            key={`${fk}-${i}`}
                             flow={f}
                             namespace={namespace}
                             appNamespace={appNamespace}
@@ -493,8 +530,8 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
                             isPolicyInTree={isPolicyInTree}
                             onPolicyClick={(name) => { setActiveTab('policies'); setSearch(name); }}
                             onFilter={applyFilter}
-                            expanded={expandedFlowIdx === globalIdx}
-                            onToggleExpand={() => setExpandedFlowIdx(expandedFlowIdx === globalIdx ? null : globalIdx)}
+                            expanded={expandedFlowKey === fk}
+                            onToggleExpand={() => setExpandedFlowKey(expandedFlowKey === fk ? null : fk)}
                           />
                         );
                       })}
@@ -791,7 +828,7 @@ const topLeft: React.CSSProperties = { display: 'flex', alignItems: 'center', ga
 const topRight: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: spacing[1], flexWrap: 'wrap' };
 const appLabelS: React.CSSProperties = { fontFamily: fonts.mono, fontWeight: fontWeight.semibold, fontSize: fontSize.md, color: colors.gray800 };
 const nsLabelS: React.CSSProperties = { fontFamily: fonts.mono, fontSize: fontSize.sm, color: colors.gray400 };
-const pill = (active: boolean): React.CSSProperties => ({ padding: `2px ${spacing[2]}px`, border: `1px solid ${active ? colors.orange500 : colors.gray200}`, borderRadius: 4, background: active ? colors.orange500 : 'transparent', color: active ? '#fff' : colors.gray600, cursor: 'pointer', fontSize: fontSize.xs, fontWeight: fontWeight.medium, fontFamily: fonts.mono, textTransform: 'uppercase' as const, lineHeight: '20px' });
+const pill = (active: boolean): React.CSSProperties => ({ padding: `2px ${spacing[2]}px`, border: `1px solid ${active ? colors.orange500 : colors.gray200}`, borderRadius: 4, background: active ? colors.orange500 : 'transparent', color: active ? colors.white : colors.gray600, cursor: 'pointer', fontSize: fontSize.xs, fontWeight: fontWeight.medium, fontFamily: fonts.mono, textTransform: 'uppercase' as const, lineHeight: '20px' });
 const tabBar: React.CSSProperties = { display: 'flex', gap: 0, borderBottom: `1px solid ${colors.gray200}`, marginTop: spacing[3], flexShrink: 0 };
 const tab = (active: boolean): React.CSSProperties => ({ padding: `${spacing[2]}px ${spacing[4]}px`, border: 'none', borderBottom: active ? `2px solid ${colors.orange500}` : '2px solid transparent', background: 'transparent', color: active ? colors.gray800 : colors.gray400, fontWeight: active ? fontWeight.semibold : fontWeight.medium, fontSize: fontSize.sm, fontFamily: fonts.mono, cursor: 'pointer' });
 const tabContent: React.CSSProperties = { flex: 1, minHeight: 0, overflowY: 'auto', paddingTop: spacing[3] };

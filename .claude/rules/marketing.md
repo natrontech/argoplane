@@ -10,7 +10,7 @@ Toss in a joke or ironic sentence every now and then. Keep it natural. If it fee
 
 ## Positioning
 
-ArgoPlane is a package of ArgoCD UI extensions. It gives developers operational visibility inside ArgoCD without a context switch: metrics, logs, alerts, backups, network flows, policy violations, vulnerabilities, events. Resource tabs, app views, status panels, and system-level dashboards, all inside ArgoCD.
+ArgoPlane is a package of ArgoCD UI extensions. It gives developers operational visibility inside ArgoCD without a context switch: metrics, logs, alerts, network flows, policy violations, vulnerabilities, events. Resource tabs, app views, status panels, and system-level dashboards, all inside ArgoCD.
 
 That's it. No standalone portal, no developer platform framework, no new UI to learn. You keep the ArgoCD you already run; ArgoPlane just adds the operational surfaces you wish it had out of the box.
 
@@ -27,7 +27,7 @@ Platform engineers and developers who already run ArgoCD and want operational vi
 
 ## Open Source
 
-Actively encourage and celebrate open-source tools. ArgoPlane is built on ArgoCD, Prometheus, Velero, Cilium, Loki, Trivy Operator, and other open-source projects. Give credit where it's due.
+Actively encourage and celebrate open-source tools. ArgoPlane is built on ArgoCD, Prometheus, Cilium, Loki, Trivy Operator, and other open-source projects. Give credit where it's due.
 
 ## Easter Eggs
 

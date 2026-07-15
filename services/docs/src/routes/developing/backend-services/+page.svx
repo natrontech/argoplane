@@ -14,8 +14,8 @@ Use Go 1.22+ routing patterns:
 ```go
 mux := http.NewServeMux()
 mux.HandleFunc("GET /api/v1/metrics", s.handleMetrics)
-mux.HandleFunc("GET /api/v1/backups", s.handleBackups)
-mux.HandleFunc("POST /api/v1/backups/{name}/restore", s.handleRestore)
+mux.HandleFunc("GET /api/v1/logs", s.handleLogs)
+mux.HandleFunc("GET /api/v1/logs/label/{name}/values", s.handleLabelValues)
 ```
 
 ## ArgoCD identity headers
@@ -37,6 +37,12 @@ func clusterFromRequest(r *http.Request) (name, url string) {
 }
 ```
 
+## Namespace authorization
+
+Every ArgoPlane backend enforces namespace scoping. The `Argocd-Application-Name` header (format `namespace:name`, set by ArgoCD's proxy) identifies the calling Application. Before serving data, the backend fetches that Application via the Kubernetes API and checks that the requested namespace is one the Application manages: the destination namespace plus any namespace in `status.resources`. Anything else gets a `403`.
+
+If you build a new backend, reuse this pattern. It needs a ServiceAccount with a ClusterRole granting `get` on `applications.argoproj.io` (the Helm chart wires this up per extension via `serviceAccount.create` and `rbac.rules`).
+
 ## Configuration
 
 Use `envconfig` struct tags. Load in `main()`, pass values to constructors:
@@ -55,7 +61,7 @@ Always wrap errors with context:
 
 ```go
 if err != nil {
-    return nil, fmt.Errorf("failed to fetch backups: %w", err)
+    return nil, fmt.Errorf("failed to fetch flows: %w", err)
 }
 ```
 
@@ -65,7 +71,7 @@ Use `log/slog` with structured key-value pairs:
 
 ```go
 slog.Info("querying prometheus", "url", config.PrometheusURL, "query", query)
-slog.Error("failed to fetch backups", "error", err, "namespace", ns)
+slog.Error("failed to fetch flows", "error", err, "namespace", ns)
 ```
 
 ## Import organization
@@ -104,5 +110,5 @@ srv.ListenAndServe()
 
 - Constructors: `New<Type>(...) (*Type, error)`
 - Method receivers: short names (`s *Server`, `c *Client`)
-- No `Get`/`List` prefixes: `Backups()` not `GetBackups()`
-- Packages: single lowercase word (`metrics`, `backups`, `proxy`)
+- No `Get`/`List` prefixes: `Flows()` not `GetFlows()`
+- Packages: single lowercase word (`metrics`, `logs`, `proxy`)

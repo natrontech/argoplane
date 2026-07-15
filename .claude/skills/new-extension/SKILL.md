@@ -71,4 +71,3 @@ extensions/$ARGUMENTS/
 ## Copy Patterns From
 
 Use `extensions/metrics/` as the reference implementation for the structure.
-Use `extensions/backups/` as reference for status panel extensions with flyout.

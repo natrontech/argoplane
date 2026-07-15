@@ -96,4 +96,4 @@ All components follow the ArgoPlane design system: 4px grid, 1px borders, max 4p
 - Prefer `interface` over `type` for object shapes
 - Components: PascalCase (`MetricsPanel.tsx`)
 - Hooks: `use` prefix (`useMetrics.ts`)
-- Types: PascalCase, no `I` prefix (`BackupStatus`)
+- Types: PascalCase, no `I` prefix (`FlowSummary`)

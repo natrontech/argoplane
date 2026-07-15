@@ -14,6 +14,8 @@ interface LogToolbarProps {
   timeSelection: TimeSelection;
   onTimeSelectionChange: (sel: TimeSelection) => void;
   onRefresh: () => void;
+  paused: boolean;
+  onPauseToggle: () => void;
 }
 
 const SEVERITIES: { severity: Severity; color: string; solidColor: string }[] = [
@@ -34,6 +36,8 @@ export const LogToolbar: React.FC<LogToolbarProps> = ({
   timeSelection,
   onTimeSelectionChange,
   onRefresh,
+  paused,
+  onPauseToggle,
 }) => {
   return (
     <div style={{
@@ -144,6 +148,27 @@ export const LogToolbar: React.FC<LogToolbarProps> = ({
         }}
       >
         Refresh
+      </button>
+
+      {/* Pause/resume auto-refresh */}
+      <button
+        onClick={onPauseToggle}
+        aria-pressed={paused}
+        title={paused ? 'Resume auto-refresh' : 'Pause auto-refresh'}
+        style={{
+          padding: `${spacing[1]}px ${spacing[3]}px`,
+          border: `1px solid ${paused ? colors.orange300 : colors.gray200}`,
+          borderRadius: 4,
+          backgroundColor: paused ? colors.orange100 : colors.gray100,
+          color: paused ? colors.orange600 : colors.gray800,
+          cursor: 'pointer',
+          fontFamily: fonts.mono,
+          fontSize: fontSize.xs,
+          fontWeight: 500,
+          transition: 'background-color 100ms',
+        }}
+      >
+        {paused ? 'Resume' : 'Pause'}
       </button>
     </div>
   );

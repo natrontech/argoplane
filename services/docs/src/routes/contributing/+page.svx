@@ -17,8 +17,10 @@ ArgoPlane is open source (Apache-2.0). Contributions are welcome.
 extensions/          # ArgoCD UI extensions (React + Go)
   shared/            # Shared React component library
   metrics/           # Metrics extension (Prometheus)
-  backups/           # Backups extension (Velero)
   networking/        # Networking extension (Cilium/Hubble)
+  logs/              # Logs extension (Loki)
+  vulnerabilities/   # Vulnerabilities extension (Trivy Operator)
+  events/            # Events extension (Kubernetes Events API)
 services/            # Standalone services
   docs/              # Documentation site (SvelteKit)
 design-system/       # CSS design tokens and components
@@ -59,7 +61,7 @@ Concise, imperative mood. Focus on "why" not "what":
 
 ```
 Add metrics extension with Prometheus backend
-Fix backup schedule timezone handling
+Fix log severity detection for JSON lines
 Wire up proxy extension config for networking
 ```
 

@@ -21,11 +21,12 @@ import (
 type Dashboard struct {
 	prom *prometheus.Client
 	cfg  *config.DashboardConfig
+	auth *Authorizer
 }
 
 // NewDashboard creates a dashboard handler.
-func NewDashboard(prom *prometheus.Client, cfg *config.DashboardConfig) *Dashboard {
-	return &Dashboard{prom: prom, cfg: cfg}
+func NewDashboard(prom *prometheus.Client, cfg *config.DashboardConfig, auth *Authorizer) *Dashboard {
+	return &Dashboard{prom: prom, cfg: cfg, auth: auth}
 }
 
 // HandleConfig serves GET /api/v1/dashboards?application=...&groupKind=...
@@ -106,6 +107,14 @@ func (h *Dashboard) HandleGraph(w http.ResponseWriter, r *http.Request) {
 	}
 	if duration == "" {
 		duration = "1h"
+	}
+
+	if namespace == "" {
+		http.Error(w, `{"error":"namespace is required"}`, http.StatusBadRequest)
+		return
+	}
+	if !h.auth.AuthorizeNamespace(w, r, namespace) {
+		return
 	}
 
 	username := r.Header.Get("Argocd-Username")

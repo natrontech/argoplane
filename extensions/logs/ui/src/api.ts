@@ -7,8 +7,8 @@ function argoHeaders(appNamespace: string, appName: string, project: string) {
   };
 }
 
-async function jsonFetch<T>(url: string, headers: Record<string, string>): Promise<T> {
-  const response = await fetch(url, { headers });
+async function jsonFetch<T>(url: string, headers: Record<string, string>, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(url, { headers, signal });
   if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
   return response.json();
 }
@@ -29,6 +29,7 @@ export function fetchLogs(
     pods?: string[];
   },
   appNamespace: string, appName: string, project: string,
+  signal?: AbortSignal,
 ): Promise<LogsResponse> {
   const searchParams = new URLSearchParams();
   searchParams.set('namespace', params.namespace);
@@ -43,7 +44,7 @@ export function fetchLogs(
   if (params.limit) searchParams.set('limit', String(params.limit));
   if (params.direction) searchParams.set('direction', params.direction);
   if (params.pods && params.pods.length > 0) searchParams.set('pods', params.pods.join(','));
-  return jsonFetch(`/extensions/logs/api/v1/logs?${searchParams}`, argoHeaders(appNamespace, appName, project));
+  return jsonFetch(`/extensions/logs/api/v1/logs?${searchParams}`, argoHeaders(appNamespace, appName, project), signal);
 }
 
 export function fetchLabels(
@@ -60,8 +61,9 @@ export function fetchLabelValues(
   label: string, namespace: string,
   appNamespace: string, appName: string, project: string,
   pods?: string[],
+  signal?: AbortSignal,
 ): Promise<string[]> {
   const params = new URLSearchParams({ namespace });
   if (pods && pods.length > 0) params.set('pods', pods.join(','));
-  return jsonFetch(`/extensions/logs/api/v1/logs/label/${encodeURIComponent(label)}/values?${params}`, argoHeaders(appNamespace, appName, project));
+  return jsonFetch(`/extensions/logs/api/v1/logs/label/${encodeURIComponent(label)}/values?${params}`, argoHeaders(appNamespace, appName, project), signal);
 }

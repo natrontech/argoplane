@@ -2,8 +2,8 @@ apiVersion: v2
 name: argoplane
 description: A package of ArgoCD UI extensions
 type: application
-version: 1.4.1
-appVersion: "1.4.1"
+version: 1.5.0
+appVersion: "1.5.0"
 home: https://argoplane.io
 annotations:
   artifacthub.io/license: Apache-2.0
@@ -19,6 +19,5 @@ keywords:
   - platform-engineering
   - kubernetes
   - metrics
-  - backups
   - networking
 icon: https://argoplane.io/logo.svg

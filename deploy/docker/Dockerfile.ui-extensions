@@ -13,7 +13,7 @@
 #       image: ghcr.io/natrontech/argoplane-ui-extensions:v0.1.0
 #       env:
 #         - name: ENABLED_EXTENSIONS
-#           value: "metrics,backups,argoplane"  # omit to load all
+#           value: "metrics,events,argoplane"  # omit to load all
 #       volumeMounts:
 #         - name: extensions
 #           mountPath: /tmp/extensions
@@ -21,7 +21,6 @@
 FROM busybox:1.38
 RUN mkdir -p /extensions
 COPY extensions/metrics/ui/dist/extension-metrics.js /extensions/
-COPY extensions/backups/ui/dist/extension-backups.js /extensions/
 COPY extensions/networking/ui/dist/extension-networking.js /extensions/
 COPY extensions/logs/ui/dist/extension-logs.js /extensions/
 COPY extensions/vulnerabilities/ui/dist/extension-vulnerabilities.js /extensions/

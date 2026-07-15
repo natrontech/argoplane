@@ -15,7 +15,7 @@ This guide walks you through installing ArgoPlane extensions in your ArgoCD clus
 
 - ArgoCD v3.x installed and running
 - `kubectl` access to the cluster
-- Helm (for operator installations like Prometheus, Velero)
+- Helm (for operator installations like Prometheus, Loki, Trivy Operator)
 
 ## Local development setup
 
@@ -57,7 +57,6 @@ Extensions require explicit RBAC in ArgoCD. Add permissions to `argocd-rbac-cm`:
 
 ```yaml
 p, role:developer, extensions, invoke, metrics, allow
-p, role:developer, extensions, invoke, backups, allow
 p, role:developer, extensions, invoke, networking, allow
 p, role:developer, extensions, invoke, logs, allow
 p, role:developer, extensions, invoke, vulnerabilities, allow
@@ -66,7 +65,9 @@ p, role:developer, extensions, invoke, events, allow
 
 ### Verify
 
-After deployment, navigate to any ArgoCD Application. You should see new tabs on Deployment and StatefulSet resources (Metrics, Logs), new panels in the Application detail view (Backups, Networking), and vulnerability/security tabs (Vulnerabilities).
+After deployment, navigate to any ArgoCD Application. You should see new tabs on Deployment and StatefulSet resources (Metrics, Logs, Events), new panels in the Application detail view (Networking), and vulnerability/security tabs (Vulnerabilities).
+
+ArgoPlane currently ships five extensions: metrics, logs, networking, vulnerabilities, and events. The Velero backups extension was removed in v1.5.0.
 
 ## Demo app
 
@@ -76,7 +77,7 @@ A demo application is included to exercise all extensions:
 make deploy-example
 ```
 
-This deploys a guestbook application with Velero schedules, CiliumNetworkPolicies, Prometheus metrics targets, and workloads for Trivy to scan.
+This deploys a guestbook application with CiliumNetworkPolicies, Prometheus metrics targets, and workloads for Trivy to scan.
 
 ## Next steps
 

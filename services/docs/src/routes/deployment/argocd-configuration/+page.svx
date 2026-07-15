@@ -40,7 +40,6 @@ The chart generates `argoplane-proxy-config` with the correct routing entries. M
 kubectl -n argocd patch cm argocd-cm --type merge -p '{
   "data": {
     "extension.config.metrics": "services:\n- url: http://argoplane-metrics-backend.argocd.svc:8080\n",
-    "extension.config.backups": "services:\n- url: http://argoplane-backups-backend.argocd.svc:8081\n",
     "extension.config.networking": "services:\n- url: http://argoplane-networking-backend.argocd.svc:8082\n",
     "extension.config.logs": "services:\n- url: http://argoplane-logs-backend.argocd.svc:8083\n",
     "extension.config.vulnerabilities": "services:\n- url: http://argoplane-vulnerabilities-backend.argocd.svc:8084\n",
@@ -64,14 +63,12 @@ Add the output to your `argocd-rbac-cm` ConfigMap's `policy.csv` field:
 
 ```
 p, role:admin, extensions, invoke, metrics, allow
-p, role:admin, extensions, invoke, backups, allow
 p, role:admin, extensions, invoke, networking, allow
 p, role:admin, extensions, invoke, logs, allow
 p, role:admin, extensions, invoke, vulnerabilities, allow
 p, role:admin, extensions, invoke, events, allow
 
 p, role:developer, extensions, invoke, metrics, allow
-p, role:developer, extensions, invoke, backups, allow
 p, role:developer, extensions, invoke, logs, allow
 p, role:developer, extensions, invoke, vulnerabilities, allow
 p, role:developer, extensions, invoke, events, allow
@@ -79,6 +76,34 @@ p, role:developer, extensions, invoke, events, allow
 
 <Callout type="warning">
   Without explicit RBAC, users will see extension tabs but get 403 errors when loading data. Every role that should use extensions needs an `extensions, invoke` policy.
+</Callout>
+
+## Namespace authorization
+
+ArgoCD's RBAC decides who may invoke an extension. On top of that, every ArgoPlane backend enforces namespace scoping on its data endpoints:
+
+- Each request must carry the `Argocd-Application-Name` header in `namespace:name` format. ArgoCD's proxy sets it automatically; requests without it get a `403`.
+- The backend fetches that Application from the Kubernetes API and builds the set of namespaces it manages: the destination namespace plus every namespace in `status.resources`.
+- If the requested namespace is not in that set, the backend returns `403 namespace not managed by this application`.
+
+The result: a user can only pull metrics, logs, flows, vulnerabilities, or events for namespaces their Application actually deploys to, even if they craft requests by hand.
+
+### What the backends need
+
+To look up Applications, each backend runs with a ServiceAccount bound to a ClusterRole granting `get` on `applications.argoproj.io`:
+
+```yaml
+rbac:
+  rules:
+    - apiGroups: ["argoproj.io"]
+      resources: ["applications"]
+      verbs: ["get"]
+```
+
+The Helm chart creates this by default (`serviceAccount.create: true` plus the `rbac.rules` block on every extension). No action needed for a standard install.
+
+<Callout type="warning">
+  If you set `serviceAccount.create: false` for an extension without providing an equivalent ServiceAccount and ClusterRole, the backend cannot read Applications and every data request fails with `403 unable to authorize namespace`.
 </Callout>
 
 ## Step 4: Load UI extension bundles
@@ -94,7 +119,7 @@ Package your built extension bundles into a ConfigMap, then use an init containe
 ```bash
 kubectl -n argocd create configmap argoplane-ui-extensions \
   --from-file=extension-metrics.js=extensions/metrics/ui/dist/extension-metrics.js \
-  --from-file=extension-backups.js=extensions/backups/ui/dist/extension-backups.js \
+  --from-file=extension-logs.js=extensions/logs/ui/dist/extension-logs.js \
   --from-file=extension-networking.js=extensions/networking/ui/dist/extension-networking.js \
   --dry-run=client -o yaml | kubectl apply --server-side -f -
 ```
@@ -157,7 +182,7 @@ spec:
           image: ghcr.io/natrontech/argoplane-ui-extensions:v0.1.0
           env:
             - name: ENABLED_EXTENSIONS
-              value: "metrics,backups,argoplane"
+              value: "metrics,logs,argoplane"
           volumeMounts:
             - name: extensions
               mountPath: /tmp/extensions
@@ -181,17 +206,15 @@ When you disable an extension backend via `extensions.<name>.enabled: false` in 
 
 Without the `ENABLED_EXTENSIONS` filter, disabled extensions still show tabs and panels in ArgoCD. They appear broken (empty or error state) because there's no backend to serve data. To prevent this, set `ENABLED_EXTENSIONS` on the init container to match your enabled backends.
 
-For example, if you only enable metrics and backups:
+For example, if you only enable metrics and logs:
 
 ```yaml
 extensions:
   metrics:
     enabled: true
-  backups:
+  logs:
     enabled: true
   networking:
-    enabled: false
-  logs:
     enabled: false
   vulnerabilities:
     enabled: false
@@ -204,7 +227,7 @@ Set the init container env to:
 ```yaml
 env:
   - name: ENABLED_EXTENSIONS
-    value: "metrics,backups,argoplane"
+    value: "metrics,logs,argoplane"
 ```
 
 Always include `argoplane` in the list. It's the consolidation extension that combines all enabled extension tabs into a single unified "ArgoPlane" tab. If you use branding, also add `argoplane-links`.
@@ -224,7 +247,7 @@ ARGOCD_POD=$(kubectl -n argocd get pods \
 
 kubectl exec -n argocd $ARGOCD_POD -- mkdir -p /tmp/extensions
 
-for ext in metrics backups networking logs vulnerabilities events; do
+for ext in metrics networking logs vulnerabilities events; do
   kubectl cp extensions/$ext/ui/dist/extension-$ext.js \
     argocd/$ARGOCD_POD:/tmp/extensions/extension-$ext.js
 done
@@ -344,9 +367,6 @@ patches:
         extension.config.metrics: |
           services:
           - url: http://argoplane-metrics-backend.argocd.svc:8080
-        extension.config.backups: |
-          services:
-          - url: http://argoplane-backups-backend.argocd.svc:8081
         extension.config.networking: |
           services:
           - url: http://argoplane-networking-backend.argocd.svc:8082
@@ -372,13 +392,11 @@ patches:
       data:
         policy.csv: |
           p, role:admin, extensions, invoke, metrics, allow
-          p, role:admin, extensions, invoke, backups, allow
           p, role:admin, extensions, invoke, networking, allow
           p, role:admin, extensions, invoke, logs, allow
           p, role:admin, extensions, invoke, vulnerabilities, allow
           p, role:admin, extensions, invoke, events, allow
           p, role:developer, extensions, invoke, metrics, allow
-          p, role:developer, extensions, invoke, backups, allow
           p, role:developer, extensions, invoke, logs, allow
           p, role:developer, extensions, invoke, vulnerabilities, allow
           p, role:developer, extensions, invoke, events, allow
@@ -401,7 +419,7 @@ patches:
                 image: ghcr.io/natrontech/argoplane-ui-extensions:v0.1.0
                 env:
                   - name: ENABLED_EXTENSIONS
-                    value: "metrics,backups,networking,logs,vulnerabilities,events,argoplane"
+                    value: "metrics,networking,logs,vulnerabilities,events,argoplane"
                 volumeMounts:
                   - name: extensions
                     mountPath: /tmp/extensions
@@ -486,6 +504,12 @@ Key changes in ArgoCD v3 that affect extension configuration:
 <Accordion title="Extension tab shows but data doesn't load (403)">
 
 Missing RBAC. Add `p, role:<your-role>, extensions, invoke, <extension-name>, allow` to `argocd-rbac-cm`.
+
+</Accordion>
+
+<Accordion title="Every request returns 403 'unable to authorize namespace'">
+
+The backend can't read ArgoCD Applications, so namespace authorization fails closed. This happens when the backend runs without the chart-created ServiceAccount (e.g. `serviceAccount.create: false`) or the ClusterRole granting `get` on `applications.argoproj.io` is missing. See the Namespace authorization section above.
 
 </Accordion>
 

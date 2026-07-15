@@ -6,7 +6,7 @@ CLUSTER_NAME    ?= argoplane-dev
 ARGOCD_VERSION  ?= v3.3.3
 ARGOCD_NS       := argocd
 KIND_CONFIG     := hack/kind-config.yaml
-EXTENSIONS      := metrics backups networking logs vulnerabilities events
+EXTENSIONS      := metrics networking logs vulnerabilities events
 UI_ONLY_EXTENSIONS := argoplane
 ALL_UI_EXTENSIONS  := $(EXTENSIONS) $(UI_ONLY_EXTENSIONS)
 
@@ -79,10 +79,6 @@ prometheus: cluster ## Install kube-prometheus-stack (idempotent)
 		--set prometheus.prometheusSpec.resources.requests.memory=256Mi \
 		--wait --timeout 180s
 
-.PHONY: velero
-velero: cluster ## Install Velero with MinIO (idempotent)
-	@bash hack/install-velero.sh
-
 .PHONY: loki
 loki: cluster ## Install Loki + Alloy for log aggregation (idempotent)
 	@bash hack/install-loki.sh
@@ -113,7 +109,7 @@ external-secrets: cluster ## Install External Secrets Operator (idempotent)
 # --- Dev environment ---
 
 .PHONY: dev-infra
-dev-infra: argocd prometheus velero loki trivy setup-argocd ## Full local dev stack (kind + ArgoCD + operators)
+dev-infra: argocd prometheus loki trivy setup-argocd ## Full local dev stack (kind + ArgoCD + operators)
 	@echo ""
 	@echo "==> Dev infrastructure ready!"
 	@echo "    Run 'make argocd-portforward' to access the UI"
@@ -164,7 +160,6 @@ clean-example: ## Remove demo app and namespace
 	-@kubectl delete ns argoplane-demo --wait=false 2>/dev/null || true
 	-@kubectl delete ns other-team --wait=false 2>/dev/null || true
 	-@kubectl delete ciliumclusterwidenetworkpolicy platform-allow-dns platform-allow-health-probes 2>/dev/null || true
-	-@kubectl delete schedule -n velero argoplane-demo-daily platform-nightly-all platform-weekly-compliance 2>/dev/null || true
 
 # --- Testing ---
 

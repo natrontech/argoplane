@@ -14,7 +14,7 @@ trap "rm -f ${VALUES_FILE}" EXIT
 cat > "${VALUES_FILE}" <<'EOF'
 # Exclude namespaces with local-only dev images (kind-loaded, not pullable from registries)
 # and system namespaces. The demo app namespace uses public images and will be scanned.
-excludeNamespaces: "kube-system,trivy-system,argocd,velero,monitoring,kube-node-lease,kube-public,local-path-storage"
+excludeNamespaces: "kube-system,trivy-system,argocd,monitoring,kube-node-lease,kube-public,local-path-storage"
 
 trivy:
   command: image

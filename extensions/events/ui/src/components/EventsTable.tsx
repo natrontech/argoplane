@@ -176,7 +176,16 @@ export const EventsTable: React.FC<EventsTableProps> = ({ events, loading, error
       React.createElement('tr', {
         key: `row-${key}-${i}`,
         style: clickableRowStyle,
+        role: 'button',
+        tabIndex: 0,
+        'aria-expanded': expanded,
         onClick: () => toggleRow(key),
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggleRow(key);
+          }
+        },
       },
         React.createElement('td', { style: cellStyle },
           React.createElement('span', {

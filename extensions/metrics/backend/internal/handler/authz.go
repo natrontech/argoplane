@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,6 +18,10 @@ var applicationGVR = schema.GroupVersionResource{
 	Version:  "v1alpha1",
 	Resource: "applications",
 }
+
+// validNamespace checks that a namespace value is a valid Kubernetes name
+// to prevent injection of arbitrary strings into K8s API calls.
+var validNamespace = regexp.MustCompile(`^[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?$`)
 
 // Authorizer enforces that a request only touches namespaces managed by the
 // ArgoCD Application named in the Argocd-Application-Name header.
@@ -32,6 +37,10 @@ func NewAuthorizer(client dynamic.Interface) *Authorizer {
 // manages (its destination namespace plus any namespace in status.resources).
 // It writes a 403 response and returns false when the request is not allowed.
 func (a *Authorizer) AuthorizeNamespace(w http.ResponseWriter, r *http.Request, requested string) bool {
+	if len(requested) > 63 || !validNamespace.MatchString(requested) {
+		writeForbidden(w, "invalid namespace")
+		return false
+	}
 	appNs, appName, ok := appFromHeader(r)
 	if !ok {
 		writeForbidden(w, "request must come through ArgoCD proxy")

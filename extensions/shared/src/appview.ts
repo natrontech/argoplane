@@ -24,6 +24,8 @@ export function registerArgoPlaneView(entry: ArgoPlaneViewEntry): void {
   if (!win[GLOBAL_KEY]) {
     win[GLOBAL_KEY] = [];
   }
+  // Skip duplicates (e.g. the same bundle injected twice).
+  if (win[GLOBAL_KEY].some((e: ArgoPlaneViewEntry) => e.id === entry.id)) return;
   win[GLOBAL_KEY].push(entry);
   window.dispatchEvent(new CustomEvent(EVENT_NAME));
 }
@@ -33,7 +35,6 @@ export function registerArgoPlaneView(entry: ArgoPlaneViewEntry): void {
 const TAB_ORDER: Record<string, number> = {
   metrics: 1,
   logs: 2,
-  backups: 3,
   networking: 4,
   vulnerabilities: 5,
   'config-audit': 6,
@@ -79,7 +80,7 @@ class TabErrorBoundary extends React.Component<
           padding: 20,
           fontFamily: fonts.mono,
           fontSize: 12,
-          color: '#B91C1C',
+          color: colors.redText,
         },
       },
         React.createElement('div', { style: { fontWeight: 600, marginBottom: 8 } },

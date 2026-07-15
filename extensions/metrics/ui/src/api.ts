@@ -12,18 +12,19 @@ function argoHeaders(appNamespace: string, appName: string, project: string) {
   };
 }
 
-async function jsonFetch<T>(url: string, headers: Record<string, string>): Promise<T> {
-  const response = await fetch(url, { headers });
+async function jsonFetch<T>(url: string, headers: Record<string, string>, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(url, { headers, signal });
   if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
   return response.json();
 }
 
 export function fetchMetrics(
   namespace: string, resourceName: string, kind: string,
-  appNamespace: string, appName: string, project: string
+  appNamespace: string, appName: string, project: string,
+  signal?: AbortSignal
 ): Promise<MetricData[]> {
   const params = new URLSearchParams({ namespace, name: resourceName, kind });
-  return jsonFetch(`/extensions/metrics/api/v1/resource-metrics?${params}`, argoHeaders(appNamespace, appName, project));
+  return jsonFetch(`/extensions/metrics/api/v1/resource-metrics?${params}`, argoHeaders(appNamespace, appName, project), signal);
 }
 
 export function fetchTimeSeriesMetrics(
@@ -37,22 +38,24 @@ export function fetchTimeSeriesMetrics(
 export function fetchAppMetrics(
   namespace: string, range: TimeRange | undefined,
   appNamespace: string, appName: string, project: string,
-  pods?: string[]
+  pods?: string[],
+  signal?: AbortSignal
 ): Promise<AppMetricsResponse> {
   const params = new URLSearchParams({ namespace });
   if (range) params.set('range', range);
   if (pods && pods.length > 0) params.set('pods', pods.join(','));
-  return jsonFetch(`/extensions/metrics/api/v1/app-metrics?${params}`, argoHeaders(appNamespace, appName, project));
+  return jsonFetch(`/extensions/metrics/api/v1/app-metrics?${params}`, argoHeaders(appNamespace, appName, project), signal);
 }
 
 export function fetchPodBreakdown(
   namespace: string, name: string, kind: string,
   appNamespace: string, appName: string, project: string,
-  pods?: string[]
+  pods?: string[],
+  signal?: AbortSignal
 ): Promise<PodMetric[]> {
   const params = new URLSearchParams({ namespace, name, kind });
   if (pods && pods.length > 0) params.set('pods', pods.join(','));
-  return jsonFetch(`/extensions/metrics/api/v1/pod-breakdown?${params}`, argoHeaders(appNamespace, appName, project));
+  return jsonFetch(`/extensions/metrics/api/v1/pod-breakdown?${params}`, argoHeaders(appNamespace, appName, project), signal);
 }
 
 export function fetchPerPodSeries(
@@ -69,10 +72,11 @@ export function fetchPerPodSeries(
 
 export function fetchDashboardConfig(
   applicationName: string, groupKind: string,
-  appNamespace: string, appName: string, project: string
+  appNamespace: string, appName: string, project: string,
+  signal?: AbortSignal
 ): Promise<DashboardConfig> {
   const params = new URLSearchParams({ application: applicationName, groupKind });
-  return jsonFetch(`/extensions/metrics/api/v1/dashboards?${params}`, argoHeaders(appNamespace, appName, project));
+  return jsonFetch(`/extensions/metrics/api/v1/dashboards?${params}`, argoHeaders(appNamespace, appName, project), signal);
 }
 
 export function fetchGraphData(
@@ -80,7 +84,8 @@ export function fetchGraphData(
   row: string, graph: string,
   namespace: string, name: string, duration: string,
   appNamespace: string, appName: string, project: string,
-  pods?: string[]
+  pods?: string[],
+  signal?: AbortSignal
 ): Promise<GraphDataResponse> {
   const params = new URLSearchParams({
     application: applicationName,
@@ -92,5 +97,5 @@ export function fetchGraphData(
     duration,
   });
   if (pods && pods.length > 0) params.set('pods', pods.join(','));
-  return jsonFetch(`/extensions/metrics/api/v1/graph?${params}`, argoHeaders(appNamespace, appName, project));
+  return jsonFetch(`/extensions/metrics/api/v1/graph?${params}`, argoHeaders(appNamespace, appName, project), signal);
 }

@@ -31,11 +31,17 @@ export const ScopeToggle: React.FC<ScopeToggleProps> = ({ value, onChange }) => 
 
 const SCOPE_STORAGE_KEY = 'argoplane-scope';
 
-/** Use scope state that persists across ArgoCD UI refreshes via sessionStorage. */
-export function useStickyScope(): [Scope, (s: Scope) => void] {
+/**
+ * Use scope state that persists across ArgoCD UI refreshes via sessionStorage.
+ * Pass the extension name to keep a per-extension key; omitting it keeps the
+ * legacy shared key for backward compatibility.
+ */
+export function useStickyScope(extension?: string): [Scope, (s: Scope) => void] {
+  const storageKey = extension ? `${SCOPE_STORAGE_KEY}-${extension}` : SCOPE_STORAGE_KEY;
+
   const [scope, setScopeRaw] = React.useState<Scope>(() => {
     try {
-      const stored = sessionStorage.getItem(SCOPE_STORAGE_KEY);
+      const stored = sessionStorage.getItem(storageKey);
       if (stored === 'app' || stored === 'namespace') return stored;
     } catch {}
     return 'app';
@@ -43,8 +49,8 @@ export function useStickyScope(): [Scope, (s: Scope) => void] {
 
   const setScope = React.useCallback((s: Scope) => {
     setScopeRaw(s);
-    try { sessionStorage.setItem(SCOPE_STORAGE_KEY, s); } catch {}
-  }, []);
+    try { sessionStorage.setItem(storageKey, s); } catch {}
+  }, [storageKey]);
 
   return [scope, setScope];
 }
@@ -92,5 +98,5 @@ const btn: React.CSSProperties = {
 const btnActive: React.CSSProperties = {
   ...btn,
   background: colors.orange500,
-  color: '#FFFFFF',
+  color: colors.white,
 };
