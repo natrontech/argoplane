@@ -11,14 +11,14 @@ description: Why teams adopt ArgoPlane and how to evaluate it
 
 # Adoption
 
-ArgoPlane is for platform teams that already use ArgoCD and want to give developers operational visibility (metrics, logs, backups, network flows, vulnerabilities, events) inside ArgoCD itself, without deploying another UI.
+ArgoPlane is for platform teams that already use ArgoCD and want to give developers operational visibility (metrics, logs, network flows, vulnerabilities, events) inside ArgoCD itself, without deploying another UI.
 
 ## Is ArgoPlane right for you?
 
 ArgoPlane fits well if:
 
 - Your team uses **ArgoCD** as the primary deployment tool
-- You want observability (metrics, logs, backups, network policies, vulnerabilities) inside ArgoCD rather than scattered across dashboards
+- You want observability (metrics, logs, network policies, vulnerabilities) inside ArgoCD rather than scattered across dashboards
 - You prefer extending existing tools over adopting new platforms
 - Your team is small and wants minimal day-2 operations
 
@@ -43,15 +43,11 @@ make setup-argocd
 
 This is the lowest-risk entry point. If it's useful, continue. If not, remove it with no side effects.
 
-### Phase 2: Protect
-
-Add the **backups** extension. Developers can see Velero schedules, trigger backups, and restore from the ArgoCD UI. Platform teams get fewer "can you restore my namespace?" tickets.
-
-### Phase 3: Secure
+### Phase 2: Secure
 
 Add the **networking** extension. Developers see CiliumNetworkPolicies applied to their apps and can inspect Hubble flow logs without kubectl access.
 
-### Phase 4: Deep visibility
+### Phase 3: Deep visibility
 
 Add the **logs**, **vulnerabilities**, and **events** extensions. Developers can search logs from Loki, view Trivy vulnerability scan results, and see Kubernetes events for their resources, all without leaving ArgoCD.
 

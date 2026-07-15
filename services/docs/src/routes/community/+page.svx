@@ -53,7 +53,6 @@ ArgoPlane stands on the shoulders of excellent open-source projects:
 |---------|-------------------|
 | [ArgoCD](https://argoproj.github.io/cd/) | GitOps engine, UI host, extension system |
 | [Prometheus](https://prometheus.io/) | Metrics backend for the metrics extension |
-| [Velero](https://velero.io/) | Backup/restore for the backups extension |
 | [Cilium](https://cilium.io/) | Network policies and Hubble flows |
 | [Loki](https://grafana.com/oss/loki/) | Log aggregation for the logs extension |
 | [Trivy Operator](https://aquasecurity.github.io/trivy-operator/) | Vulnerability scanning for the vulnerabilities extension |

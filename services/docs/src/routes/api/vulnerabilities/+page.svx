@@ -7,6 +7,10 @@ description: Vulnerabilities extension backend API reference
 
 The vulnerabilities backend exposes a JSON HTTP API consumed by the UI extension via ArgoCD's proxy at `/extensions/vulnerabilities/`.
 
+## Authorization
+
+Every data endpoint requires the `Argocd-Application-Name` header (`namespace:name` format, set automatically by ArgoCD's proxy). The backend returns `403` if the header is missing or if the requested namespace is not managed by that Application (its destination namespace plus namespaces in `status.resources`). The backend needs `get` on `applications.argoproj.io` for this lookup; the Helm chart grants it by default.
+
 ## Endpoints
 
 ### Get vulnerability reports
@@ -222,5 +226,5 @@ Export reports as CSV file.
 | Status | Description |
 |--------|-------------|
 | 400 | Invalid namespace or missing required parameters |
-| 403 | Missing ArgoCD proxy headers (direct access attempt) |
+| 403 | Namespace authorization failed (missing `Argocd-Application-Name` header or namespace not managed by the Application) |
 | 500 | Kubernetes API or parsing error |

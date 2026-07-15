@@ -11,7 +11,7 @@ ArgoPlane is built with love from Switzerland by [Natron Tech AG](https://natron
 
 Natron Tech is a platform engineering company based in Switzerland. We help teams build and operate cloud-native platforms on Kubernetes. ArgoPlane grew out of a recurring pattern we saw across our projects: developers using ArgoCD had a clear view of sync status but no view of what their workloads were actually doing.
 
-So we built ArgoPlane: a package of ArgoCD UI extensions that surfaces metrics, logs, backups, network flows, vulnerabilities, and events right next to the apps they belong to.
+So we built ArgoPlane: a package of ArgoCD UI extensions that surfaces metrics, logs, network flows, vulnerabilities, and events right next to the apps they belong to.
 
 ## Built with AI
 
@@ -37,7 +37,7 @@ We think the industry benefits from honesty about AI usage. It sets realistic ex
 
 ## Why open source
 
-Platform engineering tooling should be open. The tools we build on (ArgoCD, Prometheus, Velero, Cilium, Loki, Trivy Operator) are all open source. ArgoPlane is too, under **Apache-2.0**. Use it, fork it, embed it, ship it — no strings.
+Platform engineering tooling should be open. The tools we build on (ArgoCD, Prometheus, Cilium, Loki, Trivy Operator) are all open source. ArgoPlane is too, under **Apache-2.0**. Use it, fork it, embed it, ship it. No strings attached.
 
 ## Contact
 

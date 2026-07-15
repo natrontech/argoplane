@@ -7,6 +7,10 @@ description: Logs extension backend API reference
 
 The logs backend exposes a JSON HTTP API consumed by the UI extension via ArgoCD's proxy at `/extensions/logs/`.
 
+## Authorization
+
+Every data endpoint requires the `Argocd-Application-Name` header (`namespace:name` format, set automatically by ArgoCD's proxy). The backend returns `403` if the header is missing or if the requested namespace is not managed by that Application (its destination namespace plus namespaces in `status.resources`). The backend needs `get` on `applications.argoproj.io` for this lookup; the Helm chart grants it by default.
+
 ## Endpoints
 
 ### Query logs
@@ -71,6 +75,7 @@ List available log label names for a namespace.
 | `namespace` | string | Yes | Kubernetes namespace |
 | `start` | string | No | RFC3339 timestamp (default: 1h ago) |
 | `end` | string | No | RFC3339 timestamp (default: now) |
+| `pods` | string | No | Comma-separated pod names to scope the query |
 
 **Response:**
 
@@ -92,37 +97,13 @@ Get distinct values for a specific label.
 |------|------|----------|-------------|
 | `name` | path | Yes | Label name |
 | `namespace` | string | Yes | Kubernetes namespace |
+| `pods` | string | No | Comma-separated pod names to scope the query |
 
 **Response:**
 
 ```json
 ["app-abc123", "app-def456"]
 ```
-
-### Log volume
-
-```
-GET /api/v1/logs/volume?namespace={ns}&pod={pod}
-```
-
-Get log entry count bucketed by time. Used for volume charts.
-
-**Parameters:**
-
-Same as query logs (namespace, pod, resource, kind, container, filter, severity, start, end).
-
-**Response:**
-
-```json
-{
-  "series": [
-    { "time": "2026-03-18T10:30:00Z", "value": 42.0 },
-    { "time": "2026-03-18T10:31:00Z", "value": 38.0 }
-  ]
-}
-```
-
-Step size is calculated automatically based on time range (30s for 15min, 1min for 1h, up to 1h for >24h).
 
 ## Error responses
 
@@ -135,4 +116,5 @@ Step size is calculated automatically based on time range (30s for 15min, 1min f
 | Status | Description |
 |--------|-------------|
 | 400 | Missing or invalid parameter |
+| 403 | Namespace authorization failed (missing header or namespace not managed by the Application) |
 | 502 | Loki query failed or unreachable |

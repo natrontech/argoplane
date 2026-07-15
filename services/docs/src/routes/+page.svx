@@ -9,11 +9,11 @@ description: A package of ArgoCD UI extensions
 
 # ArgoPlane
 
-ArgoPlane is a package of ArgoCD UI extensions. It adds resource tabs, app views, and status panels so developers can see metrics, logs, backups, network flows, vulnerabilities, and events without leaving ArgoCD.
+ArgoPlane is a package of ArgoCD UI extensions. It adds resource tabs, app views, and status panels so developers can see metrics, logs, network flows, vulnerabilities, and events without leaving ArgoCD.
 
 ## What it does
 
-Developers deploying through ArgoCD can see whether their app is synced. What they can't see: logs, metrics, backup status, network flows, policy violations, or recent events. ArgoPlane surfaces that operational data inside ArgoCD's existing UI.
+Developers deploying through ArgoCD can see whether their app is synced. What they can't see: logs, metrics, network flows, policy violations, or recent events. ArgoPlane surfaces that operational data inside ArgoCD's existing UI.
 
 No separate app. No extra auth layer. Each extension is independent and can be installed on its own.
 
@@ -21,13 +21,12 @@ No separate app. No extra auth layer. Each extension is independent and can be i
 
 | Category | Purpose | Examples |
 |----------|---------|----------|
-| **Observe** | Workload visibility | Metrics, logs, backups, networking, events, alerts (planned) |
+| **Observe** | Workload visibility | Metrics, logs, networking, events, alerts (planned) |
 | **Secure** | Security and compliance | Vulnerabilities, policies (planned) |
 
 ## Current extensions
 
 - **[Metrics]({base}/extensions/metrics)**: CPU, memory, request rates, and custom Prometheus queries per resource
-- **[Backups]({base}/extensions/backups)**: Velero backup schedules, status, and restore triggers
 - **[Networking]({base}/extensions/networking)**: Cilium network policies and Hubble flow visibility
 - **[Logs]({base}/extensions/logs)**: Loki log search, severity detection, volume charts
 - **[Vulnerabilities]({base}/extensions/vulnerabilities)**: Trivy Operator image CVEs, config audit, exposed secrets, SBOM

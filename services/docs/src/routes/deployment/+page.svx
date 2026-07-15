@@ -20,7 +20,6 @@ ArgoPlane ships as a Helm chart that deploys extension backends alongside ArgoCD
 - Helm 3.x
 - Backend dependencies installed per extension:
   - **Metrics**: Prometheus
-  - **Backups**: Velero
   - **Networking**: Cilium with Hubble
   - **Logs**: Loki with a log collector (e.g., Grafana Alloy)
   - **Vulnerabilities**: Trivy Operator
@@ -40,7 +39,7 @@ helm install argoplane deploy/helm/argoplane/ \
   --namespace argocd
 ```
 
-This deploys the **metrics** and **backups** extensions by default. Networking is disabled by default (requires Cilium).
+This deploys the **metrics** extension by default. The others (networking, logs, vulnerabilities, events) are opt-in toggles since they need their own backing systems.
 
 After install, configure ArgoCD to route extension requests. See <a href="{base}/deployment/argocd-configuration">ArgoCD Configuration</a> for the full walkthrough, or use the quick setup below.
 
@@ -56,7 +55,6 @@ kubectl -n argocd patch cm argocd-cmd-params-cm --type merge \
 kubectl -n argocd patch cm argocd-cm --type merge -p '{
   "data": {
     "extension.config.metrics": "services:\n- url: http://argoplane-metrics-backend.argocd.svc:8080\n",
-    "extension.config.backups": "services:\n- url: http://argoplane-backups-backend.argocd.svc:8081\n",
     "extension.config.networking": "services:\n- url: http://argoplane-networking-backend.argocd.svc:8082\n",
     "extension.config.logs": "services:\n- url: http://argoplane-logs-backend.argocd.svc:8083\n",
     "extension.config.vulnerabilities": "services:\n- url: http://argoplane-vulnerabilities-backend.argocd.svc:8084\n",
@@ -67,7 +65,7 @@ kubectl -n argocd patch cm argocd-cm --type merge -p '{
 # Grant RBAC
 kubectl -n argocd patch cm argocd-rbac-cm --type merge -p '{
   "data": {
-    "policy.csv": "p, role:admin, extensions, invoke, metrics, allow\np, role:admin, extensions, invoke, backups, allow\np, role:admin, extensions, invoke, networking, allow\np, role:admin, extensions, invoke, logs, allow\np, role:admin, extensions, invoke, vulnerabilities, allow\np, role:admin, extensions, invoke, events, allow\n"
+    "policy.csv": "p, role:admin, extensions, invoke, metrics, allow\np, role:admin, extensions, invoke, networking, allow\np, role:admin, extensions, invoke, logs, allow\np, role:admin, extensions, invoke, vulnerabilities, allow\np, role:admin, extensions, invoke, events, allow\n"
   }
 }'
 
@@ -89,12 +87,6 @@ extensions:
     enabled: true
     env:
       PROMETHEUS_URL: "http://prometheus:9090"
-  backups:
-    enabled: true
-    env:
-      VELERO_NAMESPACE: "velero"
-      # Skip TLS verification for self-signed object storage certs
-      # INSECURE_TLS: "true"
   networking:
     enabled: false
     env:
@@ -142,11 +134,13 @@ extensions:
       limits:
         memory: 256Mi
 
-  backups:
+  logs:
     enabled: true
     image:
-      repository: ghcr.io/natrontech/argoplane-backups-backend
+      repository: ghcr.io/natrontech/argoplane-logs-backend
       tag: "v0.1.0"
+    env:
+      LOKI_URL: "http://loki.monitoring.svc:3100"
 
   networking:
     enabled: true
@@ -161,7 +155,7 @@ argocd:
       - role: admin
         extensions: ["*"]
       - role: developer
-        extensions: ["metrics", "backups"]
+        extensions: ["metrics", "logs"]
 
 services:
   docs:
@@ -194,11 +188,15 @@ For each enabled extension:
 |----------|------|---------|
 | Deployment | `argoplane-<name>-backend` | Go HTTP backend |
 | Service | `argoplane-<name>-backend` | Internal service |
-| ServiceAccount | `argoplane-<name>-backend` | If RBAC rules are defined |
-| ClusterRole | `argoplane-<name>` | If RBAC rules are defined |
+| ServiceAccount | `argoplane-<name>-backend` | Identity for the backend pod |
+| ClusterRole | `argoplane-<name>` | Kubernetes API permissions, including `get` on ArgoCD Applications |
 | ClusterRoleBinding | `argoplane-<name>` | Binds role to ServiceAccount |
 
 Plus two ConfigMaps with the proxy and RBAC config you need to merge into ArgoCD.
+
+<Callout type="warning">
+  The ServiceAccount and ClusterRole are not optional decoration. Every backend authorizes requests by reading the calling ArgoCD Application (namespace scoping), which requires <code>get</code> on <code>applications.argoproj.io</code>. If you set <code>serviceAccount.create: false</code> without providing an equivalent ServiceAccount, every data request fails with <code>403 unable to authorize namespace</code>. See <a href="{base}/deployment/argocd-configuration#namespace-authorization">Namespace authorization</a>.
+</Callout>
 
 ## Post-install: wire up ArgoCD
 
@@ -216,7 +214,6 @@ kubectl -n argocd get cm argoplane-proxy-config -o yaml
 kubectl -n argocd patch cm argocd-cm --type merge -p '{
   "data": {
     "extension.config.metrics": "services:\n- url: http://argoplane-metrics-backend.argocd.svc:8080\n",
-    "extension.config.backups": "services:\n- url: http://argoplane-backups-backend.argocd.svc:8081\n",
     "extension.config.networking": "services:\n- url: http://argoplane-networking-backend.argocd.svc:8082\n",
     "extension.config.logs": "services:\n- url: http://argoplane-logs-backend.argocd.svc:8083\n",
     "extension.config.vulnerabilities": "services:\n- url: http://argoplane-vulnerabilities-backend.argocd.svc:8084\n",
