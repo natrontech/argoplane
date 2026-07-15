@@ -72,15 +72,11 @@ func main() {
 	auth := handler.NewAuthorizer(dynClient)
 	policiesHandler := handler.NewPoliciesHandler(dynClient, auth)
 	endpointsHandler := handler.NewEndpointsHandler(dynClient, auth)
-	identitiesHandler := handler.NewIdentitiesHandler(dynClient, auth)
 	flowsHandler := handler.NewFlowsHandler(flowBuffer, auth)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/v1/policies", policiesHandler.HandleNamespaced)
-	mux.HandleFunc("GET /api/v1/clusterwide-policies", policiesHandler.HandleClusterwide)
 	mux.HandleFunc("POST /api/v1/policies-with-ownership", policiesHandler.HandleWithOwnership)
 	mux.HandleFunc("GET /api/v1/endpoints", endpointsHandler.Handle)
-	mux.HandleFunc("GET /api/v1/identities", identitiesHandler.Handle)
 	mux.HandleFunc("GET /api/v1/flows", flowsHandler.Handle)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

@@ -52,13 +52,11 @@ func main() {
 
 	logsHandler := handler.NewLogs(lokiClient, auth)
 	labelsHandler := handler.NewLabels(lokiClient, auth)
-	volumeHandler := handler.NewVolume(lokiClient, auth)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/logs", logsHandler.Handle)
 	mux.HandleFunc("GET /api/v1/logs/labels", labelsHandler.HandleLabels)
 	mux.HandleFunc("GET /api/v1/logs/label/{name}/values", labelsHandler.HandleLabelValues)
-	mux.HandleFunc("GET /api/v1/logs/volume", volumeHandler.Handle)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})

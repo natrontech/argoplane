@@ -26,6 +26,7 @@ func NewAuditHandler(client dynamic.Interface, auth *Authorizer) *AuditHandler {
 // HandleOverview returns an aggregated config audit overview for a namespace.
 func (h *AuditHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
 	var req types.AuditOverviewRequest
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request body")
 		return

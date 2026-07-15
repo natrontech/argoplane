@@ -27,6 +27,7 @@ func NewOverviewHandler(client dynamic.Interface, auth *Authorizer) *OverviewHan
 // so we simply list all reports in the namespace and deduplicate by image.
 func (h *OverviewHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	var req types.OverviewRequest
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request body")
 		return

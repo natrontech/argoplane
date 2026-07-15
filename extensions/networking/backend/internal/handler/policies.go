@@ -34,6 +34,7 @@ type policiesWithOwnershipRequest struct {
 
 // HandleWithOwnership returns all policies (namespace + clusterwide) with ownership tags.
 func (h *PoliciesHandler) HandleWithOwnership(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	var req policiesWithOwnershipRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request body")
@@ -104,62 +105,6 @@ func (h *PoliciesHandler) HandleWithOwnership(w http.ResponseWriter, r *http.Req
 
 	if policies == nil {
 		policies = []types.PolicySummary{}
-	}
-
-	WriteJSON(w, policies)
-}
-
-// HandleNamespaced returns CiliumNetworkPolicies for a namespace (legacy GET endpoint).
-func (h *PoliciesHandler) HandleNamespaced(w http.ResponseWriter, r *http.Request) {
-	namespace := r.URL.Query().Get("namespace")
-	if namespace == "" {
-		WriteError(w, http.StatusBadRequest, "namespace is required")
-		return
-	}
-
-	if !h.auth.AuthorizeNamespace(w, r, namespace) {
-		return
-	}
-
-	username := r.Header.Get("Argocd-Username")
-	slog.Debug("policies request", "namespace", namespace, "user", username)
-
-	list, err := h.client.Resource(types.CiliumNetPolGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{})
-	if err != nil {
-		slog.Error("failed to list cilium network policies", "error", err, "namespace", namespace)
-		WriteError(w, http.StatusInternalServerError, "failed to list network policies")
-		return
-	}
-
-	policies := make([]types.PolicySummary, 0, len(list.Items))
-	for _, item := range list.Items {
-		ps := ParsePolicySummary(item)
-		ps.Scope = "namespace"
-		policies = append(policies, ps)
-	}
-
-	WriteJSON(w, policies)
-}
-
-// HandleClusterwide returns CiliumClusterwideNetworkPolicies (legacy GET endpoint).
-// Not namespace-gated: Cilium clusterwide policies are cluster-scoped (no namespace),
-// so this stays open, gated only by ArgoCD's extensions-invoke RBAC.
-func (h *PoliciesHandler) HandleClusterwide(w http.ResponseWriter, r *http.Request) {
-	username := r.Header.Get("Argocd-Username")
-	slog.Debug("clusterwide policies request", "user", username)
-
-	list, err := h.client.Resource(types.CiliumClusterNetPolGVR).List(r.Context(), metav1.ListOptions{})
-	if err != nil {
-		slog.Error("failed to list cilium clusterwide network policies", "error", err)
-		WriteError(w, http.StatusInternalServerError, "failed to list clusterwide network policies")
-		return
-	}
-
-	policies := make([]types.PolicySummary, 0, len(list.Items))
-	for _, item := range list.Items {
-		ps := ParsePolicySummary(item)
-		ps.Scope = "clusterwide"
-		policies = append(policies, ps)
 	}
 
 	WriteJSON(w, policies)
