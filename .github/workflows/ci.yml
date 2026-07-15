@@ -44,6 +44,10 @@ jobs:
         working-directory: extensions/${{ matrix.extension }}/backend
         run: go vet ./...
 
+      - name: Test
+        working-directory: extensions/${{ matrix.extension }}/backend
+        run: go test ./...
+
       - name: Build
         working-directory: extensions/${{ matrix.extension }}/backend
         run: CGO_ENABLED=0 go build -o /dev/null ./cmd/
