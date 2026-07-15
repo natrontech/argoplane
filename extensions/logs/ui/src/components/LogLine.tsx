@@ -42,6 +42,9 @@ export const LogLine: React.FC<LogLineProps> = React.memo(({ entry, showPod }) =
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-expanded={expanded}
       style={{
         display: 'flex',
         borderBottom: `1px solid ${colors.gray200}`,
@@ -49,6 +52,12 @@ export const LogLine: React.FC<LogLineProps> = React.memo(({ entry, showPod }) =
         transition: 'background-color 100ms',
       }}
       onClick={() => setExpanded(!expanded)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setExpanded(!expanded);
+        }
+      }}
       onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = colors.gray50; }}
       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
     >

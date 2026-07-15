@@ -52,6 +52,7 @@ export const PolicyFlowsTab: React.FC<{ resource: any; tree?: any; application: 
   const [directionFilter, setDirectionFilter] = React.useState<DirectionFilter>('all');
   const [timeRange, setTimeRange] = React.useState<TimeRange>('5m');
   const [search, setSearch] = React.useState('');
+  const [page, setPage] = React.useState(0);
 
   const policyName = resource?.metadata?.name || '';
   const policyNs = resource?.metadata?.namespace || '';
@@ -102,16 +103,17 @@ export const PolicyFlowsTab: React.FC<{ resource: any; tree?: any; application: 
     return () => { mountedRef.current = false; };
   }, []);
 
-  const fetchData = React.useCallback(() => {
+  const fetchData = React.useCallback((signal?: AbortSignal) => {
     if (!namespace) return;
-    const flowsP = fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter, directionFilter)
+    const flowsP = fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter, directionFilter, undefined, signal)
       .catch(() => null);
-    const endpointsP = fetchEndpoints(namespace, appNamespace, appName, project)
+    const endpointsP = fetchEndpoints(namespace, appNamespace, appName, project, undefined, signal)
       .catch(() => null);
 
     Promise.all([flowsP, endpointsP])
       .then(([fl, ep]) => {
-        if (!mountedRef.current) return;
+        // Drop stale responses: a newer fetch (new filters) may already be in flight.
+        if (!mountedRef.current || signal?.aborted) return;
         // If every request failed, surface an error instead of silently keeping stale data.
         if (fl === null && ep === null) {
           setError('Failed to load networking data');
@@ -122,12 +124,17 @@ export const PolicyFlowsTab: React.FC<{ resource: any; tree?: any; application: 
         if (ep !== null) setEndpoints(ep);
         setError(null);
       })
-      .catch((err) => { if (mountedRef.current) setError(err.message); })
-      .finally(() => { if (mountedRef.current) setLoading(false); });
+      .catch((err) => { if (mountedRef.current && !signal?.aborted) setError(err.message); })
+      .finally(() => { if (mountedRef.current && !signal?.aborted) setLoading(false); });
   }, [namespace, appNamespace, appName, project, timeRange, verdictFilter, directionFilter]);
 
-  React.useEffect(() => { setLoading(true); fetchData(); }, [fetchData]);
-  React.useEffect(() => { const i = setInterval(fetchData, REFRESH_INTERVAL); return () => clearInterval(i); }, [fetchData]);
+  React.useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    fetchData(controller.signal);
+    const i = setInterval(() => fetchData(controller.signal), REFRESH_INTERVAL);
+    return () => { controller.abort(); clearInterval(i); };
+  }, [fetchData]);
 
   const flows = flowsResponse?.flows || [];
   const hubbleAvailable = flowsResponse?.hubble ?? false;
@@ -154,14 +161,13 @@ export const PolicyFlowsTab: React.FC<{ resource: any; tree?: any; application: 
   }, [endpoints, endpointSelector, namespace]);
 
   // Filter flows to those affected by this policy:
-  // - Ingress flows where dest pod matches the selector
-  // - Egress flows where source pod matches the selector
+  // - Ingress flows where the destination pod matches the selector
+  // - Egress flows where the source pod matches the selector
+  // A policy declaring both directions matches both.
   const policyFlows = React.useMemo(() => {
     return flows.filter((f) => {
       if (hasIngress && f.direction === 'INGRESS' && matchingPodNames.has(f.destPod)) return true;
       if (hasEgress && f.direction === 'EGRESS' && matchingPodNames.has(f.sourcePod)) return true;
-      // If policy has both or empty selector, also match by pod name
-      if (matchingPodNames.has(f.sourcePod) || matchingPodNames.has(f.destPod)) return true;
       return false;
     });
   }, [flows, matchingPodNames, hasIngress, hasEgress]);
@@ -182,7 +188,16 @@ export const PolicyFlowsTab: React.FC<{ resource: any; tree?: any; application: 
     );
   }, [policyFlows, search]);
 
-  if (loading) return <div style={panel}><Loading /></div>;
+  // Reset page when filters change.
+  React.useEffect(() => { setPage(0); }, [search, verdictFilter, directionFilter, timeRange]);
+
+  const PAGE_SIZE = 50;
+  const totalPages = Math.max(1, Math.ceil(filteredFlows.length / PAGE_SIZE));
+  const pageFlows = filteredFlows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  // Full-view loading only before the first data arrives; refreshes keep the view.
+  const hasData = flowsResponse !== null || endpoints.length > 0;
+  if (loading && !hasData) return <div style={panel}><Loading /></div>;
   if (error) {
     return (
       <div style={panel}>
@@ -259,6 +274,7 @@ export const PolicyFlowsTab: React.FC<{ resource: any; tree?: any; application: 
           {filteredFlows.length === 0 ? (
             <EmptyState message={search ? 'No flows match your search' : `No flows for this policy in the last ${timeRange}`} />
           ) : (
+            <>
             <div style={tableWrap}>
               <table style={tableStyle}>
                 <thead>
@@ -274,7 +290,7 @@ export const PolicyFlowsTab: React.FC<{ resource: any; tree?: any; application: 
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredFlows.map((f, i) => {
+                  {pageFlows.map((f, i) => {
                     const isDrop = f.verdict === 'DROPPED';
                     const srcDisplay = f.sourcePod || f.sourceIP || 'unknown';
                     const dstDisplay = f.destPod || f.destDNS || f.destIP || 'unknown';
@@ -311,6 +327,14 @@ export const PolicyFlowsTab: React.FC<{ resource: any; tree?: any; application: 
                 </tbody>
               </table>
             </div>
+            {totalPages > 1 && (
+              <div style={paginationRow}>
+                <button style={pageBtn} disabled={page === 0} onClick={() => setPage(page - 1)}>Prev</button>
+                <span style={pageLabelStyle}>{page + 1} / {totalPages}</span>
+                <button style={pageBtn} disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>Next</button>
+              </div>
+            )}
+            </>
           )}
         </>
       )}
@@ -357,4 +381,7 @@ const ellipsisTd: React.CSSProperties = { ...tdStyle, maxWidth: 200, overflow: '
 const dropRow: React.CSSProperties = { background: colors.redLight };
 const podLinkStyle: React.CSSProperties = { fontFamily: fonts.mono, fontSize: fontSize.sm, color: colors.blueText, borderBottom: `1px dotted ${colors.blueText}`, cursor: 'pointer' };
 const notice: React.CSSProperties = { padding: spacing[3], background: colors.gray50, border: `1px solid ${colors.gray200}`, borderRadius: 4, color: colors.gray500, fontSize: fontSize.sm, marginBottom: spacing[3] };
-const pill = (active: boolean): React.CSSProperties => ({ padding: `2px ${spacing[2]}px`, border: `1px solid ${active ? colors.orange500 : colors.gray200}`, borderRadius: 4, background: active ? colors.orange500 : 'transparent', color: active ? '#fff' : colors.gray600, cursor: 'pointer', fontSize: fontSize.xs, fontWeight: fontWeight.medium, fontFamily: fonts.mono, textTransform: 'uppercase' as const, lineHeight: '20px' });
+const paginationRow: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: spacing[3], paddingTop: spacing[3] };
+const pageBtn: React.CSSProperties = { padding: `2px ${spacing[2]}px`, border: `1px solid ${colors.gray200}`, borderRadius: 4, background: 'transparent', color: colors.gray600, cursor: 'pointer', fontSize: fontSize.xs, fontWeight: fontWeight.medium, fontFamily: fonts.mono, textTransform: 'uppercase' as const, lineHeight: '20px' };
+const pageLabelStyle: React.CSSProperties = { fontSize: fontSize.xs, fontFamily: fonts.mono, color: colors.gray500 };
+const pill = (active: boolean): React.CSSProperties => ({ padding: `2px ${spacing[2]}px`, border: `1px solid ${active ? colors.orange500 : colors.gray200}`, borderRadius: 4, background: active ? colors.orange500 : 'transparent', color: active ? colors.white : colors.gray600, cursor: 'pointer', fontSize: fontSize.xs, fontWeight: fontWeight.medium, fontFamily: fonts.mono, textTransform: 'uppercase' as const, lineHeight: '20px' });

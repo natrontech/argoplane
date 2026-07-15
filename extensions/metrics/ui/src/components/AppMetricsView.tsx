@@ -17,6 +17,7 @@ import {
 import { useStickyScope } from '@argoplane/shared';
 import { fetchAppMetrics, fetchPodBreakdown } from '../api';
 import { MetricData, PodMetric } from '../types';
+import { SERIES_COLORS } from '../utils/palette';
 import { ConfigDashboard } from './ConfigDashboard';
 
 interface AppViewProps {
@@ -24,17 +25,18 @@ interface AppViewProps {
   tree?: any;
 }
 
-const SERIES_COLORS = [
-  '#00A2B3', '#f5a337', '#0c568f', '#63b343', '#1abe93',
-  '#bd19c6', '#fb44be', '#999966', '#80B300', '#1AB399',
-];
-
 const REFRESH_INTERVAL = 30_000;
+
+interface Workload {
+  kind: string;
+  name: string;
+}
 
 export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) => {
   const [summary, setSummary] = React.useState<MetricData[]>([]);
   const [pods, setPods] = React.useState<PodMetric[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [loaded, setLoaded] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [scope, setScope] = useStickyScope();
 
@@ -43,51 +45,83 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
 
-  const treeDeployments = React.useMemo(() => {
-    if (!tree?.nodes) return [];
-    return tree.nodes
-      .filter((n: any) => n.kind === 'Deployment' && n.namespace === namespace)
-      .map((n: any) => n.name) as string[];
-  }, [tree, namespace]);
+  // The tree object gets a fresh identity on every app refresh. Derive stable
+  // string keys from the node names and memoize the arrays on those keys so
+  // fetchAll (and thus the polling effect) only changes when content changes.
+  const workloadsKey = ((tree?.nodes || []) as any[])
+    .filter((n) => (n.kind === 'Deployment' || n.kind === 'StatefulSet') && n.namespace === namespace)
+    .map((n) => `${n.kind}:${n.name}`)
+    .sort()
+    .join('|');
+  const treeWorkloads = React.useMemo<Workload[]>(() => {
+    if (!workloadsKey) return [];
+    return workloadsKey.split('|').map((s) => {
+      const [kind, name] = s.split(':');
+      return { kind, name };
+    });
+  }, [workloadsKey]);
 
-  const treePodNames = React.useMemo(() => {
-    if (!tree?.nodes) return [];
-    return tree.nodes
-      .filter((n: any) => n.kind === 'Pod' && n.namespace === namespace)
-      .map((n: any) => n.name) as string[];
-  }, [tree, namespace]);
+  const podsKey = ((tree?.nodes || []) as any[])
+    .filter((n) => n.kind === 'Pod' && n.namespace === namespace)
+    .map((n) => n.name)
+    .sort()
+    .join('|');
+  const treePodNames = React.useMemo(() => (podsKey ? podsKey.split('|') : []), [podsKey]);
 
   const scopedPodNames = React.useMemo(() => {
     if (scope === 'namespace') return undefined;
     return treePodNames.length > 0 ? treePodNames : undefined;
   }, [scope, treePodNames]);
 
-  const mountedRef = React.useRef(true);
-  React.useEffect(() => {
-    mountedRef.current = true;
-    return () => { mountedRef.current = false; };
-  }, []);
+  const abortRef = React.useRef<AbortController | null>(null);
+  React.useEffect(() => () => abortRef.current?.abort(), []);
 
   const fetchAll = React.useCallback(() => {
-    if (!namespace) return;
+    if (!namespace) {
+      setLoading(false);
+      return;
+    }
 
-    const metricsP = fetchAppMetrics(namespace, undefined, appNamespace, appName, project, scopedPodNames);
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-    const deployName = treeDeployments.length > 0 ? treeDeployments[0] : appName;
+    const metricsP = fetchAppMetrics(namespace, undefined, appNamespace, appName, project, scopedPodNames, controller.signal);
+
+    // Fetch pod breakdowns for ALL workloads (Deployments and StatefulSets)
+    // in the tree, then merge. Fall back to the app name if the tree is empty.
+    const workloads: Workload[] = treeWorkloads.length > 0
+      ? treeWorkloads
+      : [{ kind: 'Deployment', name: appName }];
     const podNames = scope === 'app' && treePodNames.length > 0 ? treePodNames : undefined;
-    const podsP = fetchPodBreakdown(namespace, deployName, 'Deployment', appNamespace, appName, project, podNames)
-      .catch(() => [] as PodMetric[]);
+    const podsP = Promise.all(
+      workloads.map((w) =>
+        fetchPodBreakdown(namespace, w.name, w.kind, appNamespace, appName, project, podNames, controller.signal)),
+    ).then((lists) => {
+      const seen = new Set<string>();
+      const merged: PodMetric[] = [];
+      for (const list of lists) {
+        for (const p of list || []) {
+          if (!seen.has(p.pod)) {
+            seen.add(p.pod);
+            merged.push(p);
+          }
+        }
+      }
+      return merged;
+    });
 
     Promise.all([metricsP, podsP])
       .then(([resp, podList]) => {
-        if (!mountedRef.current) return;
+        if (controller.signal.aborted) return;
         setSummary(resp.summary || []);
-        setPods(podList || []);
+        setPods(podList);
         setError(null);
+        setLoaded(true);
       })
-      .catch((err) => { if (mountedRef.current) setError(err.message); })
-      .finally(() => { if (mountedRef.current) setLoading(false); });
-  }, [namespace, appNamespace, appName, project, treePodNames, treeDeployments, scope, scopedPodNames]);
+      .catch((err) => { if (!controller.signal.aborted) setError(err.message); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+  }, [namespace, appNamespace, appName, project, treePodNames, treeWorkloads, scope, scopedPodNames]);
 
   React.useEffect(() => {
     setLoading(true);
@@ -99,9 +133,13 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
     return () => clearInterval(interval);
   }, [fetchAll]);
 
-  if (loading) return <div style={panel}><Loading /></div>;
+  if (!namespace) {
+    return <div style={panel}><EmptyState message="No destination namespace configured for this application" /></div>;
+  }
 
-  if (error) {
+  if (loading && !loaded) return <div style={panel}><Loading /></div>;
+
+  if (error && !loaded) {
     return (
       <div style={panel}>
         <div style={{ color: colors.redText, marginBottom: spacing[2] }}>
@@ -112,15 +150,21 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
     );
   }
 
-  if (summary.length === 0) {
+  if (summary.length === 0 && !error) {
     return <div style={panel}><EmptyState message="No metrics available. Is Prometheus running?" /></div>;
   }
 
   return (
     <div style={panel}>
+      {error && (
+        <div style={refreshErrorNote}>
+          Refresh failed: {error}. Showing last loaded data.
+        </div>
+      )}
+
       {/* Scope toggle */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: spacing[3] }}>
-        <ScopeToggle value={scope} onChange={(s) => { setScope(s); setLoading(true); }} />
+        <ScopeToggle value={scope} onChange={setScope} />
       </div>
 
       {/* Overview */}
@@ -209,6 +253,17 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
 };
 
 // --- Styles ---
+
+const refreshErrorNote: React.CSSProperties = {
+  padding: `${spacing[1]}px ${spacing[3]}px`,
+  marginBottom: spacing[3],
+  backgroundColor: colors.yellowLight,
+  border: `1px solid ${colors.yellow}`,
+  borderRadius: 4,
+  color: colors.yellowText,
+  fontFamily: fonts.mono,
+  fontSize: fontSize.xs,
+};
 
 const cardGrid: React.CSSProperties = {
   display: 'grid',

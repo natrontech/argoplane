@@ -116,12 +116,21 @@ export const PodFlowsTab: React.FC<{ resource: any; tree?: any; application: any
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
 
+  // ArgoCD passes a fresh tree object on every app refresh. Memoize the derived
+  // refs on a stable string key so identical content keeps identical identity
+  // and doesn't re-trigger fetches.
+  const resourceRefsKey: string = !tree?.nodes ? '' : tree.nodes
+    .filter((n: any) => n.namespace === namespace || !n.namespace)
+    .map((n: any) => `${n.group || ''}/${n.kind}/${n.namespace || ''}/${n.name}`)
+    .sort()
+    .join('|');
   const resourceRefs = React.useMemo<ResourceRef[]>(() => {
-    if (!tree?.nodes) return [];
-    return tree.nodes
-      .filter((n: any) => n.namespace === namespace || !n.namespace)
-      .map((n: any) => ({ group: n.group || '', kind: n.kind, namespace: n.namespace || '', name: n.name }));
-  }, [tree, namespace]);
+    if (!resourceRefsKey) return [];
+    return resourceRefsKey.split('|').map((k) => {
+      const [group, kind, ns, name] = k.split('/');
+      return { group, kind, namespace: ns, name };
+    });
+  }, [resourceRefsKey]);
 
   // Build a Set of tree node keys for link checks.
   const treeNodeKeys = React.useMemo(() => {
@@ -150,18 +159,19 @@ export const PodFlowsTab: React.FC<{ resource: any; tree?: any; application: any
     return () => { mountedRef.current = false; };
   }, []);
 
-  const fetchData = React.useCallback(() => {
+  const fetchData = React.useCallback((signal?: AbortSignal) => {
     if (!namespace) return;
-    const flowsP = fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter, directionFilter)
+    const flowsP = fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter, directionFilter, undefined, signal)
       .catch(() => null);
-    const policiesP = fetchPoliciesWithOwnership(namespace, resourceRefs, appNamespace, appName, project)
+    const policiesP = fetchPoliciesWithOwnership(namespace, resourceRefs, appNamespace, appName, project, signal)
       .catch(() => null);
-    const endpointsP = fetchEndpoints(namespace, appNamespace, appName, project)
+    const endpointsP = fetchEndpoints(namespace, appNamespace, appName, project, undefined, signal)
       .catch(() => null);
 
     Promise.all([flowsP, policiesP, endpointsP])
       .then(([fl, pol, ep]) => {
-        if (!mountedRef.current) return;
+        // Drop stale responses: a newer fetch (new filters) may already be in flight.
+        if (!mountedRef.current || signal?.aborted) return;
         // If every request failed, surface an error instead of silently keeping stale data.
         if (fl === null && pol === null && ep === null) {
           setError('Failed to load networking data');
@@ -173,12 +183,17 @@ export const PodFlowsTab: React.FC<{ resource: any; tree?: any; application: any
         if (ep !== null) setEndpoints(ep);
         setError(null);
       })
-      .catch((err) => { if (mountedRef.current) setError(err.message); })
-      .finally(() => { if (mountedRef.current) setLoading(false); });
+      .catch((err) => { if (mountedRef.current && !signal?.aborted) setError(err.message); })
+      .finally(() => { if (mountedRef.current && !signal?.aborted) setLoading(false); });
   }, [namespace, appNamespace, appName, project, resourceRefs, timeRange, verdictFilter, directionFilter]);
 
-  React.useEffect(() => { setLoading(true); fetchData(); }, [fetchData]);
-  React.useEffect(() => { const i = setInterval(fetchData, REFRESH_INTERVAL); return () => clearInterval(i); }, [fetchData]);
+  React.useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    fetchData(controller.signal);
+    const i = setInterval(() => fetchData(controller.signal), REFRESH_INTERVAL);
+    return () => { controller.abort(); clearInterval(i); };
+  }, [fetchData]);
 
   const flows = flowsResponse?.flows || [];
   const hubbleAvailable = flowsResponse?.hubble ?? false;
@@ -211,7 +226,9 @@ export const PodFlowsTab: React.FC<{ resource: any; tree?: any; application: any
   const totalPages = Math.max(1, Math.ceil(filteredFlows.length / PAGE_SIZE));
   const pageFlows = filteredFlows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  if (loading) return <div style={panel}><Loading /></div>;
+  // Full-view loading only before the first data arrives; refreshes keep the view.
+  const hasData = flowsResponse !== null || policies.length > 0 || endpoints.length > 0;
+  if (loading && !hasData) return <div style={panel}><Loading /></div>;
   if (error) {
     return (
       <div style={panel}>
@@ -566,7 +583,7 @@ const pill = (active: boolean): React.CSSProperties => ({
   border: `1px solid ${active ? colors.orange500 : colors.gray200}`,
   borderRadius: 4,
   background: active ? colors.orange500 : 'transparent',
-  color: active ? '#fff' : colors.gray600,
+  color: active ? colors.white : colors.gray600,
   cursor: 'pointer',
   fontSize: fontSize.xs,
   fontWeight: fontWeight.medium,

@@ -2,7 +2,6 @@ import * as React from 'react';
 import {
   Loading,
   EmptyState,
-  Button,
   SectionHeader,
   MetricCard,
   Input,
@@ -16,8 +15,10 @@ import {
   panel,
 } from '@argoplane/shared';
 import { useStickyScope } from '@argoplane/shared';
-import { fetchOverview, downloadExport } from '../api';
+import { fetchOverview } from '../api';
+import { severityColor, severityBg } from '../severity';
 import { ImageReport, OverviewResponse, Vulnerability } from '../types';
+import { ExportButton } from './ExportButton';
 import { PieChart } from './PieChart';
 
 // ============================================================
@@ -36,22 +37,6 @@ function timeAgo(iso?: string): string {
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
 }
-
-const severityColor: Record<string, string> = {
-  CRITICAL: colors.redText,
-  HIGH: colors.orange500,
-  MEDIUM: colors.yellowText,
-  LOW: colors.blueText,
-  UNKNOWN: colors.gray500,
-};
-
-const severityBg: Record<string, string> = {
-  CRITICAL: colors.redLight,
-  HIGH: colors.orange100,
-  MEDIUM: colors.yellowLight,
-  LOW: colors.blueLight,
-  UNKNOWN: colors.gray100,
-};
 
 const SEVERITY_ORDER: Record<string, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, UNKNOWN: 4 };
 const SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'UNKNOWN'] as const;
@@ -123,14 +108,17 @@ export const AppVulnerabilitiesView: React.FC<{ application: any; tree?: any }> 
   const [sortKey, setSortKey] = React.useState<SortKey>('severity');
   const [sortDir, setSortDir] = React.useState<'asc' | 'desc'>('asc');
 
-  const [scope, setScope] = useStickyScope();
+  const [scope, setScope] = useStickyScope('vulnerabilities');
 
   const appName = application?.metadata?.name || '';
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
   const destNamespace = application?.spec?.destination?.namespace || 'default';
 
-  const workloads = React.useMemo(() => extractWorkloadNames(tree, destNamespace), [tree, destNamespace]);
+  // ArgoCD passes a fresh tree object on every app refresh. Memoize on a
+  // stable string key so unchanged workloads don't re-trigger the fetch.
+  const workloadsKey = extractWorkloadNames(tree, destNamespace).sort().join('|');
+  const workloads = React.useMemo(() => (workloadsKey ? workloadsKey.split('|') : []), [workloadsKey]);
   const scopedResources = scope === 'app' && workloads.length > 0 ? workloads : undefined;
 
   React.useEffect(() => {
@@ -153,7 +141,8 @@ export const AppVulnerabilitiesView: React.FC<{ application: any; tree?: any }> 
     setSeverityFilter(prev => { const next = new Set(prev); if (next.has(sev)) next.delete(sev); else next.add(sev); return next; });
   };
 
-  if (loading) return <div style={panel}><Loading /></div>;
+  // Full-view loading only before the first data arrives; refreshes keep the view.
+  if (loading && !overview) return <div style={panel}><Loading /></div>;
   if (error) return <div style={panel}><EmptyState message={`Failed to load vulnerability data: ${error}`} /></div>;
   if (!overview || overview.images.length === 0) {
     return <div style={panel}><EmptyState message="No vulnerability reports found. The Trivy Operator scans images automatically when pods are created." /></div>;
@@ -161,11 +150,11 @@ export const AppVulnerabilitiesView: React.FC<{ application: any; tree?: any }> 
 
   const s = overview.summary;
   const pieSegments = [
-    { label: 'Critical', value: s.critical, color: '#B91C1C' },
-    { label: 'High', value: s.high, color: '#E8935A' },
-    { label: 'Medium', value: s.medium, color: '#A16207' },
-    { label: 'Low', value: s.low, color: '#1D4ED8' },
-    { label: 'Unknown', value: s.unknown, color: '#78716C' },
+    { label: 'Critical', value: s.critical, color: severityColor.CRITICAL },
+    { label: 'High', value: s.high, color: severityColor.HIGH },
+    { label: 'Medium', value: s.medium, color: severityColor.MEDIUM },
+    { label: 'Low', value: s.low, color: severityColor.LOW },
+    { label: 'Unknown', value: s.unknown, color: severityColor.UNKNOWN },
   ];
 
   const bodyCell: React.CSSProperties = {
@@ -194,9 +183,7 @@ export const AppVulnerabilitiesView: React.FC<{ application: any; tree?: any }> 
           <span style={{ fontSize: fontSize.xs, color: colors.gray500, fontFamily: fonts.mono }}>
             Scans run automatically by the Trivy Operator
           </span>
-          <Button onClick={() => downloadExport(destNamespace, 'vulnerabilities', appNamespace, appName, project)}>
-            Export CSV
-          </Button>
+          <ExportButton namespace={destNamespace} type="vulnerabilities" appNamespace={appNamespace} appName={appName} project={project} />
         </div>
       </div>
 
@@ -204,7 +191,7 @@ export const AppVulnerabilitiesView: React.FC<{ application: any; tree?: any }> 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing[4], gap: spacing[3] }}>
         <Input
           value={search}
-          onChange={(e: any) => setSearch(e.target.value)}
+          onChange={setSearch}
           placeholder="Search CVE, package, title..."
           style={{ maxWidth: 300 }}
         />

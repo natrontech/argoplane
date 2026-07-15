@@ -1,12 +1,13 @@
 import * as React from 'react';
 import {
-  Loading, EmptyState, Button, SectionHeader, MetricCard, Input,
+  Loading, EmptyState, SectionHeader, MetricCard, Input,
   ScopeToggle, extractWorkloadNames,
   colors, fonts, fontSize, fontWeight, spacing, panel,
 } from '@argoplane/shared';
 import { useStickyScope } from '@argoplane/shared';
-import { fetchSbomOverview, downloadExport } from '../api';
+import { fetchSbomOverview } from '../api';
 import { SbomOverviewResponse, SbomComponent } from '../types';
+import { ExportButton } from './ExportButton';
 
 type SortKey = 'name' | 'version' | 'type' | 'image';
 
@@ -24,14 +25,17 @@ export const AppSbomView: React.FC<{ application: any; tree?: any }> = ({ applic
   const [sortKey, setSortKey] = React.useState<SortKey>('name');
   const [sortDir, setSortDir] = React.useState<'asc' | 'desc'>('asc');
   const [expandedImage, setExpandedImage] = React.useState<string | null>(null);
-  const [scope, setScope] = useStickyScope();
+  const [scope, setScope] = useStickyScope('vulnerabilities');
 
   const appName = application?.metadata?.name || '';
   const appNamespace = application?.metadata?.namespace || 'argocd';
   const project = application?.spec?.project || 'default';
   const destNamespace = application?.spec?.destination?.namespace || 'default';
 
-  const workloads = React.useMemo(() => extractWorkloadNames(tree, destNamespace), [tree, destNamespace]);
+  // ArgoCD passes a fresh tree object on every app refresh. Memoize on a
+  // stable string key so unchanged workloads don't re-trigger the fetch.
+  const workloadsKey = extractWorkloadNames(tree, destNamespace).sort().join('|');
+  const workloads = React.useMemo(() => (workloadsKey ? workloadsKey.split('|') : []), [workloadsKey]);
   const scopedResources = scope === 'app' && workloads.length > 0 ? workloads : undefined;
 
   React.useEffect(() => {
@@ -47,7 +51,8 @@ export const AppSbomView: React.FC<{ application: any; tree?: any }> = ({ applic
 
   const handleSort = (key: SortKey) => { if (key === sortKey) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc'); } };
 
-  if (loading) return <div style={panel}><Loading /></div>;
+  // Full-view loading only before the first data arrives; refreshes keep the view.
+  if (loading && !data) return <div style={panel}><Loading /></div>;
   if (error) return <div style={panel}><EmptyState message={`Failed to load: ${error}`} /></div>;
   if (!data || data.reports.length === 0) {
     return <div style={panel}><EmptyState message="No SBOM reports found. Enable sbomGenerationEnabled in the Trivy Operator." /></div>;
@@ -75,12 +80,12 @@ export const AppSbomView: React.FC<{ application: any; tree?: any }> = ({ applic
             ))}
           </div>
         </div>
-        <Button onClick={() => downloadExport(destNamespace, 'sbom', appNamespace, appName, project)}>Export CSV</Button>
+        <ExportButton namespace={destNamespace} type="sbom" appNamespace={appNamespace} appName={appName} project={project} />
       </div>
 
       {/* Search */}
       <div style={{ marginBottom: spacing[4] }}>
-        <Input value={search} onChange={(e: any) => setSearch(e.target.value)} placeholder="Search component name, version, purl..." style={{ maxWidth: 400 }} />
+        <Input value={search} onChange={setSearch} placeholder="Search component name, version, purl..." style={{ maxWidth: 400 }} />
       </div>
 
       {/* Per-image sections */}

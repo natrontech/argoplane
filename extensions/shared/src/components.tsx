@@ -17,7 +17,7 @@ export const StatusBadge: React.FC<{
 );
 
 // --- Section Header ---
-// "BACKUPS ─────────────"
+// "NETWORKING ─────────────"
 
 export const SectionHeader: React.FC<{
   title: string;

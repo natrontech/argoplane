@@ -9,18 +9,41 @@ import {
   spacing,
 } from '@argoplane/shared';
 import { fetchLogs, fetchLabelValues } from '../api';
-import { ExtensionProps, LogEntry, Severity, TimeSelection, resolveTimeSelection } from '../types';
+import { ExtensionProps, LogEntry, Severity, TimeSelection, logEntryKey, resolveTimeSelection } from '../types';
 import { LogLine } from './LogLine';
 import { LogToolbar } from './LogToolbar';
 
 const REFRESH_INTERVAL = 30_000;
 const DEFAULT_LIMIT = 500;
 
-export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) => {
+/** Pods in the resource tree that descend from the given resource (via parentRefs). */
+function podsForResource(tree: any, kind: string, name: string, namespace: string): string[] {
+  const nodes: any[] = tree?.nodes || [];
+  const owned = new Set([`${kind}/${name}`]);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const n of nodes) {
+      const key = `${n.kind}/${n.name}`;
+      if (owned.has(key) || n.namespace !== namespace) continue;
+      if ((n.parentRefs || []).some((p: any) => owned.has(`${p.kind}/${p.name}`))) {
+        owned.add(key);
+        grew = true;
+      }
+    }
+  }
+  return nodes
+    .filter((n) => n.kind === 'Pod' && n.namespace === namespace && owned.has(`Pod/${n.name}`))
+    .map((n) => n.name as string);
+}
+
+export const LogsPanel: React.FC<ExtensionProps> = ({ resource, tree, application }) => {
   const [entries, setEntries] = React.useState<LogEntry[]>([]);
   const [containers, setContainers] = React.useState<string[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [loaded, setLoaded] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [paused, setPaused] = React.useState(false);
   const [totalEntries, setTotalEntries] = React.useState(0);
 
   const [selectedContainer, setSelectedContainer] = React.useState('');
@@ -44,11 +67,19 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
   const isPod = kind === 'Pod';
   const showPod = !isPod;
 
+  // The tree object gets a fresh identity on every app refresh, so derive a
+  // stable string key from the pod names and memoize the array on that.
+  const podsKey = (isPod ? [name] : podsForResource(tree, kind, name, namespace)).join('|');
+  const podNames = React.useMemo(() => (podsKey ? podsKey.split('|') : []), [podsKey]);
+
   const mountedRef = React.useRef(true);
   React.useEffect(() => {
     mountedRef.current = true;
     return () => { mountedRef.current = false; };
   }, []);
+
+  const abortRef = React.useRef<AbortController | null>(null);
+  React.useEffect(() => () => abortRef.current?.abort(), []);
 
   // Debounce search text: only update debouncedSearch after 500ms of no typing
   React.useEffect(() => {
@@ -56,8 +87,24 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
     return () => clearTimeout(timer);
   }, [searchText]);
 
+  const noSeverities = activeSeverities.size === 0;
+
   const fetchAll = React.useCallback(() => {
-    if (!namespace || !name) return;
+    if (!namespace || !name) {
+      setLoading(false);
+      return;
+    }
+
+    abortRef.current?.abort();
+
+    if (activeSeverities.size === 0) {
+      // Nothing selected: skip the fetch instead of querying without a filter.
+      setEntries([]);
+      setTotalEntries(0);
+      setError(null);
+      setLoading(false);
+      return;
+    }
 
     const { start, end } = resolveTimeSelection(timeSelection);
 
@@ -76,24 +123,28 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
       limit: DEFAULT_LIMIT,
     };
 
-    fetchLogs(queryParams, appNamespace, appName, project)
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    fetchLogs(queryParams, appNamespace, appName, project, controller.signal)
       .then((logsResp) => {
-        if (!mountedRef.current) return;
+        if (controller.signal.aborted) return;
         setEntries(logsResp.entries || []);
         setTotalEntries(logsResp.stats?.totalEntries || logsResp.entries?.length || 0);
         setError(null);
+        setLoaded(true);
       })
-      .catch((err) => { if (mountedRef.current) setError(err.message); })
-      .finally(() => { if (mountedRef.current) setLoading(false); });
+      .catch((err) => { if (!controller.signal.aborted) setError(err.message); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
   }, [namespace, name, kind, isPod, selectedContainer, debouncedSearch, activeSeverities, timeSelection, appNamespace, appName, project]);
 
-  // Fetch containers for the dropdown
+  // Fetch containers for the dropdown, scoped to this resource's pods
   React.useEffect(() => {
     if (!namespace) return;
-    fetchLabelValues('container', namespace, appNamespace, appName, project)
+    fetchLabelValues('container', namespace, appNamespace, appName, project, podNames.length > 0 ? podNames : undefined)
       .then((vals) => { if (mountedRef.current) setContainers(vals || []); })
       .catch(() => { if (mountedRef.current) setContainers([]); });
-  }, [namespace, appNamespace, appName, project]);
+  }, [namespace, appNamespace, appName, project, podNames]);
 
   // Fetch data when filters change (but not on every keystroke thanks to debounce)
   React.useEffect(() => {
@@ -101,9 +152,10 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
   }, [fetchAll]);
 
   React.useEffect(() => {
+    if (paused) return;
     const interval = setInterval(fetchAll, REFRESH_INTERVAL);
     return () => clearInterval(interval);
-  }, [fetchAll]);
+  }, [fetchAll, paused]);
 
   const handleSeverityToggle = React.useCallback((severity: Severity) => {
     setActiveSeverities((prev) => {
@@ -121,9 +173,17 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
   const errorCount = entries.filter((e) => e.severity === 'error').length;
   const warnCount = entries.filter((e) => e.severity === 'warn').length;
 
-  if (loading) return <Loading />;
+  if (!namespace || !name) {
+    return (
+      <div style={panel}>
+        <EmptyState message="No namespace or name available for this resource" />
+      </div>
+    );
+  }
 
-  if (error) {
+  if (loading && !loaded) return <Loading />;
+
+  if (error && !loaded) {
     return (
       <div style={panel}>
         <div style={{
@@ -167,15 +227,25 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
         onSearchChange={setSearchText}
         timeSelection={timeSelection}
         onTimeSelectionChange={setTimeSelection}
-        onRefresh={() => { setLoading(true); fetchAll(); }}
+        onRefresh={fetchAll}
+        paused={paused}
+        onPauseToggle={() => setPaused((p) => !p)}
       />
+
+      {error && (
+        <div style={refreshErrorBanner}>
+          Refresh failed: {error}. Showing last loaded data.
+        </div>
+      )}
 
       <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
         {entries.length === 0 ? (
-          <EmptyState message="No logs found for the selected filters" />
+          <EmptyState message={noSeverities
+            ? 'No severities selected. Enable at least one severity to see logs.'
+            : 'No logs found for the selected filters'} />
         ) : (
-          entries.map((entry, i) => (
-            <LogLine key={`${entry.timestamp}-${i}`} entry={entry} showPod={showPod} />
+          entries.map((entry) => (
+            <LogLine key={logEntryKey(entry)} entry={entry} showPod={showPod} />
           ))
         )}
       </div>
@@ -208,4 +278,14 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, application }) =
       )}
     </div>
   );
+};
+
+const refreshErrorBanner: React.CSSProperties = {
+  padding: `${spacing[1]}px ${spacing[3]}px`,
+  backgroundColor: colors.yellowLight,
+  borderBottom: `1px solid ${colors.yellow}`,
+  color: colors.yellowText,
+  fontFamily: fonts.mono,
+  fontSize: fontSize.xs,
+  flexShrink: 0,
 };

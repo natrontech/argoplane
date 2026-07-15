@@ -13,15 +13,22 @@ export const PodSelector: React.FC<PodSelectorProps> = ({ pods, selected, onChan
 
   const allSelected = selected.length === 0 || selected.length === pods.length;
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click or Escape
   React.useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const clickHandler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', clickHandler);
+    document.addEventListener('keydown', keyHandler);
+    return () => {
+      document.removeEventListener('mousedown', clickHandler);
+      document.removeEventListener('keydown', keyHandler);
+    };
   }, []);
 
   const togglePod = (pod: string) => {
@@ -51,7 +58,7 @@ export const PodSelector: React.FC<PodSelectorProps> = ({ pods, selected, onChan
       {/* Chips */}
       <div style={chipRow}>
         {allSelected ? (
-          <button style={chip} onClick={() => setOpen(!open)}>
+          <button style={chip} onClick={() => setOpen(!open)} aria-expanded={open} aria-haspopup="true">
             All Pods ({pods.length})
             <span style={chevron}>{open ? '▲' : '▼'}</span>
           </button>
@@ -63,7 +70,7 @@ export const PodSelector: React.FC<PodSelectorProps> = ({ pods, selected, onChan
                 <span style={chipX}>{'×'}</span>
               </button>
             ))}
-            <button style={chipAdd} onClick={() => setOpen(!open)}>
+            <button style={chipAdd} onClick={() => setOpen(!open)} aria-expanded={open} aria-haspopup="true">
               {open ? '▲' : '+'}
             </button>
           </>

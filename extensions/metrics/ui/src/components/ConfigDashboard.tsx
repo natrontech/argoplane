@@ -37,19 +37,38 @@ export const ConfigDashboard: React.FC<ConfigDashboardProps> = ({
 }) => {
   const [config, setConfig] = React.useState<DashboardConfig | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [reloadKey, setReloadKey] = React.useState(0);
   const [duration, setDuration] = React.useState<TimeRange>('1h');
   const [viewMode, setViewMode] = React.useState<ViewMode>('pod');
   const [selectedPods, setSelectedPods] = React.useState<string[]>([]); // empty = all
 
   React.useEffect(() => {
+    const controller = new AbortController();
     setLoading(true);
-    fetchDashboardConfig(applicationName, groupKind, appNamespace, appName, project)
-      .then((cfg) => setConfig(cfg))
-      .catch(() => setConfig(null))
-      .finally(() => setLoading(false));
-  }, [applicationName, groupKind, appNamespace, appName, project]);
+    setError(null);
+    fetchDashboardConfig(applicationName, groupKind, appNamespace, appName, project, controller.signal)
+      .then((cfg) => { if (!controller.signal.aborted) setConfig(cfg); })
+      .catch((err) => {
+        if (!controller.signal.aborted) {
+          setConfig(null);
+          setError(err.message);
+        }
+      })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [applicationName, groupKind, appNamespace, appName, project, reloadKey]);
 
   if (loading) return <Loading />;
+
+  if (error) {
+    return (
+      <div style={errorBox}>
+        <div style={{ marginBottom: spacing[2] }}>Failed to load dashboard config: {error}</div>
+        <button style={retryButton} onClick={() => setReloadKey((k) => k + 1)}>Retry</button>
+      </div>
+    );
+  }
 
   if (!config || !config.rows || config.rows.length === 0) {
     return <EmptyState message="No dashboard configured for this resource type" />;
@@ -125,6 +144,28 @@ export const ConfigDashboard: React.FC<ConfigDashboardProps> = ({
 };
 
 // --- Styles ---
+
+const errorBox: React.CSSProperties = {
+  padding: spacing[3],
+  border: `1px dashed ${colors.red}`,
+  borderRadius: radius.md,
+  color: colors.redText,
+  fontFamily: fonts.mono,
+  fontSize: fontSize.xs,
+  textAlign: 'center',
+};
+
+const retryButton: React.CSSProperties = {
+  padding: `${spacing[1]}px ${spacing[3]}px`,
+  border: `1px solid ${colors.gray200}`,
+  borderRadius: radius.md,
+  backgroundColor: colors.gray100,
+  color: colors.gray800,
+  cursor: 'pointer',
+  fontFamily: fonts.mono,
+  fontSize: fontSize.xs,
+  fontWeight: fontWeight.medium,
+};
 
 const headerRow: React.CSSProperties = {
   display: 'flex',

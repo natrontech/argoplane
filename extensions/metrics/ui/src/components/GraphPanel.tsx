@@ -33,21 +33,22 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({
 
   const podsKey = pods ? pods.join(',') : '';
 
-  const mountedRef = React.useRef(true);
-  React.useEffect(() => {
-    mountedRef.current = true;
-    return () => { mountedRef.current = false; };
-  }, []);
+  const abortRef = React.useRef<AbortController | null>(null);
+  React.useEffect(() => () => abortRef.current?.abort(), []);
 
   const fetchData = React.useCallback(() => {
-    fetchGraphData(applicationName, groupKind, row, graph.name, namespace, name, duration, appNamespace, appName, project, pods)
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    fetchGraphData(applicationName, groupKind, row, graph.name, namespace, name, duration, appNamespace, appName, project, pods, controller.signal)
       .then((resp) => {
-        if (!mountedRef.current) return;
+        if (controller.signal.aborted) return;
         setData(resp);
         setError(null);
       })
-      .catch((err) => { if (mountedRef.current) setError(err.message); })
-      .finally(() => { if (mountedRef.current) setLoading(false); });
+      .catch((err) => { if (!controller.signal.aborted) setError(err.message); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applicationName, groupKind, row, graph.name, namespace, name, duration, appNamespace, appName, project, podsKey]);
 
@@ -113,16 +114,21 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({
   }));
 
   return (
-    <MetricsChart
-      title={graph.title}
-      unit={displayUnit(graph.yAxisUnit)}
-      timestamps={timestamps}
-      series={series}
-      height={150}
-      timeRange={duration}
-      syncId={syncId || 'argoplane-metrics'}
-      thresholds={thresholds}
-    />
+    <div>
+      {error && (
+        <div style={staleNote}>Refresh failed: {error}. Showing last loaded data.</div>
+      )}
+      <MetricsChart
+        title={graph.title}
+        unit={displayUnit(graph.yAxisUnit)}
+        timestamps={timestamps}
+        series={series}
+        height={150}
+        timeRange={duration}
+        syncId={syncId || 'argoplane-metrics'}
+        thresholds={thresholds}
+      />
+    </div>
   );
 };
 
@@ -134,6 +140,17 @@ function displayUnit(unit: string): string {
     default: return unit;
   }
 }
+
+const staleNote: React.CSSProperties = {
+  padding: `${spacing[1]}px ${spacing[2]}px`,
+  marginBottom: spacing[1],
+  backgroundColor: colors.yellowLight,
+  border: `1px solid ${colors.yellow}`,
+  borderRadius: radius.md,
+  color: colors.yellowText,
+  fontFamily: fonts.mono,
+  fontSize: fontSize.xs,
+};
 
 const loadingBox: React.CSSProperties = {
   display: 'flex',

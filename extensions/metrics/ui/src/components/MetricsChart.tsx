@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { colors, fonts, fontSize, spacing, radius } from '@argoplane/shared';
 import { formatTimeLabel } from '../utils/format';
+import { SERIES_COLORS } from '../utils/palette';
 
 // --- Types ---
 
@@ -38,14 +39,6 @@ interface MetricsChartProps {
   thresholds?: ThresholdLine[];
   formatValue?: (v: number) => string;
 }
-
-// --- Color palette ---
-
-const DEFAULT_COLORS = [
-  '#00A2B3', '#f5a337', '#0c568f', '#63b343', '#1abe93',
-  '#bd19c6', '#fb44be', '#999966', '#80B300', '#1AB399',
-  '#ba55ba', '#E6B3B3', '#43680b', '#25b708', '#66994D',
-];
 
 // --- Value formatting ---
 
@@ -104,7 +97,7 @@ export const MetricsChart: React.FC<MetricsChartProps> = ({
   unit,
   timestamps,
   series,
-  colors: seriesColors = DEFAULT_COLORS,
+  colors: seriesColors = SERIES_COLORS,
   height = 150,
   timeRange = '1h',
   syncId = 'argoplane-metrics',
@@ -313,7 +306,8 @@ const unitStyle: React.CSSProperties = {
 
 // Tooltip styles (dark overlay like the reference)
 const tooltipContainer: React.CSSProperties = {
-  background: 'rgba(41, 37, 36, 0.92)',
+  // gray800 with ~92% opacity (hex alpha EB)
+  background: `${colors.gray800}EB`,
   borderRadius: radius.md,
   padding: `${spacing[2]}px ${spacing[3]}px`,
   minWidth: 160,

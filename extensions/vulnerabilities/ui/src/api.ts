@@ -174,8 +174,8 @@ export async function downloadExport(
   const blob = await response.blob();
   // Extract filename from Content-Disposition or generate a safe default.
   const disposition = response.headers.get('Content-Disposition') || '';
-  const filenameMatch = disposition.match(/filename=([^\s;]+)/);
-  const filename = filenameMatch ? filenameMatch[1] : `${type}-${namespace}.csv`;
+  const filenameMatch = disposition.match(/filename="?([^";]+)"?/);
+  const filename = filenameMatch ? filenameMatch[1].trim() : `${type}-${namespace}.csv`;
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

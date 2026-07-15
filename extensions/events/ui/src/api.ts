@@ -7,8 +7,8 @@ function argoHeaders(appNamespace: string, appName: string, project: string) {
   };
 }
 
-async function jsonFetch<T>(url: string, headers: Record<string, string>): Promise<T> {
-  const response = await fetch(url, { headers });
+async function jsonFetch<T>(url: string, headers: Record<string, string>, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(url, { headers, signal });
   if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
   return response.json();
 }
@@ -22,6 +22,7 @@ export function fetchEvents(
     since?: string;
   },
   appNamespace: string, appName: string, project: string,
+  signal?: AbortSignal,
 ): Promise<EventResponse> {
   const searchParams = new URLSearchParams();
   searchParams.set('namespace', params.namespace);
@@ -29,5 +30,5 @@ export function fetchEvents(
   if (params.name) searchParams.set('name', params.name);
   if (params.type) searchParams.set('type', params.type);
   if (params.since) searchParams.set('since', params.since);
-  return jsonFetch(`/extensions/events/api/v1/events?${searchParams}`, argoHeaders(appNamespace, appName, project));
+  return jsonFetch(`/extensions/events/api/v1/events?${searchParams}`, argoHeaders(appNamespace, appName, project), signal);
 }

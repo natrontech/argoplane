@@ -20,6 +20,9 @@ function resourceKey(group: string, kind: string): string {
 const GLOBAL_KEY = '__argoplane_resource_tabs';
 const EVENT_NAME = 'argoplane-resource-tab-registered';
 
+/** Event fired whenever a resource tab is registered. `detail` is `{ group, kind }`. */
+export const RESOURCE_TAB_EVENT = EVENT_NAME;
+
 interface ResourceTabRegistry {
   [resourceType: string]: ArgoPlaneResourceTabEntry[];
 }
@@ -46,6 +49,8 @@ export function registerArgoPlaneResourceTab(
   if (!win[GLOBAL_KEY][key]) {
     win[GLOBAL_KEY][key] = [];
   }
+  // Skip duplicates (e.g. the same bundle injected twice).
+  if (win[GLOBAL_KEY][key].some((e: ArgoPlaneResourceTabEntry) => e.id === entry.id)) return;
   win[GLOBAL_KEY][key].push(entry);
   window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: { group, kind } }));
 }
@@ -64,7 +69,6 @@ export function getRegisteredResourceTypes(): Array<{ group: string; kind: strin
 const TAB_ORDER: Record<string, number> = {
   metrics: 1,
   logs: 2,
-  backups: 3,
   networking: 4,
   vulnerabilities: 5,
   events: 6,
@@ -107,7 +111,7 @@ class TabErrorBoundary extends React.Component<
           padding: 20,
           fontFamily: fonts.mono,
           fontSize: 12,
-          color: '#B91C1C',
+          color: colors.redText,
         },
       },
         React.createElement('div', { style: { fontWeight: 600, marginBottom: 8 } },

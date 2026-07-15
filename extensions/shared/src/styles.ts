@@ -44,7 +44,7 @@ export const card: React.CSSProperties = {
 };
 
 // --- Section Header ---
-// "BACKUPS ─────────"
+// "NETWORKING ─────────"
 
 export const sectionHeader: React.CSSProperties = {
   fontSize: fontSize.xs,
@@ -128,7 +128,7 @@ export const buttonDisabled: React.CSSProperties = {
 export const buttonDanger: React.CSSProperties = {
   ...button,
   background: colors.redLight,
-  color: '#B91C1C',
+  color: colors.redText,
   border: `1px solid ${colors.red}`,
 };
 
@@ -193,7 +193,7 @@ export const badgeWithBg = (status: Status): React.CSSProperties => ({
 });
 
 // --- Inline Metadata ---
-// "Namespace: default  ·  Last backup: 2h ago"
+// "Namespace: default  ·  Last sync: 2h ago"
 
 export const metaRow: React.CSSProperties = {
   display: 'flex',
