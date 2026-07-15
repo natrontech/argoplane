@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
 
 	"github.com/natrontech/argoplane/extensions/logs/backend/internal/handler"
 	"github.com/natrontech/argoplane/extensions/logs/backend/internal/loki"
@@ -34,9 +36,23 @@ func main() {
 	slog.Info("starting logs backend", "port", cfg.Port, "loki", cfg.LokiURL, "tenantID", cfg.LokiTenantID)
 	lokiClient := loki.NewClient(cfg.LokiURL, cfg.LokiTenantID)
 
-	logsHandler := handler.NewLogs(lokiClient)
-	labelsHandler := handler.NewLabels(lokiClient)
-	volumeHandler := handler.NewVolume(lokiClient)
+	kubeConfig, err := rest.InClusterConfig()
+	if err != nil {
+		slog.Error("failed to create in-cluster config", "error", err)
+		os.Exit(1)
+	}
+
+	dynClient, err := dynamic.NewForConfig(kubeConfig)
+	if err != nil {
+		slog.Error("failed to create dynamic client", "error", err)
+		os.Exit(1)
+	}
+
+	auth := handler.NewAuthorizer(dynClient)
+
+	logsHandler := handler.NewLogs(lokiClient, auth)
+	labelsHandler := handler.NewLabels(lokiClient, auth)
+	volumeHandler := handler.NewVolume(lokiClient, auth)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/logs", logsHandler.Handle)

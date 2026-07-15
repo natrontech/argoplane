@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -14,11 +15,12 @@ import (
 // App handles application-level aggregate metric requests.
 type App struct {
 	prom *prometheus.Client
+	auth *Authorizer
 }
 
 // NewApp creates an app metrics handler.
-func NewApp(prom *prometheus.Client) *App {
-	return &App{prom: prom}
+func NewApp(prom *prometheus.Client, auth *Authorizer) *App {
+	return &App{prom: prom, auth: auth}
 }
 
 // appResponse contains both instant summary and optional time series.
@@ -37,6 +39,10 @@ func (h *App) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.auth.AuthorizeNamespace(w, r, namespace) {
+		return
+	}
+
 	var pods []string
 	if p := r.URL.Query().Get("pods"); p != "" {
 		pods = strings.Split(p, ",")
@@ -45,12 +51,15 @@ func (h *App) Handle(w http.ResponseWriter, r *http.Request) {
 	username := r.Header.Get("Argocd-Username")
 	slog.Debug("app metrics request", "namespace", namespace, "range", timeRange, "pods", len(pods), "user", username)
 
+	ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
+	defer cancel()
+
 	queries := query.AppMetrics(namespace, pods)
 	resp := appResponse{}
 
 	// Instant summary
 	for _, q := range queries {
-		samples, err := h.prom.Query(r.Context(), q.Query)
+		samples, err := h.prom.Query(ctx, q.Query)
 		if err != nil {
 			slog.Warn("app query failed", "name", q.Name, "error", err)
 			resp.Summary = append(resp.Summary, instantMetric{
@@ -79,7 +88,7 @@ func (h *App) Handle(w http.ResponseWriter, r *http.Request) {
 		start, step := rangeParams(timeRange, end)
 
 		for _, q := range queries[:2] {
-			series, err := h.prom.QueryRange(r.Context(), q.Query, start, end, step)
+			series, err := h.prom.QueryRange(ctx, q.Query, start, end, step)
 			if err != nil {
 				slog.Warn("app range query failed", "name", q.Name, "error", err)
 				continue

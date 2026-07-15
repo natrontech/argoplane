@@ -14,19 +14,16 @@ import (
 // SbomHandler handles SBOM report queries.
 type SbomHandler struct {
 	client dynamic.Interface
+	auth   *Authorizer
 }
 
 // NewSbomHandler creates a new SbomHandler.
-func NewSbomHandler(client dynamic.Interface) *SbomHandler {
-	return &SbomHandler{client: client}
+func NewSbomHandler(client dynamic.Interface, auth *Authorizer) *SbomHandler {
+	return &SbomHandler{client: client, auth: auth}
 }
 
 // HandleOverview returns SBOM data for all images in a namespace.
 func (h *SbomHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
-	if !requireAppHeader(w, r) {
-		return
-	}
-
 	var req struct {
 		Namespace string   `json:"namespace"`
 		Resources []string `json:"resources,omitempty"`
@@ -40,10 +37,13 @@ func (h *SbomHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
 	if !validateNamespace(w, req.Namespace) {
 		return
 	}
+	if !h.auth.AuthorizeNamespace(w, r, req.Namespace) {
+		return
+	}
 
 	auditLog(r, "sbom.overview", req.Namespace)
 
-	listOpts := metav1.ListOptions{LabelSelector: resourceLabelSelector(req.Resources)}
+	listOpts := metav1.ListOptions{Limit: 500, LabelSelector: resourceLabelSelector(req.Resources)}
 	list, err := h.client.Resource(types.SbomReportGVR).Namespace(req.Namespace).List(r.Context(), listOpts)
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "failed to list sbom reports")

@@ -16,11 +16,12 @@ import (
 type OverviewHandler struct {
 	client          dynamic.Interface
 	veleroNamespace string
+	auth            *Authorizer
 }
 
 // NewOverviewHandler creates a new OverviewHandler.
-func NewOverviewHandler(client dynamic.Interface, veleroNamespace string) *OverviewHandler {
-	return &OverviewHandler{client: client, veleroNamespace: veleroNamespace}
+func NewOverviewHandler(client dynamic.Interface, veleroNamespace string, auth *Authorizer) *OverviewHandler {
+	return &OverviewHandler{client: client, veleroNamespace: veleroNamespace, auth: auth}
 }
 
 type overviewRequest struct {
@@ -39,6 +40,13 @@ func (h *OverviewHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	if req.Namespace == "" {
 		WriteError(w, http.StatusBadRequest, "namespace is required")
+		return
+	}
+
+	// Per-app aggregation: only namespaces the calling Application manages. This
+	// also prevents the storage-location / ownership data from leaking to callers
+	// requesting an arbitrary namespace.
+	if !h.auth.AuthorizeNamespace(w, r, req.Namespace) {
 		return
 	}
 

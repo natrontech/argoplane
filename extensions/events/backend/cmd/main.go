@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -42,7 +43,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	eventsHandler := handler.NewEventsHandler(client)
+	dynClient, err := dynamic.NewForConfig(kubeConfig)
+	if err != nil {
+		slog.Error("failed to create dynamic client", "error", err)
+		os.Exit(1)
+	}
+
+	auth := handler.NewAuthorizer(dynClient)
+	eventsHandler := handler.NewEventsHandler(client, auth)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/events", eventsHandler.Handle)

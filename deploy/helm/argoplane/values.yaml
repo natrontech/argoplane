@@ -101,12 +101,17 @@ extensions:
     # -- ServiceAccount configuration
     serviceAccount:
       # -- Create a dedicated ServiceAccount
-      create: false
+      create: true
       # -- Annotations for the ServiceAccount
       annotations: {}
     # -- RBAC rules for the extension (creates ClusterRole + ClusterRoleBinding)
     rbac:
-      rules: []
+      # Reads ArgoCD Applications to authorize that a requested namespace is
+      # one the calling application manages (namespace scoping).
+      rules:
+        - apiGroups: ["argoproj.io"]
+          resources: ["applications"]
+          verbs: ["get"]
 
   backups:
     enabled: true
@@ -164,6 +169,9 @@ extensions:
         - apiGroups: ["velero.io"]
           resources: ["schedules"]
           verbs: ["patch"]
+        - apiGroups: ["argoproj.io"]
+          resources: ["applications"]
+          verbs: ["get"]
 
   networking:
     enabled: false
@@ -209,6 +217,9 @@ extensions:
         - apiGroups: ["cilium.io"]
           resources: ["ciliumnetworkpolicies", "ciliumclusterwidenetworkpolicies", "ciliumendpoints", "ciliumidentities"]
           verbs: ["get", "list", "watch"]
+        - apiGroups: ["argoproj.io"]
+          resources: ["applications"]
+          verbs: ["get"]
 
   logs:
     enabled: false
@@ -248,10 +259,14 @@ extensions:
     tolerations: []
     affinity: {}
     serviceAccount:
-      create: false
+      create: true
       annotations: {}
     rbac:
-      rules: []
+      # Reads ArgoCD Applications to authorize namespace scoping.
+      rules:
+        - apiGroups: ["argoproj.io"]
+          resources: ["applications"]
+          verbs: ["get"]
 
   vulnerabilities:
     enabled: false
@@ -296,6 +311,9 @@ extensions:
         - apiGroups: ["aquasecurity.github.io"]
           resources: ["vulnerabilityreports", "configauditreports", "exposedsecretreports", "sbomreports"]
           verbs: ["get", "list", "watch"]
+        - apiGroups: ["argoproj.io"]
+          resources: ["applications"]
+          verbs: ["get"]
 
   events:
     enabled: false
@@ -343,6 +361,9 @@ extensions:
         - apiGroups: ["events.k8s.io"]
           resources: ["events"]
           verbs: ["list", "watch"]
+        - apiGroups: ["argoproj.io"]
+          resources: ["applications"]
+          verbs: ["get"]
 
 # -- Optional ArgoPlane services (docs site)
 services:

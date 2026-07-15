@@ -55,6 +55,12 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
   const treePodNames = React.useMemo(() => extractPodNames(tree, namespace), [tree, namespace]);
   const scopedPods = scope === 'app' && treePodNames.length > 0 ? treePodNames : undefined;
 
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   // Debounce search text: only update debouncedSearch after 500ms of no typing
   React.useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchText), 500);
@@ -84,23 +90,24 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
 
     fetchLogs(queryParams, appNamespace, appName, project)
       .then((logsResp) => {
+        if (!mountedRef.current) return;
         setEntries(logsResp.entries || []);
         setTotalEntries(logsResp.stats?.totalEntries || logsResp.entries?.length || 0);
         setError(null);
       })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err) => { if (mountedRef.current) setError(err.message); })
+      .finally(() => { if (mountedRef.current) setLoading(false); });
   }, [namespace, selectedPod, selectedContainer, debouncedSearch, activeSeverities, timeSelection, appNamespace, appName, project, scopedPods]);
 
   // Fetch containers and pods for dropdowns
   React.useEffect(() => {
     if (!namespace) return;
     fetchLabelValues('container', namespace, appNamespace, appName, project, scopedPods)
-      .then((vals) => setContainers(vals || []))
-      .catch(() => setContainers([]));
+      .then((vals) => { if (mountedRef.current) setContainers(vals || []); })
+      .catch(() => { if (mountedRef.current) setContainers([]); });
     fetchLabelValues('pod', namespace, appNamespace, appName, project, scopedPods)
-      .then((vals) => setPods(vals || []))
-      .catch(() => setPods([]));
+      .then((vals) => { if (mountedRef.current) setPods(vals || []); })
+      .catch(() => { if (mountedRef.current) setPods([]); });
   }, [namespace, appNamespace, appName, project, scopedPods]);
 
   // Fetch data when filters change (but not on every keystroke thanks to debounce)

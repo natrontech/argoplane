@@ -22,7 +22,9 @@ func NewStorageHandler(client dynamic.Interface, veleroNamespace string) *Storag
 	return &StorageHandler{client: client, veleroNamespace: veleroNamespace}
 }
 
-// Handle lists all BackupStorageLocations.
+// Handle lists all BackupStorageLocations. This is platform-level, read-only data
+// (BSLs are cluster infrastructure, not namespace-scoped), so it is intentionally
+// not namespace-gated. Access is governed by ArgoCD's extension invoke RBAC.
 func (h *StorageHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	username := r.Header.Get("Argocd-Username")
 	slog.Debug("storage locations request", "user", username)

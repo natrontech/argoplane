@@ -304,6 +304,12 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
       : treeNodeKeys.has(`cilium.io/CiliumNetworkPolicy/${p.namespace || ''}/${p.name}`);
   }, [treeNodeKeys]);
 
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const fetchAll = React.useCallback(() => {
     if (!namespace) return;
     Promise.all([
@@ -311,15 +317,22 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
       fetchEndpoints(namespace, appNamespace, appName, project, scopedPods).catch(() => null),
       fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter, directionFilter, scopedPods).catch(() => null),
     ]).then(([pol, ep, fl]) => {
+      if (!mountedRef.current) return;
+      // If every request failed, surface an error instead of silently keeping stale data.
+      if (pol === null && ep === null && fl === null) {
+        setError('Failed to load networking data');
+        setLoading(false);
+        return;
+      }
       // Only update state if the fetch succeeded; keep previous data on failure.
       if (pol !== null) setPolicies(pol);
       if (ep !== null) setEndpoints(ep);
       if (fl !== null) setFlowsResponse(fl);
       setError(null);
     })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [namespace, appNamespace, appName, project, resourceRefs, timeRange, verdictFilter, directionFilter, scopedPods]);
+      .catch((err) => { if (mountedRef.current) setError(err.message); })
+      .finally(() => { if (mountedRef.current) setLoading(false); });
+  }, [namespace, appNamespace, appName, project, resourceRefs, timeRange, verdictFilter, directionFilter, scope, scopedPods]);
 
   React.useEffect(() => { setLoading(true); fetchAll(); }, [fetchAll]);
   React.useEffect(() => { const i = setInterval(fetchAll, REFRESH_INTERVAL); return () => clearInterval(i); }, [fetchAll]);

@@ -20,11 +20,12 @@ import (
 type BackupsHandler struct {
 	client          dynamic.Interface
 	veleroNamespace string
+	auth            *Authorizer
 }
 
 // NewBackupsHandler creates a new BackupsHandler.
-func NewBackupsHandler(client dynamic.Interface, veleroNamespace string) *BackupsHandler {
-	return &BackupsHandler{client: client, veleroNamespace: veleroNamespace}
+func NewBackupsHandler(client dynamic.Interface, veleroNamespace string, auth *Authorizer) *BackupsHandler {
+	return &BackupsHandler{client: client, veleroNamespace: veleroNamespace, auth: auth}
 }
 
 // Handle lists backups for a given namespace, optionally filtered by schedule.
@@ -32,6 +33,11 @@ func (h *BackupsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
 	if namespace == "" {
 		WriteError(w, http.StatusBadRequest, "namespace is required")
+		return
+	}
+
+	// Per-app read: only namespaces the calling Application manages.
+	if !h.auth.AuthorizeNamespace(w, r, namespace) {
 		return
 	}
 
@@ -99,6 +105,11 @@ func (h *BackupsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Mutation: the target namespace must be managed by the calling Application.
+	if !h.auth.AuthorizeNamespace(w, r, req.Namespace) {
+		return
+	}
+
 	if req.TTL == "" {
 		req.TTL = "72h0m0s"
 	}
@@ -146,6 +157,7 @@ func (h *BackupsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	slog.Info("backup created", "name", created.GetName(), "namespace", h.veleroNamespace)
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	WriteJSON(w, map[string]string{
 		"name":    created.GetName(),
@@ -159,6 +171,28 @@ func (h *BackupsHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
 		WriteError(w, http.StatusBadRequest, "backup name is required")
+		return
+	}
+
+	// Mutation: resolve the namespaces the calling Application manages, then read
+	// the named backup and require it is app-scoped (non-empty includedNamespaces)
+	// with every included namespace managed by this Application. This rejects
+	// deleting platform-wide backups (empty includedNamespaces) or any backup that
+	// touches a namespace the app does not manage.
+	allowed, ok := h.auth.Allowed(w, r)
+	if !ok {
+		return
+	}
+	backupObj, err := h.client.Resource(types.BackupGVR).Namespace(h.veleroNamespace).Get(r.Context(), name, metav1.GetOptions{})
+	if err != nil {
+		slog.Warn("backup delete rejected: backup not found", "backup", name, "error", err)
+		WriteError(w, http.StatusNotFound, "backup not found")
+		return
+	}
+	backupIncluded := nestedStringSlice(backupObj.Object, "spec", "includedNamespaces")
+	if !namespacesSubsetOf(backupIncluded, allowed) {
+		auditLog(r, "backup.delete.rejected", "", "backup", name, "includedNamespaces", backupIncluded)
+		WriteError(w, http.StatusForbidden, "backup is not scoped to namespaces managed by this application")
 		return
 	}
 
@@ -196,6 +230,7 @@ func (h *BackupsHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	slog.Info("delete backup request created", "name", created.GetName(), "backup", name)
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	WriteJSON(w, map[string]string{
 		"name":    created.GetName(),

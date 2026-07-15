@@ -17,18 +17,20 @@ func ForPod(namespace, pod, container string) string {
 
 // ForDeployment builds a LogQL stream selector matching all pods of a deployment.
 func ForDeployment(namespace, name, container string) string {
-	sel := fmt.Sprintf(`{namespace=%q, pod=~%q}`, namespace, name+"-.*")
+	podRegex := regexp.QuoteMeta(name) + "-.*"
+	sel := fmt.Sprintf(`{namespace=%q, pod=~%q}`, namespace, podRegex)
 	if container != "" {
-		sel = fmt.Sprintf(`{namespace=%q, pod=~%q, container=%q}`, namespace, name+"-.*", container)
+		sel = fmt.Sprintf(`{namespace=%q, pod=~%q, container=%q}`, namespace, podRegex, container)
 	}
 	return sel
 }
 
 // ForStatefulSet builds a LogQL stream selector matching all pods of a statefulset.
 func ForStatefulSet(namespace, name, container string) string {
-	sel := fmt.Sprintf(`{namespace=%q, pod=~%q}`, namespace, name+"-\\d+")
+	podRegex := regexp.QuoteMeta(name) + "-\\d+"
+	sel := fmt.Sprintf(`{namespace=%q, pod=~%q}`, namespace, podRegex)
 	if container != "" {
-		sel = fmt.Sprintf(`{namespace=%q, pod=~%q, container=%q}`, namespace, name+"-\\d+", container)
+		sel = fmt.Sprintf(`{namespace=%q, pod=~%q, container=%q}`, namespace, podRegex, container)
 	}
 	return sel
 }

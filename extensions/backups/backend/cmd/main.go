@@ -45,17 +45,21 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Authorizer scopes mutations and per-app reads to namespaces the calling
+	// ArgoCD Application manages.
+	auth := handler.NewAuthorizer(dynClient)
+
 	// Create handlers.
 	storageHandler := handler.NewStorageHandler(dynClient, config.VeleroNamespace)
-	schedulesHandler := handler.NewSchedulesHandler(dynClient, config.VeleroNamespace)
-	backupsHandler := handler.NewBackupsHandler(dynClient, config.VeleroNamespace)
-	restoresHandler := handler.NewRestoresHandler(dynClient, config.VeleroNamespace)
-	overviewHandler := handler.NewOverviewHandler(dynClient, config.VeleroNamespace)
-	logsHandler := handler.NewLogsHandler(dynClient, config.VeleroNamespace, &handler.TLSConfig{
+	schedulesHandler := handler.NewSchedulesHandler(dynClient, config.VeleroNamespace, auth)
+	backupsHandler := handler.NewBackupsHandler(dynClient, config.VeleroNamespace, auth)
+	restoresHandler := handler.NewRestoresHandler(dynClient, config.VeleroNamespace, auth)
+	overviewHandler := handler.NewOverviewHandler(dynClient, config.VeleroNamespace, auth)
+	logsHandler := handler.NewLogsHandler(dynClient, config.VeleroNamespace, auth, &handler.TLSConfig{
 		CACertPath:  config.CACertPath,
 		InsecureTLS: config.InsecureTLS,
 	})
-	volumesHandler := handler.NewVolumesHandler(dynClient, config.VeleroNamespace)
+	volumesHandler := handler.NewVolumesHandler(dynClient, config.VeleroNamespace, auth)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/storage-locations", storageHandler.Handle)

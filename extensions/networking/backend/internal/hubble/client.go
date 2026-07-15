@@ -154,7 +154,9 @@ func (c *Client) Flows(ctx context.Context, req FlowsRequest) ([]FlowSummary, er
 		}
 
 		if t := flow.GetTime(); t != nil {
-			fs.Time = t.AsTime().Format(time.RFC3339)
+			// Use nanosecond resolution so the dedup key in the buffer does not
+			// collapse distinct flows that occur within the same second.
+			fs.Time = t.AsTime().Format(time.RFC3339Nano)
 		}
 
 		if flow.GetIsReply() != nil {

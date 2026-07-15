@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/natrontech/argoplane/extensions/metrics/backend/internal/config"
 	"github.com/natrontech/argoplane/extensions/metrics/backend/internal/prometheus"
+	"github.com/natrontech/argoplane/extensions/metrics/backend/internal/query"
 )
 
 // Dashboard serves dashboard configuration and graph data.
@@ -136,12 +138,14 @@ func (h *Dashboard) HandleGraph(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build template variables from all query parameters
-	vars := make(map[string]string)
-	for k, v := range r.URL.Query() {
-		if len(v) > 0 {
-			vars[k] = v[0]
-		}
+	// ponytail: dashboard PromQL templates only ever reference {{.namespace}} and
+	// {{.podFilter}}, so we build a closed set of known vars and escape each value
+	// with EscapePromQLLabel before substitution. This blocks PromQL injection
+	// (a value can no longer break out of a label matcher) without enumerating
+	// every possible query param. If a new template var is ever needed, add it here.
+	vars := map[string]string{
+		"namespace": query.EscapePromQLLabel(namespace),
+		"name":      query.EscapePromQLLabel(name),
 	}
 
 	// Set podFilter: if specific pods are requested, use them as a regex OR;
@@ -152,9 +156,9 @@ func (h *Dashboard) HandleGraph(w http.ResponseWriter, r *http.Request) {
 		for i, p := range podNames {
 			podNames[i] = strings.TrimSpace(p)
 		}
-		vars["podFilter"] = strings.Join(podNames, "|")
-	} else if vars["name"] != "" {
-		vars["podFilter"] = vars["name"]
+		vars["podFilter"] = query.EscapePromQLLabel(strings.Join(podNames, "|"))
+	} else if name != "" {
+		vars["podFilter"] = query.EscapePromQLLabel(name)
 	}
 	// Ensure podFilter is always set (fallback to match-all)
 	if vars["podFilter"] == "" {
@@ -164,19 +168,22 @@ func (h *Dashboard) HandleGraph(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("resolved podFilter", "podFilter", vars["podFilter"], "pods", pods, "name", name)
 
 	// Execute PromQL template
-	query, err := renderTemplate(graph.QueryExpression, vars)
+	promQL, err := renderTemplate(graph.QueryExpression, vars)
 	if err != nil {
 		slog.Error("template render failed", "error", err, "expression", graph.QueryExpression)
 		http.Error(w, fmt.Sprintf(`{"error":"template error: %s"}`, err.Error()), http.StatusInternalServerError)
 		return
 	}
 
-	slog.Debug("executing graph query", "query", query, "duration", duration)
+	slog.Debug("executing graph query", "query", promQL, "duration", duration)
+
+	ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
+	defer cancel()
 
 	end := time.Now()
 	start, step := rangeParams(duration, end)
 
-	allSeries, err := h.prom.QueryRange(r.Context(), query, start, end, step)
+	allSeries, err := h.prom.QueryRange(ctx, promQL, start, end, step)
 	if err != nil {
 		slog.Warn("graph query failed", "graph", graphName, "error", err)
 		w.Header().Set("Content-Type", "application/json")
@@ -217,7 +224,7 @@ func (h *Dashboard) HandleGraph(w http.ResponseWriter, r *http.Request) {
 			slog.Warn("threshold template render failed", "name", t.Name, "error", err)
 			continue
 		}
-		samples, err := h.prom.Query(r.Context(), tQuery)
+		samples, err := h.prom.Query(ctx, tQuery)
 		if err != nil {
 			slog.Warn("threshold query failed", "name", t.Name, "error", err)
 			continue

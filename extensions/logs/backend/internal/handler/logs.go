@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -11,14 +12,22 @@ import (
 	"github.com/natrontech/argoplane/extensions/logs/backend/internal/loki"
 )
 
+// ponytail: cap the queryable window at 7 days. Wider ranges are clamped to
+// end-7d to bound Loki query cost and latency.
+const maxTimeRange = 7 * 24 * time.Hour
+
+// queryTimeout bounds a single upstream Loki query.
+const queryTimeout = 25 * time.Second
+
 // Logs handles log query requests.
 type Logs struct {
 	loki *loki.Client
+	auth *Authorizer
 }
 
 // NewLogs creates a Logs handler.
-func NewLogs(loki *loki.Client) *Logs {
-	return &Logs{loki: loki}
+func NewLogs(loki *loki.Client, auth *Authorizer) *Logs {
+	return &Logs{loki: loki, auth: auth}
 }
 
 type logsResponse struct {
@@ -33,6 +42,9 @@ func (h *Logs) Handle(w http.ResponseWriter, r *http.Request) {
 	namespace := q.Get("namespace")
 	if namespace == "" {
 		writeError(w, http.StatusBadRequest, "namespace is required")
+		return
+	}
+	if !h.auth.AuthorizeNamespace(w, r, namespace) {
 		return
 	}
 
@@ -71,6 +83,11 @@ func (h *Logs) Handle(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if end.Sub(start) > maxTimeRange {
+		slog.Warn("clamping time range", "namespace", namespace, "requested", end.Sub(start).String(), "max", maxTimeRange.String())
+		start = end.Add(-maxTimeRange)
+	}
+
 	// Build LogQL query
 	selector := logql.BuildSelector(namespace, pod, resource, kind, container, scopedPods)
 	query := logql.WithFilter(selector, filter)
@@ -82,7 +99,10 @@ func (h *Logs) Handle(w http.ResponseWriter, r *http.Request) {
 	username := r.Header.Get("Argocd-Username")
 	slog.Debug("logs query", "namespace", namespace, "pod", pod, "kind", kind, "query", query, "user", username)
 
-	entries, stats, err := h.loki.QueryRange(r.Context(), query, start, end, limit, direction)
+	ctx, cancel := context.WithTimeout(r.Context(), queryTimeout)
+	defer cancel()
+
+	entries, stats, err := h.loki.QueryRange(ctx, query, start, end, limit, direction)
 	if err != nil {
 		slog.Warn("loki query failed", "error", err, "query", query)
 		writeError(w, http.StatusBadGateway, "failed to query logs")
