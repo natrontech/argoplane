@@ -15,7 +15,7 @@ ArgoPlane ships as a Helm chart that deploys extension backends alongside ArgoCD
 
 ## Prerequisites
 
-- ArgoCD v3.x installed and running
+- ArgoCD v3.5+ installed and running
 - `kubectl` access to the cluster
 - Helm 3.x
 - Backend dependencies installed per extension:

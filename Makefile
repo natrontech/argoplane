@@ -3,7 +3,7 @@
 
 # --- Configuration ---
 CLUSTER_NAME    ?= argoplane-dev
-ARGOCD_VERSION  ?= v3.3.3
+ARGOCD_VERSION  ?= v3.5.2
 ARGOCD_NS       := argocd
 KIND_CONFIG     := hack/kind-config.yaml
 EXTENSIONS      := metrics networking logs vulnerabilities events

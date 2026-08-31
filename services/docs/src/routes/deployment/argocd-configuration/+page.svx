@@ -498,6 +498,7 @@ Key changes in ArgoCD v3 that affect extension configuration:
 | Extensions require RBAC | Every extension needs `p, role:<role>, extensions, invoke, <name>, allow`. |
 | Annotation-based tracking | Resource tracking uses annotations by default, not labels. |
 | Health in Redis | Resource health is stored in Redis, not in Application status. |
+| React 19 UI (v3.5+) | UI extensions must externalize `react/jsx-runtime` (exposed as `window.ReactJSXRuntime`). ArgoPlane bundles already do. Custom extensions built against older ArgoCD may fail to load until rebuilt. |
 
 ## Troubleshooting
 

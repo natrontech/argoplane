@@ -13,7 +13,7 @@ This guide walks you through installing ArgoPlane extensions in your ArgoCD clus
 
 ## Prerequisites
 
-- ArgoCD v3.x installed and running
+- ArgoCD v3.5+ installed and running
 - `kubectl` access to the cluster
 - Helm (for operator installations like Prometheus, Loki, Trivy Operator)
 

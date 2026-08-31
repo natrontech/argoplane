@@ -5,10 +5,10 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "peerDependencies": {
-    "react": "^18.0.0"
+    "react": "^19.0.0"
   },
   "devDependencies": {
-    "@types/react": "^18.3.31",
+    "@types/react": "^19.2.18",
     "typescript": "^5.4.0"
   }
 }

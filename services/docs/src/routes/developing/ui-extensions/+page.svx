@@ -12,7 +12,7 @@ ArgoCD extensions run inside ArgoCD's React runtime. React is provided globally 
 Configure webpack externals to use ArgoCD's React:
 
 ```javascript
-externals: { react: "React", "react-dom": "ReactDOM" }
+externals: { react: "React", "react-dom": "ReactDOM", "react/jsx-runtime": "ReactJSXRuntime" }
 ```
 
 The build output must be a single JS file matching `extension(.*)\.js`, built as IIFE or UMD (not ES modules).
