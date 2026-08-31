@@ -10,7 +10,7 @@
   "dependencies": {
     "@argoplane/shared": "file:../../shared",
     "react-is": "^19.2.8",
-    "recharts": "^3.9.2"
+    "recharts": "^3.10.1"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",
@@ -18,7 +18,7 @@
     "style-loader": "^4.0.0",
     "ts-loader": "^9.6.2",
     "typescript": "^5.4.0",
-    "webpack": "^5.108.4",
-    "webpack-cli": "^7.2.1"
+    "webpack": "^5.109.2",
+    "webpack-cli": "^7.2.2"
   }
 }
