@@ -5,7 +5,7 @@
 ArgoCD extensions run inside ArgoCD's React runtime. React is provided globally by ArgoCD. Do not bundle React. Configure webpack/vite externals:
 
 ```javascript
-externals: { react: "React", "react-dom": "ReactDOM" }
+externals: { react: "React", "react-dom": "ReactDOM", "react/jsx-runtime": "ReactJSXRuntime" }
 ```
 
 ## Extension Registration

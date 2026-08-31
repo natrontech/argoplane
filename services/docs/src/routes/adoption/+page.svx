@@ -65,7 +65,7 @@ Add the **logs**, **vulnerabilities**, and **events** extensions. Developers can
 </Accordion>
 
 <Accordion title="Does ArgoPlane work with ArgoCD v2?">
-  ArgoPlane targets ArgoCD v3.x. Some extensions may work with v2.x proxy extensions, but v3 is required for full functionality (system-level extensions, status panels, app view extensions).
+  ArgoPlane targets ArgoCD v3.5+ (tested against v3.5.2, which runs the React 19 UI). Earlier v3.x releases generally work since the bundles avoid version-specific React APIs, but they are not tested. v2.x is not supported: system-level extensions, status panels, and app view extensions require v3.
 </Accordion>
 
 <Accordion title="Can I write my own extensions?">

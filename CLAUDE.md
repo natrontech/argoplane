@@ -27,7 +27,7 @@ Every ArgoPlane extension follows the same pattern:
 
 ### Key Components
 
-- **ArgoCD v3.3.3**: GitOps engine, UI host, RBAC, proxy extension routing
+- **ArgoCD v3.5.2**: GitOps engine, UI host, RBAC, proxy extension routing
 - **Prometheus**: Metrics and alerts (metrics + alerts extensions)
 - **Loki**: Log aggregation (logs extension)
 - **Cilium/Hubble**: Network visibility (networking extension)
