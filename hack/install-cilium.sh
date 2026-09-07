@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CILIUM_VERSION="${CILIUM_VERSION:-1.19.1}"
+CILIUM_VERSION="${CILIUM_VERSION:-1.20.1}"
 
 echo "==> Installing Cilium ${CILIUM_VERSION}"
 
