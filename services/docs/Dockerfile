@@ -1,4 +1,6 @@
-FROM node:26-alpine AS build
+# Build natively on the builder's platform; the vite output is arch-independent.
+# Building under QEMU emulation crashes V8/Rolldown with SIGILL on arm64.
+FROM --platform=$BUILDPLATFORM node:26-alpine AS build
 
 WORKDIR /app
 
