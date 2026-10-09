@@ -62,6 +62,12 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
       {{- with $docs.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

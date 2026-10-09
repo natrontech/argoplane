@@ -10,16 +10,14 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM node:26-alpine
+# adapter-static emits plain files, so serve them with nginx instead of Node.
+FROM nginxinc/nginx-unprivileged:1.30-alpine
 
-WORKDIR /app
+COPY nginx.conf /etc/nginx/nginx.conf
+COPY --from=build /app/build /usr/share/nginx/html
 
-COPY --from=build /app/build ./build
-COPY --from=build /app/package.json ./
-
-ENV NODE_ENV=production
-ENV PORT=3000
+ENV NGINX_ENTRYPOINT_QUIET_LOGS=1
 
 EXPOSE 3000
 
-CMD ["node", "build/index.js"]
+CMD ["nginx", "-g", "daemon off;"]

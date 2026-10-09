@@ -119,6 +119,8 @@ dev-infra: argocd prometheus loki trivy setup-argocd ## Full local dev stack (ki
 
 .PHONY: build-extensions
 build-extensions: ## Build all UI extension bundles
+	@echo "==> Installing shared dependencies"
+	@cd extensions/shared && npm ci
 	@for ext in $(ALL_UI_EXTENSIONS); do \
 		echo "==> Building $$ext extension UI"; \
 		(cd extensions/$$ext/ui && npm install && npm run build); \
