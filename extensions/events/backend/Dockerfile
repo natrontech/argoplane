@@ -1,11 +1,11 @@
-FROM golang:1.27.1-alpine AS builder
+FROM golang:1.27.2-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -o /events-backend ./cmd/
 
-FROM alpine:3.24.1
+FROM alpine:3.24.3
 RUN apk --no-cache add ca-certificates
 COPY --from=builder /events-backend /usr/local/bin/events-backend
 USER 65534:65534
