@@ -11,7 +11,7 @@ COPY . .
 RUN npm run build
 
 # adapter-static emits plain files, so serve them with nginx instead of Node.
-FROM nginxinc/nginx-unprivileged:1.30-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine
 
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY --from=build /app/build /usr/share/nginx/html

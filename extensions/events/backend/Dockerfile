@@ -1,6 +1,6 @@
 # Build on the runner's own platform and let Go cross-compile: building the
 # arm64 image under QEMU emulation took up to 14 min per backend.
-FROM --platform=$BUILDPLATFORM golang:1.27.2-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine AS builder
 ARG TARGETOS TARGETARCH
 WORKDIR /app
 COPY go.mod go.sum ./
