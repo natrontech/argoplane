@@ -306,8 +306,7 @@ const unitStyle: React.CSSProperties = {
 
 // Tooltip styles (dark overlay like the reference)
 const tooltipContainer: React.CSSProperties = {
-  // gray800 with ~92% opacity (hex alpha EB)
-  background: `${colors.gray800}EB`,
+  background: colors.gray800,
   borderRadius: radius.md,
   padding: `${spacing[2]}px ${spacing[3]}px`,
   minWidth: 160,
