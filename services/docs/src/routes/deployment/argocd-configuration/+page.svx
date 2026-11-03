@@ -4,9 +4,9 @@ description: Wire up ArgoCD with proxy extensions, RBAC, custom styles, and UI b
 ---
 
 <script>
-  import Tabs from '$lib/components/docs/Tabs.svelte';
-  import Callout from '$lib/components/docs/Callout.svelte';
-  import Accordion from '$lib/components/docs/Accordion.svelte';
+  import Tabs from '#lib/components/docs/Tabs.svelte';
+  import Callout from '#lib/components/docs/Callout.svelte';
+  import Accordion from '#lib/components/docs/Accordion.svelte';
 </script>
 
 # ArgoCD Configuration

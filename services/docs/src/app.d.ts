@@ -1,8 +1,3 @@
-declare module 'virtual:git-timestamps' {
-	const timestamps: Record<string, string>;
-	export default timestamps;
-}
-
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
 declare global {

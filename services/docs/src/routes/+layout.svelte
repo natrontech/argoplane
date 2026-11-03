@@ -1,15 +1,15 @@
 <script lang="ts">
 	import '../app.css';
-	import Header from '$lib/components/docs/Header.svelte';
-	import Sidebar from '$lib/components/docs/Sidebar.svelte';
-	import TableOfContents from '$lib/components/docs/TableOfContents.svelte';
-	import PrevNext from '$lib/components/docs/PrevNext.svelte';
-	import PageMeta from '$lib/components/docs/PageMeta.svelte';
-	import Breadcrumbs from '$lib/components/docs/Breadcrumbs.svelte';
-	import BackToTop from '$lib/components/docs/BackToTop.svelte';
-	import ReadingTime from '$lib/components/docs/ReadingTime.svelte';
+	import Header from '#lib/components/docs/Header.svelte';
+	import Sidebar from '#lib/components/docs/Sidebar.svelte';
+	import TableOfContents from '#lib/components/docs/TableOfContents.svelte';
+	import PrevNext from '#lib/components/docs/PrevNext.svelte';
+	import PageMeta from '#lib/components/docs/PageMeta.svelte';
+	import Breadcrumbs from '#lib/components/docs/Breadcrumbs.svelte';
+	import BackToTop from '#lib/components/docs/BackToTop.svelte';
+	import ReadingTime from '#lib/components/docs/ReadingTime.svelte';
 	import type { Snippet } from 'svelte';
-	import { browser } from '$app/environment';
+	import { browser } from '$app/env';
 	import { afterNavigate } from '$app/navigation';
 
 	let { children }: { children: Snippet } = $props();

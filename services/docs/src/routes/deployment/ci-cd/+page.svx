@@ -4,7 +4,7 @@ description: GitHub Actions workflows for building, testing, and publishing Argo
 ---
 
 <script>
-  import Callout from '$lib/components/docs/Callout.svelte';
+  import Callout from '#lib/components/docs/Callout.svelte';
 </script>
 
 # CI/CD Pipeline

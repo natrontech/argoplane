@@ -1,6 +1,8 @@
+import type { RouteId } from '$app/types';
+
 export interface NavItem {
 	title: string;
-	href: string;
+	href: RouteId;
 	children?: NavItem[];
 }
 

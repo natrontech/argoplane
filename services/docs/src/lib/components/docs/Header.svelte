@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { base } from '$app/paths';
-	import { siteConfig } from '$lib/config/site';
+	import { asset, resolve } from '$app/paths';
+	import { siteConfig } from '#lib/config/site.ts';
 	import { onMount } from 'svelte';
 	import SearchDialog from './SearchDialog.svelte';
 	import { Menu, PanelLeftClose, PanelLeftOpen, Sun, Moon, Star } from 'lucide-svelte';
@@ -60,9 +60,9 @@
 					<PanelLeftClose size={18} />
 				{/if}
 			</button>
-			<a href="{base}/" class="flex items-center gap-2 no-underline">
+			<a href={resolve('/')} class="flex items-center gap-2 no-underline">
 				<img
-					src="{base}{isDark ? '/logo-light.svg' : '/logo-dark.svg'}"
+					src={asset(isDark ? 'logo-light.svg' : 'logo-dark.svg')}
 					alt="ArgoPlane"
 					class="h-6 w-6"
 				/>
