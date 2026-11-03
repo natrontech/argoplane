@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { base } from '$app/paths';
-	import { browser } from '$app/environment';
+	import { asset } from '$app/paths';
+	import { browser } from '$app/env';
 	import { afterNavigate } from '$app/navigation';
 	import { Search } from 'lucide-svelte';
 
@@ -25,7 +25,7 @@
 		if (pagefindUI || !browser) return;
 		try {
 			// Use globalThis to avoid Vite/Rollup trying to resolve the import
-			const pagefind = await (new Function('return import("' + base + '/pagefind/pagefind.js")'))();
+			const pagefind = await (new Function('return import("' + asset('pagefind/pagefind.js') + '")'))();
 			await pagefind.init();
 			pagefindUI = pagefind;
 			pagefindFailed = false;

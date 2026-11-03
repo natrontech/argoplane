@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { page } from '$app/stores';
-	import { siteConfig } from '$lib/config/site';
+	import { page } from '$app/state';
+	import { siteConfig } from '#lib/config/site.ts';
 	import timestamps from 'virtual:git-timestamps';
 	import { SquarePen } from 'lucide-svelte';
 
 	let editUrl = $derived(() => {
-		const path = $page.url.pathname;
+		const path = page.url.pathname;
 		const filePath = path === '/' ? '/src/routes/+page.svx' : `/src/routes${path}/+page.svx`;
 		return `${siteConfig.repo}/edit/main/services/docs${filePath}`;
 	});
 
 	let lastUpdated = $derived(() => {
-		const path = $page.url.pathname;
+		const path = page.url.pathname;
 		const ts = (timestamps as Record<string, string>)[path];
 		if (!ts) return '';
 		return new Date(ts).toLocaleDateString('en-US', {

@@ -4,7 +4,9 @@ description: A package of ArgoCD UI extensions
 ---
 
 <script>
-  import { base } from '$app/paths';
+  import { resolve } from '$app/paths';
+  // ponytail: same value SvelteKit 2's removed `base` export had
+  const base = resolve('/').slice(0, -1);
 </script>
 
 # ArgoPlane

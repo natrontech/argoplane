@@ -3,6 +3,10 @@
 	"private": true,
 	"version": "0.0.1",
 	"type": "module",
+	"imports": {
+		"#lib": "./src/lib",
+		"#lib/*": "./src/lib/*"
+	},
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
@@ -14,12 +18,11 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
 	},
 	"devDependencies": {
-		"@sveltejs/adapter-auto": "^8.0.0",
-		"@sveltejs/adapter-node": "^6.0.0",
 		"@sveltejs/adapter-static": "^4.0.0",
 		"@sveltejs/kit": "^3.1.0",
 		"@sveltejs/vite-plugin-svelte": "^7.3.1",
 		"@tailwindcss/vite": "^4.3.3",
+		"@types/node": "^26.6.6",
 		"bits-ui": "^2.20.2",
 		"clsx": "^2.1.1",
 		"mdsvex": "^0.12.8",
@@ -33,7 +36,7 @@
 		"tailwind-merge": "^3.7.0",
 		"tailwind-variants": "^3.3.1",
 		"tailwindcss": "^4.3.3",
-		"typescript": "^7.0.2",
+		"typescript": "^6.0.3",
 		"vite": "^8.3.5"
 	},
 	"dependencies": {
