@@ -22,7 +22,7 @@ When viewing an Application, the Networking view shows:
 
 - A flow map: callers on the left, the app's workloads in the middle, callees on the right. Pods are grouped by workload, external peers by DNS name or IP, and Cilium's reserved identities (`kube-apiserver`, `host`, ...) get their own nodes. Calls between the app's own workloads push the callee one column to the right, so a chain like `frontend → cart → checkout` reads left to right. Green edges carried only forwarded flows; red edges had at least one drop (dashed when nothing got through). Clicking a node or edge opens the flow table filtered to that peer.
 - CiliumNetworkPolicies applied to the application's namespace
-- CiliumClusterwideNetworkPolicies affecting the namespace
+- CiliumClusterwideNetworkPolicies affecting the namespace (policies pinned to other namespaces stay hidden, so tenants don't see each other's rules)
 - Cross-namespace traffic flows (via Hubble)
 - Policy rule details (ingress/egress, endpoints, ports)
 - For each flow, the policies Cilium reports as having allowed or denied it (expand a row in the flow table)
