@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -28,11 +29,33 @@ var validLabelValue = regexp.MustCompile(`^[a-z0-9A-Z]([a-z0-9A-Z._-]*[a-z0-9A-Z
 // Application manages (its destination namespace plus any namespaced resources).
 type Authorizer struct {
 	client dynamic.Interface
+	// clusterName and clusterServer identify the cluster this backend reads
+	// from. Empty means "don't check" (single-cluster installs).
+	clusterName   string
+	clusterServer string
+}
+
+// AuthorizerOption configures an Authorizer.
+type AuthorizerOption func(*Authorizer)
+
+// WithCluster rejects Applications whose spec.destination names a different
+// cluster than this backend serves. An app matches if its destination.name
+// equals name or its destination.server equals server; empty values are
+// ignored, and with both empty the check is off.
+func WithCluster(name, server string) AuthorizerOption {
+	return func(a *Authorizer) {
+		a.clusterName = name
+		a.clusterServer = strings.TrimSuffix(server, "/")
+	}
 }
 
 // NewAuthorizer creates a new Authorizer backed by the given dynamic client.
-func NewAuthorizer(client dynamic.Interface) *Authorizer {
-	return &Authorizer{client: client}
+func NewAuthorizer(client dynamic.Interface, opts ...AuthorizerOption) *Authorizer {
+	a := &Authorizer{client: client}
+	for _, opt := range opts {
+		opt(a)
+	}
+	return a
 }
 
 // AuthorizeNamespace verifies that the requested namespace is managed by the
@@ -46,6 +69,10 @@ func (a *Authorizer) AuthorizeNamespace(w http.ResponseWriter, r *http.Request, 
 	}
 	allowed, err := a.allowedNamespaces(r.Context(), appNs, appName)
 	if err != nil {
+		if errors.Is(err, errOtherCluster) {
+			WriteError(w, http.StatusForbidden, "application deploys to a cluster this backend does not serve")
+			return false
+		}
 		slog.Warn("security.rejected", "reason", "failed to resolve application namespaces", "error", err, "app", appNs+":"+appName)
 		WriteError(w, http.StatusForbidden, "unable to authorize namespace")
 		return false
@@ -73,6 +100,9 @@ func (a *Authorizer) allowedNamespaces(ctx context.Context, appNs, appName strin
 	app, err := a.client.Resource(applicationGVR).Namespace(appNs).Get(ctx, appName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get application %s/%s: %w", appNs, appName, err)
+	}
+	if !a.servesCluster(app) {
+		return nil, errOtherCluster
 	}
 	allowed := make(map[string]struct{})
 	if dest, found, _ := unstructured.NestedString(app.Object, "spec", "destination", "namespace"); found && dest != "" {
@@ -148,4 +178,20 @@ func resourceLabelSelector(resources []string) string {
 		return ""
 	}
 	return fmt.Sprintf("trivy-operator.resource.name in (%s)", strings.Join(valid, ","))
+}
+
+// errOtherCluster means the Application deploys to a cluster this backend
+// does not read from: the same namespace name here may belong to someone else.
+var errOtherCluster = errors.New("application targets a different cluster")
+
+// servesCluster reports whether app deploys to the cluster this backend reads
+// from. Without WithCluster every app passes.
+func (a *Authorizer) servesCluster(app *unstructured.Unstructured) bool {
+	if a.clusterName == "" && a.clusterServer == "" {
+		return true
+	}
+	name, _, _ := unstructured.NestedString(app.Object, "spec", "destination", "name")
+	server, _, _ := unstructured.NestedString(app.Object, "spec", "destination", "server")
+	return (a.clusterName != "" && name == a.clusterName) ||
+		(a.clusterServer != "" && strings.TrimSuffix(server, "/") == a.clusterServer)
 }

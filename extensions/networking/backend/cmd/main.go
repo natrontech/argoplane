@@ -21,6 +21,8 @@ import (
 type Config struct {
 	Port                string        `envconfig:"PORT" default:"8082"`
 	LogLevel            string        `envconfig:"LOG_LEVEL" default:"info"`
+	ClusterName         string        `envconfig:"CLUSTER_NAME"`
+	ClusterServer       string        `envconfig:"CLUSTER_SERVER"`
 	HubbleRelayURL      string        `envconfig:"HUBBLE_RELAY_URL" default:""`
 	FlowBufferRetention time.Duration `envconfig:"FLOW_BUFFER_RETENTION" default:"15m"`
 	FlowBufferMaxPerNs  int           `envconfig:"FLOW_BUFFER_MAX_PER_NS" default:"5000"`
@@ -70,7 +72,7 @@ func main() {
 	}
 
 	// Create handlers.
-	auth := handler.NewAuthorizer(dynClient)
+	auth := handler.NewAuthorizer(dynClient, handler.WithCluster(config.ClusterName, config.ClusterServer))
 	policiesHandler := handler.NewPoliciesHandler(dynClient, auth)
 	endpointsHandler := handler.NewEndpointsHandler(dynClient, auth)
 	flowsHandler := handler.NewFlowsHandler(flowBuffer, auth)

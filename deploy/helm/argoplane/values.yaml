@@ -133,6 +133,11 @@ extensions:
     env:
       HUBBLE_RELAY_URL: "hubble-relay.kube-system.svc:80"
       LOG_LEVEL: "info"
+      # Multi-cluster ArgoCD: name the cluster this backend reads from, so
+      # apps deploying elsewhere get a 403 instead of this cluster's data.
+      # Matches the app's spec.destination.name or .server; both empty = off.
+      # CLUSTER_NAME: "in-cluster"
+      # CLUSTER_SERVER: "https://kubernetes.default.svc"
     extraEnv: []
     resources:
       requests:
@@ -227,6 +232,11 @@ extensions:
     port: 8084
     env:
       LOG_LEVEL: "info"
+      # Multi-cluster ArgoCD: name the cluster this backend reads from, so
+      # apps deploying elsewhere get a 403 instead of this cluster's data.
+      # Matches the app's spec.destination.name or .server; both empty = off.
+      # CLUSTER_NAME: "in-cluster"
+      # CLUSTER_SERVER: "https://kubernetes.default.svc"
     extraEnv: []
     resources:
       requests:
@@ -274,6 +284,11 @@ extensions:
     port: 8085
     env:
       LOG_LEVEL: "info"
+      # Multi-cluster ArgoCD: name the cluster this backend reads from, so
+      # apps deploying elsewhere get a 403 instead of this cluster's data.
+      # Matches the app's spec.destination.name or .server; both empty = off.
+      # CLUSTER_NAME: "in-cluster"
+      # CLUSTER_SERVER: "https://kubernetes.default.svc"
     extraEnv: []
     resources:
       requests:

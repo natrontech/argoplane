@@ -62,6 +62,8 @@ The networking backend queries Cilium/Hubble:
 | `HUBBLE_RELAY_URL` | No | _(empty)_ | Hubble relay URL (e.g. `hubble-relay.kube-system.svc:80`) |
 | `PORT` | No | `8082` | HTTP server port |
 | `LOG_LEVEL` | No | `info` | Log level |
+| `CLUSTER_NAME` | No | | ArgoCD name of the cluster this backend reads from. When set, apps whose `spec.destination.name` differs get a 403. See "Multi-cluster ArgoCD" on the ArgoCD Configuration page. |
+| `CLUSTER_SERVER` | No | | API server URL of that cluster, matched against `spec.destination.server` |
 
 ## RBAC
 

@@ -18,8 +18,10 @@ import (
 )
 
 type Config struct {
-	Port     string `envconfig:"PORT" default:"8084"`
-	LogLevel string `envconfig:"LOG_LEVEL" default:"info"`
+	Port          string `envconfig:"PORT" default:"8084"`
+	LogLevel      string `envconfig:"LOG_LEVEL" default:"info"`
+	ClusterName   string `envconfig:"CLUSTER_NAME"`
+	ClusterServer string `envconfig:"CLUSTER_SERVER"`
 }
 
 func main() {
@@ -47,7 +49,7 @@ func main() {
 	}
 
 	// Create handlers.
-	auth := handler.NewAuthorizer(dynClient)
+	auth := handler.NewAuthorizer(dynClient, handler.WithCluster(config.ClusterName, config.ClusterServer))
 	reportsHandler := handler.NewReportsHandler(dynClient, auth)
 	overviewHandler := handler.NewOverviewHandler(dynClient, auth)
 	auditHandler := handler.NewAuditHandler(dynClient, auth)

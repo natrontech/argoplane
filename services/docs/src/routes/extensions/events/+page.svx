@@ -56,6 +56,8 @@ The events backend queries the Kubernetes Events API:
 |---------------------|----------|---------|-------------|
 | `PORT` | No | `8085` | HTTP server port |
 | `LOG_LEVEL` | No | `info` | Log level |
+| `CLUSTER_NAME` | No | | ArgoCD name of the cluster this backend reads from. When set, apps whose `spec.destination.name` differs get a 403. See "Multi-cluster ArgoCD" on the ArgoCD Configuration page. |
+| `CLUSTER_SERVER` | No | | API server URL of that cluster, matched against `spec.destination.server` |
 
 ### RBAC
 
