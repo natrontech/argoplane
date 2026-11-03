@@ -57,6 +57,16 @@ func ForNamespace(namespace, container string) string {
 	return sel
 }
 
+// WithCluster adds a cluster matcher to a stream selector. It is a no-op when
+// label or cluster is empty. The label must already be validated as a label
+// name.
+func WithCluster(selector, label, cluster string) string {
+	if label == "" || cluster == "" || !strings.HasSuffix(selector, "}") {
+		return selector
+	}
+	return fmt.Sprintf(`%s, %s=%q}`, strings.TrimSuffix(selector, "}"), label, cluster)
+}
+
 // WithFilter appends a line filter to a LogQL query.
 func WithFilter(base, text string) string {
 	if text == "" {

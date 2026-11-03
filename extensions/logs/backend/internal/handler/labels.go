@@ -30,7 +30,8 @@ func (h *Labels) HandleLabels(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "namespace is required")
 		return
 	}
-	if !h.auth.AuthorizeNamespace(w, r, namespace) {
+	cluster, ok := h.auth.AuthorizeNamespace(w, r, namespace)
+	if !ok {
 		return
 	}
 
@@ -61,6 +62,7 @@ func (h *Labels) HandleLabels(w http.ResponseWriter, r *http.Request) {
 	} else {
 		query = logql.ForNamespace(namespace, "")
 	}
+	query = logql.WithCluster(query, h.auth.clusterLabel, cluster)
 	labels, err := h.loki.LabelsWithQuery(ctx, query, start, end)
 	if err != nil {
 		slog.Warn("labels query failed", "error", err, "namespace", namespace)
@@ -85,7 +87,8 @@ func (h *Labels) HandleLabelValues(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "namespace is required")
 		return
 	}
-	if !h.auth.AuthorizeNamespace(w, r, namespace) {
+	cluster, ok := h.auth.AuthorizeNamespace(w, r, namespace)
+	if !ok {
 		return
 	}
 
@@ -116,6 +119,7 @@ func (h *Labels) HandleLabelValues(w http.ResponseWriter, r *http.Request) {
 	} else {
 		query = logql.ForNamespace(namespace, "")
 	}
+	query = logql.WithCluster(query, h.auth.clusterLabel, cluster)
 
 	values, err := h.loki.LabelValues(ctx, name, query, start, end)
 	if err != nil {

@@ -44,7 +44,8 @@ func (h *Logs) Handle(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "namespace is required")
 		return
 	}
-	if !h.auth.AuthorizeNamespace(w, r, namespace) {
+	cluster, ok := h.auth.AuthorizeNamespace(w, r, namespace)
+	if !ok {
 		return
 	}
 
@@ -90,6 +91,7 @@ func (h *Logs) Handle(w http.ResponseWriter, r *http.Request) {
 
 	// Build LogQL query
 	selector := logql.BuildSelector(namespace, pod, resource, kind, container, scopedPods)
+	selector = logql.WithCluster(selector, h.auth.clusterLabel, cluster)
 	query := logql.WithFilter(selector, filter)
 	if severity != "" {
 		severities := strings.Split(severity, ",")

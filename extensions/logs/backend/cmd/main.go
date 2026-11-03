@@ -22,6 +22,8 @@ type Config struct {
 	LokiURL      string `envconfig:"LOKI_URL" default:"http://loki.monitoring.svc:3100"`
 	LokiTenantID string `envconfig:"LOKI_TENANT_ID" default:""`
 	LogLevel     string `envconfig:"LOG_LEVEL" default:"info"`
+	ClusterLabel string `envconfig:"CLUSTER_LABEL" default:""`
+	ClusterMap   string `envconfig:"CLUSTER_MAP" default:""`
 }
 
 func main() {
@@ -33,7 +35,16 @@ func main() {
 
 	setupLogging(cfg.LogLevel)
 
-	slog.Info("starting logs backend", "port", cfg.Port, "loki", cfg.LokiURL, "tenantID", cfg.LokiTenantID)
+	clusterMap, err := handler.ParseClusterConfig(cfg.ClusterLabel, cfg.ClusterMap)
+	if err != nil {
+		slog.Error("invalid cluster filter config", "error", err)
+		os.Exit(1)
+	}
+	if cfg.ClusterLabel == "" && cfg.ClusterMap != "" {
+		slog.Warn("CLUSTER_MAP is set but CLUSTER_LABEL is empty, cluster filter is off")
+	}
+
+	slog.Info("starting logs backend", "port", cfg.Port, "loki", cfg.LokiURL, "tenantID", cfg.LokiTenantID, "clusterLabel", cfg.ClusterLabel)
 	lokiClient := loki.NewClient(cfg.LokiURL, cfg.LokiTenantID)
 
 	kubeConfig, err := rest.InClusterConfig()
@@ -48,7 +59,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	auth := handler.NewAuthorizer(dynClient)
+	auth := handler.NewAuthorizer(dynClient, cfg.ClusterLabel, clusterMap)
 
 	logsHandler := handler.NewLogs(lokiClient, auth)
 	labelsHandler := handler.NewLabels(lokiClient, auth)
