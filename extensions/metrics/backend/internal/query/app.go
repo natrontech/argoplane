@@ -17,7 +17,7 @@ func podFilter(pods []string) string {
 	for i, p := range pods {
 		escaped[i] = regexp.QuoteMeta(p)
 	}
-	return fmt.Sprintf(`,pod=~"%s"`, strings.Join(escaped, "|"))
+	return fmt.Sprintf(`,pod=~"%s"`, EscapePromQLLabel(strings.Join(escaped, "|")))
 }
 
 // AppMetrics returns PromQL queries aggregated across containers in a namespace.

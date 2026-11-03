@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -70,12 +71,23 @@ func (h *FlowsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	verdict := r.URL.Query().Get("verdict")
 	direction := r.URL.Query().Get("direction")
 
-	flows, err := h.buffer.Flows(r.Context(), hubble.FlowsRequest{
+	var pods map[string]bool
+	if podsParam := r.URL.Query().Get("pods"); podsParam != "" {
+		pods = make(map[string]bool)
+		for _, p := range strings.Split(podsParam, ",") {
+			pods[p] = true
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+	defer cancel()
+	flows, err := h.buffer.Flows(ctx, hubble.FlowsRequest{
 		Namespace: namespace,
 		Since:     since,
 		Limit:     limit,
 		Verdict:   verdict,
 		Direction: direction,
+		Pods:      pods,
 	})
 	if err != nil {
 		slog.Error("failed to query hubble flows", "error", err, "namespace", namespace)
@@ -83,22 +95,7 @@ func (h *FlowsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Filter by pod names if provided (app-scoped mode).
-	if podsParam := r.URL.Query().Get("pods"); podsParam != "" {
-		podSet := make(map[string]bool)
-		for _, p := range strings.Split(podsParam, ",") {
-			podSet[p] = true
-		}
-		filtered := make([]hubble.FlowSummary, 0, len(flows))
-		for _, f := range flows {
-			if podSet[f.SourcePod] || podSet[f.DestPod] {
-				filtered = append(filtered, f)
-			}
-		}
-		flows = filtered
-	}
-
-	// Compute verdict summary counts.
+	// Count verdicts over the whole window, then truncate to the limit.
 	var forwarded, dropped, errCount int
 	for _, f := range flows {
 		switch f.Verdict {
@@ -110,12 +107,16 @@ func (h *FlowsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 			errCount++
 		}
 	}
+	total := len(flows)
+	if int64(len(flows)) > limit {
+		flows = flows[:limit]
+	}
 
 	WriteJSON(w, map[string]any{
 		"flows":  flows,
 		"hubble": true,
 		"summary": map[string]int{
-			"total":     len(flows),
+			"total":     total,
 			"forwarded": forwarded,
 			"dropped":   dropped,
 			"error":     errCount,

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -17,8 +18,10 @@ import (
 )
 
 type Config struct {
-	Port     string `envconfig:"PORT" default:"8084"`
-	LogLevel string `envconfig:"LOG_LEVEL" default:"info"`
+	Port          string `envconfig:"PORT" default:"8084"`
+	LogLevel      string `envconfig:"LOG_LEVEL" default:"info"`
+	ClusterName   string `envconfig:"CLUSTER_NAME"`
+	ClusterServer string `envconfig:"CLUSTER_SERVER"`
 }
 
 func main() {
@@ -35,6 +38,9 @@ func main() {
 		slog.Error("failed to create in-cluster config", "error", err)
 		os.Exit(1)
 	}
+	// Bound every API call: a stuck List would otherwise hold the handler
+	// past the server's WriteTimeout until the client disconnects.
+	kubeConfig.Timeout = 25 * time.Second
 
 	dynClient, err := dynamic.NewForConfig(kubeConfig)
 	if err != nil {
@@ -43,7 +49,7 @@ func main() {
 	}
 
 	// Create handlers.
-	auth := handler.NewAuthorizer(dynClient)
+	auth := handler.NewAuthorizer(dynClient, handler.WithCluster(config.ClusterName, config.ClusterServer))
 	reportsHandler := handler.NewReportsHandler(dynClient, auth)
 	overviewHandler := handler.NewOverviewHandler(dynClient, auth)
 	auditHandler := handler.NewAuditHandler(dynClient, auth)
@@ -69,7 +75,7 @@ func main() {
 		WriteTimeout: 30 * time.Second,
 	}
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
 	go func() {

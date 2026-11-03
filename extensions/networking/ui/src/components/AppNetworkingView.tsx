@@ -13,9 +13,11 @@ import {
   fontWeight,
   spacing,
   panel,
+  useVisibleInterval,
 } from '@argoplane/shared';
 import { useStickyScope } from '@argoplane/shared';
 import { fetchPoliciesWithOwnership, fetchEndpoints, fetchFlows } from '../api';
+import { FlowMap } from './FlowMap';
 import {
   PolicySummary,
   PolicyRule,
@@ -86,22 +88,11 @@ function findMatchingPolicies(flow: FlowSummary, policies: PolicySummary[], endp
     // Policy selects this pod. Now check if it has rules for this direction.
     const hasRulesForDirection = flow.direction === 'INGRESS' ? p.hasIngress : p.hasEgress;
 
-    if (hasRulesForDirection) {
-      // Policy has explicit rules for this direction. It could be allowing
-      // other traffic while implicitly denying this flow.
-      matches.push({ policy: p, defaultDeny: false });
-    } else {
-      // Policy selects the pod but has NO rules for this direction.
-      // In Cilium, ANY policy selecting a pod activates default deny
-      // for the directions it declares. But if another policy on this
-      // pod declares rules for this direction, this pod already has
-      // default deny active. Mark as default deny contributor.
-      //
-      // Also: a policy with ingress rules but no egress rules does NOT
-      // create default deny for egress. So only flag as default deny
-      // if at least one other policy on this pod has rules for this direction.
-      matches.push({ policy: p, defaultDeny: true });
-    }
+    // A policy without rules for this direction doesn't enforce it, so it
+    // can't be why this flow was dropped. One with rules puts the pod into
+    // default deny for that direction, and none of its rules allowed the flow.
+    if (!hasRulesForDirection) continue;
+    matches.push({ policy: p, defaultDeny: false });
   }
 
   return matches;
@@ -276,7 +267,7 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
   const [sortField, setSortField] = React.useState<SortField>('time');
   const [sortDir, setSortDir] = React.useState<SortDir>('desc');
   const [page, setPage] = React.useState(0);
-  const [activeTab, setActiveTab] = React.useState<'flows' | 'policies' | 'allowed'>('flows');
+  const [activeTab, setActiveTab] = React.useState<'map' | 'flows' | 'policies' | 'allowed'>('map');
   const [expandedFlowKey, setExpandedFlowKey] = React.useState<string | null>(null);
   const [expandedPolicy, setExpandedPolicy] = React.useState<string | null>(null);
   const [aggregated, setAggregated] = React.useState(false);
@@ -359,9 +350,9 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
     const controller = new AbortController();
     setLoading(true);
     fetchAll(controller.signal);
-    const i = setInterval(() => fetchAll(controller.signal), REFRESH_INTERVAL);
-    return () => { controller.abort(); clearInterval(i); };
+    return () => controller.abort();
   }, [fetchAll]);
+  useVisibleInterval(fetchAll, REFRESH_INTERVAL);
   React.useEffect(() => { setPage(0); setExpandedFlowKey(null); }, [search, sortField, sortDir, verdictFilter, directionFilter, timeRange, aggregated]);
 
   const flows = flowsResponse?.flows || [];
@@ -376,7 +367,8 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
       (f.sourceIP || '').toLowerCase().includes(q) || (f.destIP || '').toLowerCase().includes(q) ||
       (f.destDNS || '').toLowerCase().includes(q) || f.protocol.toLowerCase().includes(q) ||
       (f.dropReason || '').toLowerCase().includes(q) || f.summary.toLowerCase().includes(q) ||
-      f.sourceNamespace.toLowerCase().includes(q) || f.destNamespace.toLowerCase().includes(q)
+      f.sourceNamespace.toLowerCase().includes(q) || f.destNamespace.toLowerCase().includes(q) ||
+      (f.sourceIdentity || '').includes(q) || (f.destIdentity || '').includes(q)
     );
   }, [flows, search]);
 
@@ -397,7 +389,8 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
   const allowedTraffic = React.useMemo(() => computeAllowedTraffic(policies, endpoints), [policies, endpoints]);
 
   const totalPages = Math.max(1, Math.ceil((aggregated ? aggregatedFlows.length : sortedFlows.length) / PAGE_SIZE));
-  const pageFlows = aggregated ? aggregatedFlows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE) : sortedFlows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const curPage = Math.min(page, totalPages - 1); // a refresh may shrink the list
+  const pageFlows = (aggregated ? aggregatedFlows : sortedFlows).slice(curPage * PAGE_SIZE, (curPage + 1) * PAGE_SIZE);
 
   const handleSort = (field: SortField) => {
     if (field === sortField) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
@@ -439,10 +432,20 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
 
       {/* Tabs */}
       <div style={tabBar}>
+        <button style={tab(activeTab === 'map')} onClick={() => setActiveTab('map')}>Map</button>
         <button style={tab(activeTab === 'flows')} onClick={() => { setActiveTab('flows'); setSearch(''); }}>Flows {hubbleAvailable && `(${flows.length})`}</button>
         <button style={tab(activeTab === 'policies')} onClick={() => { setActiveTab('policies'); setSearch(''); }}>Policies ({policies.length})</button>
         <button style={tab(activeTab === 'allowed')} onClick={() => setActiveTab('allowed')}>Allowed Traffic</button>
       </div>
+
+      {/* === Map tab === */}
+      {activeTab === 'map' && (
+        <div style={tabContent}>
+          {hubbleAvailable
+            ? <FlowMap flows={flows} namespace={namespace} onFilter={(v) => { setAggregated(true); applyFilter(v); }} />
+            : <div style={notice}>Hubble Relay not configured. Enable it to see traffic flows.</div>}
+        </div>
+      )}
 
       {/* === Flows tab === */}
       {activeTab === 'flows' && (
@@ -492,9 +495,9 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
               </div>
               {totalPages > 1 && (
                 <div style={paginationRow}>
-                  <button style={pageBtn} disabled={page === 0} onClick={() => setPage(page - 1)}>Prev</button>
-                  <span style={pageLabelS}>{page + 1} / {totalPages}</span>
-                  <button style={pageBtn} disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>Next</button>
+                  <button style={pageBtn} disabled={curPage === 0} onClick={() => setPage(curPage - 1)}>Prev</button>
+                  <span style={pageLabelS}>{curPage + 1} / {totalPages}</span>
+                  <button style={pageBtn} disabled={curPage >= totalPages - 1} onClick={() => setPage(curPage + 1)}>Next</button>
                 </div>
               )}
               </>
@@ -528,7 +531,7 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
                             endpoints={endpoints}
                             isPodInTree={isPodInTree}
                             isPolicyInTree={isPolicyInTree}
-                            onPolicyClick={(name) => { setActiveTab('policies'); setSearch(name); }}
+                            onPolicyClick={(name) => { const p = policies.find((x) => x.name === name); setActiveTab('policies'); setExpandedPolicy(p ? `${p.scope}-${p.name}` : null); }}
                             onFilter={applyFilter}
                             expanded={expandedFlowKey === fk}
                             onToggleExpand={() => setExpandedFlowKey(expandedFlowKey === fk ? null : fk)}
@@ -540,9 +543,9 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
                 </div>
                 {totalPages > 1 && (
                   <div style={paginationRow}>
-                    <button style={pageBtn} disabled={page === 0} onClick={() => setPage(page - 1)}>Prev</button>
-                    <span style={pageLabelS}>{page + 1} / {totalPages}</span>
-                    <button style={pageBtn} disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>Next</button>
+                    <button style={pageBtn} disabled={curPage === 0} onClick={() => setPage(curPage - 1)}>Prev</button>
+                    <span style={pageLabelS}>{curPage + 1} / {totalPages}</span>
+                    <button style={pageBtn} disabled={curPage >= totalPages - 1} onClick={() => setPage(curPage + 1)}>Next</button>
                   </div>
                 )}
               </>
@@ -679,6 +682,8 @@ const FlowRow: React.FC<{
             {f.destDNS && <KV label="DNS" value={f.destDNS} />}
             <KV label="Protocol" value={`${f.protocol}:${f.destPort}`} />
             <KV label="Reply" value={f.isReply ? 'yes' : 'no'} />
+            {f.allowedBy && f.allowedBy.length > 0 && <KV label="Allowed by" value={f.allowedBy.join(', ')} />}
+            {f.deniedBy && f.deniedBy.length > 0 && <KV label="Denied by" value={f.deniedBy.join(', ')} />}
             <KV label="Summary" value={f.summary} />
           </div>
           {isDrop && (

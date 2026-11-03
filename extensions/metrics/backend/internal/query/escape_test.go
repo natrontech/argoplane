@@ -47,3 +47,14 @@ func hasUnescapedQuote(s string) bool {
 	}
 	return false
 }
+
+func TestRegexMatchersAreValidPromQLStrings(t *testing.T) {
+	// A dot in a name becomes `\.` after QuoteMeta; PromQL needs `\\.` inside
+	// a double-quoted string or the query fails to parse.
+	if got := podSelectorForKind("ns", "web.v2", "Deployment"); !strings.Contains(got, `pod=~"web\\.v2-.*"`) {
+		t.Errorf("podSelectorForKind = %s", got)
+	}
+	if got := podFilter([]string{"a.b"}); got != `,pod=~"a\\.b"` {
+		t.Errorf("podFilter = %s", got)
+	}
+}

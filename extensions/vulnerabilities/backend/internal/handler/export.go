@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
@@ -15,11 +16,24 @@ import (
 // writeCSVRow writes a single CSV row, logging and returning false on failure
 // so the caller can stop instead of silently producing a truncated file.
 func writeCSVRow(w *csv.Writer, row []string) bool {
+	for i, cell := range row {
+		row[i] = csvSafe(cell)
+	}
 	if err := w.Write(row); err != nil {
 		slog.Error("failed to write csv row", "error", err)
 		return false
 	}
 	return true
+}
+
+// csvSafe neutralises spreadsheet formulas. Package names, file paths and
+// secret matches come from image contents, so whoever builds the image
+// controls them; a cell like =HYPERLINK(...) would run when opened in Excel.
+func csvSafe(cell string) string {
+	if cell != "" && strings.ContainsRune("=+-@\t\r", rune(cell[0])) {
+		return "'" + cell
+	}
+	return cell
 }
 
 // flushCSV flushes the writer, logging and returning false on failure.

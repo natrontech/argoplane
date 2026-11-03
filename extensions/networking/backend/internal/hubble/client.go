@@ -37,6 +37,10 @@ func (c *Client) Close() error {
 	return c.conn.Close()
 }
 
+// timeFormat is RFC 3339 with a fixed nine-digit fraction. time.RFC3339Nano
+// trims trailing zeros, which breaks lexical sorting.
+const timeFormat = "2006-01-02T15:04:05.000000000Z07:00"
+
 // FlowSummary is a simplified flow record suitable for JSON serialization.
 type FlowSummary struct {
 	Time            string `json:"time"`
@@ -45,15 +49,22 @@ type FlowSummary struct {
 	SourceNamespace string `json:"sourceNamespace"`
 	SourcePod       string `json:"sourcePod"`
 	SourceIP        string `json:"sourceIP,omitempty"`
+	SourceWorkload  string `json:"sourceWorkload,omitempty"`
+	SourceIdentity  string `json:"sourceIdentity,omitempty"`
 	DestNamespace   string `json:"destNamespace"`
 	DestPod         string `json:"destPod"`
 	DestIP          string `json:"destIP,omitempty"`
 	DestDNS         string `json:"destDNS,omitempty"`
+	DestWorkload    string `json:"destWorkload,omitempty"`
+	DestIdentity    string `json:"destIdentity,omitempty"`
 	Protocol        string `json:"protocol"`
 	DestPort        uint32 `json:"destPort"`
 	DropReason      string `json:"dropReason,omitempty"`
 	Summary         string `json:"summary"`
 	IsReply         bool   `json:"isReply"`
+	// Policies Cilium reports as having allowed or denied this flow.
+	AllowedBy []string `json:"allowedBy,omitempty"`
+	DeniedBy  []string `json:"deniedBy,omitempty"`
 }
 
 // FlowsRequest contains parameters for querying flows.
@@ -63,6 +74,9 @@ type FlowsRequest struct {
 	Limit     int64
 	Verdict   string // "all", "forwarded", "dropped", "error"
 	Direction string // "all", "ingress", "egress"
+	// Pods, when set, keeps only flows whose source or destination pod is in
+	// the set. Applied before Limit so quiet pods aren't crowded out.
+	Pods map[string]bool
 }
 
 // Flows queries Hubble Relay for recent flows matching the request filters.
@@ -154,9 +168,9 @@ func (c *Client) Flows(ctx context.Context, req FlowsRequest) ([]FlowSummary, er
 		}
 
 		if t := flow.GetTime(); t != nil {
-			// Use nanosecond resolution so the dedup key in the buffer does not
-			// collapse distinct flows that occur within the same second.
-			fs.Time = t.AsTime().Format(time.RFC3339Nano)
+			// Fixed-width UTC nanoseconds: distinct flows within one second keep
+			// distinct dedup keys, and string order equals time order.
+			fs.Time = t.AsTime().UTC().Format(timeFormat)
 		}
 
 		if flow.GetIsReply() != nil {
@@ -166,6 +180,8 @@ func (c *Client) Flows(ctx context.Context, req FlowsRequest) ([]FlowSummary, er
 		if src := flow.GetSource(); src != nil {
 			fs.SourceNamespace = src.GetNamespace()
 			fs.SourcePod = src.GetPodName()
+			fs.SourceWorkload = workloadName(src)
+			fs.SourceIdentity = reservedIdentity(src)
 		}
 		if srcIP := flow.GetIP(); srcIP != nil {
 			fs.SourceIP = srcIP.GetSource()
@@ -175,6 +191,8 @@ func (c *Client) Flows(ctx context.Context, req FlowsRequest) ([]FlowSummary, er
 		if dst := flow.GetDestination(); dst != nil {
 			fs.DestNamespace = dst.GetNamespace()
 			fs.DestPod = dst.GetPodName()
+			fs.DestWorkload = workloadName(dst)
+			fs.DestIdentity = reservedIdentity(dst)
 		}
 
 		if dns := flow.GetDestinationNames(); len(dns) > 0 {
@@ -203,8 +221,47 @@ func (c *Client) Flows(ctx context.Context, req FlowsRequest) ([]FlowSummary, er
 			fs.DropReason = flow.GetDropReasonDesc().String()
 		}
 
+		fs.AllowedBy = policyNames(flow.GetIngressAllowedBy(), flow.GetEgressAllowedBy())
+		fs.DeniedBy = policyNames(flow.GetIngressDeniedBy(), flow.GetEgressDeniedBy())
+
 		flows = append(flows, fs)
 	}
 
 	return flows, nil
+}
+
+// workloadName returns the name of the endpoint's owning workload (e.g. the
+// Deployment), or "" when Hubble did not resolve one.
+func workloadName(ep *flowpb.Endpoint) string {
+	if w := ep.GetWorkloads(); len(w) > 0 {
+		return w[0].GetName()
+	}
+	return ""
+}
+
+// reservedIdentity returns the Cilium reserved identity of an endpoint
+// ("world", "host", "kube-apiserver", ...), or "" for regular endpoints.
+func reservedIdentity(ep *flowpb.Endpoint) string {
+	for _, l := range ep.GetLabels() {
+		if name, ok := strings.CutPrefix(l, "reserved:"); ok {
+			return name
+		}
+	}
+	return ""
+}
+
+// policyNames flattens Hubble policy references into "namespace/name"
+// (or "name" for clusterwide policies).
+func policyNames(lists ...[]*flowpb.Policy) []string {
+	var names []string
+	for _, list := range lists {
+		for _, p := range list {
+			name := p.GetName()
+			if ns := p.GetNamespace(); ns != "" {
+				name = ns + "/" + name
+			}
+			names = append(names, name)
+		}
+	}
+	return names
 }

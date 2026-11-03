@@ -28,7 +28,7 @@ func NewPoliciesHandler(client dynamic.Interface, auth *Authorizer) *PoliciesHan
 
 // policiesWithOwnershipRequest is the JSON body for the ownership-aware endpoint.
 type policiesWithOwnershipRequest struct {
-	Namespace string           `json:"namespace"`
+	Namespace string              `json:"namespace"`
 	Resources []types.ResourceRef `json:"resources"`
 }
 

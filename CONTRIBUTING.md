@@ -4,9 +4,9 @@ Thanks for your interest in contributing to ArgoPlane! Whether it's a bug report
 
 ## Quick links
 
-- [Development setup](https://argoplane.io/developing)
-- [Architecture overview](https://argoplane.io/architecture)
-- [Extension development guide](https://argoplane.io/developing/ui-extensions)
+- [Development setup](https://natrontech.github.io/argoplane/developing)
+- [Architecture overview](https://natrontech.github.io/argoplane/architecture)
+- [Extension development guide](https://natrontech.github.io/argoplane/developing/ui-extensions)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
 - [Security policy](SECURITY.md)
 

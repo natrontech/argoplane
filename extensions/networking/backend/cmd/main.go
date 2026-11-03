@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -18,11 +19,13 @@ import (
 )
 
 type Config struct {
-	Port                   string        `envconfig:"PORT" default:"8082"`
-	LogLevel               string        `envconfig:"LOG_LEVEL" default:"info"`
-	HubbleRelayURL         string        `envconfig:"HUBBLE_RELAY_URL" default:""`
-	FlowBufferRetention    time.Duration `envconfig:"FLOW_BUFFER_RETENTION" default:"15m"`
-	FlowBufferMaxPerNs     int           `envconfig:"FLOW_BUFFER_MAX_PER_NS" default:"5000"`
+	Port                string        `envconfig:"PORT" default:"8082"`
+	LogLevel            string        `envconfig:"LOG_LEVEL" default:"info"`
+	ClusterName         string        `envconfig:"CLUSTER_NAME"`
+	ClusterServer       string        `envconfig:"CLUSTER_SERVER"`
+	HubbleRelayURL      string        `envconfig:"HUBBLE_RELAY_URL" default:""`
+	FlowBufferRetention time.Duration `envconfig:"FLOW_BUFFER_RETENTION" default:"15m"`
+	FlowBufferMaxPerNs  int           `envconfig:"FLOW_BUFFER_MAX_PER_NS" default:"5000"`
 }
 
 func main() {
@@ -69,7 +72,7 @@ func main() {
 	}
 
 	// Create handlers.
-	auth := handler.NewAuthorizer(dynClient)
+	auth := handler.NewAuthorizer(dynClient, handler.WithCluster(config.ClusterName, config.ClusterServer))
 	policiesHandler := handler.NewPoliciesHandler(dynClient, auth)
 	endpointsHandler := handler.NewEndpointsHandler(dynClient, auth)
 	flowsHandler := handler.NewFlowsHandler(flowBuffer, auth)
@@ -89,7 +92,7 @@ func main() {
 		WriteTimeout: 30 * time.Second,
 	}
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
 	go func() {
