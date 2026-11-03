@@ -25,7 +25,7 @@ When viewing a Deployment, StatefulSet, or Pod, the Metrics tab shows:
 - Per-pod and per-container breakdowns via configurable PromQL
 - Pod details table with per-pod instant metrics
 
-Charts are rendered with recharts: responsive width, synchronized hover across all charts, dark tooltip overlay, and clickable legend to toggle series.
+Charts are plain SVG with no chart library: responsive width, synchronized hover across all charts, dark tooltip overlay, and clickable legend to toggle series. Gaps in the data break the line instead of joining across them.
 
 ### App view
 
