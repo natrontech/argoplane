@@ -42,6 +42,14 @@ argocd:
   branding:
     enabled: false
 
+# -- Restrict ingress to the extension backends to argocd-server.
+# The backends trust ArgoCD's identity headers; without this policy any pod in
+# the cluster can call them directly with forged headers.
+networkPolicy:
+  enabled: true
+  # -- Pod labels of argocd-server
+  argocdServerSelector:
+    app.kubernetes.io/name: argocd-server
 
 # -- Extension backends
 # Each extension is deployed as a Deployment + Service.

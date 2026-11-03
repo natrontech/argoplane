@@ -77,7 +77,7 @@ func WithSeverity(base string, severities []string) string {
 		escaped[i] = regexp.QuoteMeta(s)
 	}
 	pattern := strings.Join(escaped, "|")
-	return fmt.Sprintf(`%s |~ "(?i)(%s)"`, base, pattern)
+	return fmt.Sprintf(`%s |~ %q`, base, "(?i)("+pattern+")")
 }
 
 // VolumeQuery wraps a stream selector in count_over_time for volume charts.

@@ -254,7 +254,7 @@ export const AppVulnerabilitiesView: React.FC<{ application: any; tree?: any }> 
                       {vulns.map((v, i) => (
                         <tr key={`${v.id}-${i}`}>
                           <td style={bodyCell}>
-                            {v.primaryLink ? <a href={v.primaryLink} target="_blank" rel="noopener noreferrer" style={{ color: colors.blueText, textDecoration: 'none' }}>{v.id}</a> : v.id}
+                            {/^https?:\/\//.test(v.primaryLink || '') ? <a href={v.primaryLink} target="_blank" rel="noopener noreferrer" style={{ color: colors.blueText, textDecoration: 'none' }}>{v.id}</a> : v.id}
                           </td>
                           <td style={bodyCell}><SeverityBadge severity={v.severity} /></td>
                           <td style={bodyCell}>{v.score > 0 ? v.score.toFixed(1) : '-'}</td>
