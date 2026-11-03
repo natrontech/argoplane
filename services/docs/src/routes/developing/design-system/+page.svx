@@ -80,7 +80,7 @@ These are non-negotiable:
 
 ## Dark mode
 
-Add `data-theme="dark"` or class `dark` to a parent element. Semantic tokens switch automatically:
+Add `data-theme="dark"` or class `theme-dark` to a parent element. Semantic tokens switch automatically:
 
 | Light | Dark |
 |-------|------|
@@ -90,6 +90,27 @@ Add `data-theme="dark"` or class `dark` to a parent element. Semantic tokens swi
 | `gray-500` secondary | `gray-400` |
 | `gray-200` borders | `gray-700` |
 | `orange-500` accent | `orange-400` |
+
+### In ArgoCD extensions
+
+ArgoCD sets `theme-dark` on a parent element when a user picks the dark theme. Every value in `colors` from `@argoplane/shared` is a CSS custom property (`colors.gray800` is `var(--ap-ext-gray800)`), so inline styles and SVG `fill`/`stroke` follow the theme without a re-render. The shared package injects the values once, in a `<style id="argoplane-color-tokens">` element.
+
+Under `theme-dark` the gray scale inverts. Each key keeps its role, so component code never branches on the theme:
+
+| Key | Role | Light | Dark |
+|-----|------|-------|------|
+| `white` | Field background | `#FFFFFF` | `#1C1917` |
+| `gray50` | Card surface | `#FAFAF9` | `#292524` |
+| `gray200` | Border | `#E7E5E4` | `#44403C` |
+| `gray500` | Secondary text | `#78716C` | `#A8A29E` |
+| `gray800` | Primary text | `#292524` | `#F5F5F4` |
+| `orange500` | Accent | `#E8935A` | `#F0A868` |
+| `*Light` | Status background | pastel tint | dark tint |
+| `*Text` | Status text | 700 shade | 400 shade |
+
+Status squares (`*Solid`) and pastel borders (`green`, `red`, `yellow`, `blue`) keep their light values. The `--ap-ext-` prefix keeps these variables apart from the `--ap-*` tokens that `argoplane-styles.css` uses to restyle ArgoCD itself.
+
+Because the values are `var()` strings, don't do arithmetic on them: `` `${colors.orange500}18` `` no longer adds an alpha channel. Pick a lighter token (`orange50`) instead. Canvas APIs (`fillStyle`) don't resolve `var()` either.
 
 ## Component library
 

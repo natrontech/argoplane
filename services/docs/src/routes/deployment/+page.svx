@@ -4,9 +4,11 @@ description: Deploying ArgoPlane to a Kubernetes cluster
 ---
 
 <script>
-  import { base } from '$app/paths';
-  import Tabs from '$lib/components/docs/Tabs.svelte';
-  import Callout from '$lib/components/docs/Callout.svelte';
+  import { resolve } from '$app/paths';
+  // ponytail: same value SvelteKit 2's removed `base` export had
+  const base = resolve('/').slice(0, -1);
+  import Tabs from '#lib/components/docs/Tabs.svelte';
+  import Callout from '#lib/components/docs/Callout.svelte';
 </script>
 
 # Deployment
@@ -192,7 +194,17 @@ For each enabled extension:
 | ClusterRole | `argoplane-<name>` | Kubernetes API permissions, including `get` on ArgoCD Applications |
 | ClusterRoleBinding | `argoplane-<name>` | Binds role to ServiceAccount |
 
-Plus two ConfigMaps with the proxy and RBAC config you need to merge into ArgoCD.
+Plus two ConfigMaps with the proxy and RBAC config you need to merge into ArgoCD, and a NetworkPolicy `argoplane-backends` that admits traffic to the backends only from argocd-server:
+
+```yaml
+networkPolicy:
+  enabled: true
+  # Pod labels of argocd-server. Change this if your install labels it differently.
+  argocdServerSelector:
+    app.kubernetes.io/name: argocd-server
+```
+
+The backends trust ArgoCD's identity headers, so don't disable the policy unless something else keeps other pods away from them.
 
 <Callout type="warning">
   The ServiceAccount and ClusterRole are not optional decoration. Every backend authorizes requests by reading the calling ArgoCD Application (namespace scoping), which requires <code>get</code> on <code>applications.argoproj.io</code>. If you set <code>serviceAccount.create: false</code> without providing an equivalent ServiceAccount, every data request fails with <code>403 unable to authorize namespace</code>. See <a href="{base}/deployment/argocd-configuration#namespace-authorization">Namespace authorization</a>.

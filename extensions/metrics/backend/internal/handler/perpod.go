@@ -33,8 +33,8 @@ type perPodSeries struct {
 }
 
 type podTimeline struct {
-	Pod    string      `json:"pod"`
-	Values []*float64  `json:"values"`
+	Pod    string     `json:"pod"`
+	Values []*float64 `json:"values"`
 }
 
 // Handle serves GET /api/v1/per-pod-series.

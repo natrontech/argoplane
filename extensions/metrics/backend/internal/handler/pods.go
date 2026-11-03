@@ -203,7 +203,7 @@ func podSelectorForKind(namespace, name, kind string) string {
 	case "Pod":
 		return fmt.Sprintf(`namespace="%s",pod="%s"`, ns, query.EscapePromQLLabel(name))
 	default:
-		return fmt.Sprintf(`namespace="%s",pod=~"%s-.*"`, ns, regexp.QuoteMeta(name))
+		return fmt.Sprintf(`namespace="%s",pod=~"%s-.*"`, ns, query.EscapePromQLLabel(regexp.QuoteMeta(name)))
 	}
 }
 
@@ -215,5 +215,6 @@ func quoteRegexAlternation(values []string) string {
 	for i, v := range values {
 		quoted[i] = regexp.QuoteMeta(v)
 	}
-	return strings.Join(quoted, "|")
+	// QuoteMeta adds backslashes, which PromQL strings must escape again.
+	return query.EscapePromQLLabel(strings.Join(quoted, "|"))
 }

@@ -4,7 +4,7 @@ FROM --platform=$BUILDPLATFORM node:26-alpine AS build
 
 WORKDIR /app
 
-COPY package*.json svelte.config.js ./
+COPY package*.json ./
 RUN npm ci
 
 COPY . .

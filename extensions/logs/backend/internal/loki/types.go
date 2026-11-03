@@ -24,9 +24,9 @@ type VolumePoint struct {
 
 // apiResponse is the top-level Loki API response structure.
 type apiResponse struct {
-	Status string   `json:"status"`
-	Data   apiData  `json:"data"`
-	Error  string   `json:"error,omitempty"`
+	Status string  `json:"status"`
+	Data   apiData `json:"data"`
+	Error  string  `json:"error,omitempty"`
 }
 
 type apiData struct {

@@ -21,6 +21,8 @@ POST /api/v1/policies-with-ownership
 
 Returns all Cilium network policies affecting a namespace (namespace-scoped and clusterwide), each tagged with ownership: `app` if the policy belongs to the calling Application's resource tree, `platform` otherwise.
 
+Clusterwide policies are filtered to those that can select pods in the namespace. A policy whose `endpointSelector` has no namespace term (a platform default deny, allow DNS) is returned. One pinned to other namespaces through `io.kubernetes.pod.namespace` (in `matchLabels`, or `In`/`NotIn` in `matchExpressions`) is not, and neither is a host policy with only a `nodeSelector`. Selectors on namespace labels can't be checked without the Namespace object and are returned. Clusterwide policies in the Application's own resource tree are always returned.
+
 **Request body:**
 
 ```json
@@ -128,7 +130,9 @@ Returns recent Hubble flows for a namespace from the backend's flow buffer.
 | `limit` | integer | No | `100` | Max flows (capped at 1000) |
 | `verdict` | string | No | - | Filter: `FORWARDED`, `DROPPED`, `ERROR` |
 | `direction` | string | No | - | Filter by flow direction |
-| `pods` | string | No | - | Comma-separated pod names; keeps flows where source or destination matches |
+| `pods` | string | No | - | Comma-separated pod names; keeps flows where source or destination matches. Applied before `limit`. |
+
+`summary` counts every flow in the window that matches the filters, before `limit` truncates `flows`.
 
 **Response:**
 
@@ -142,19 +146,32 @@ Returns recent Hubble flows for a namespace from the backend's flow buffer.
       "sourceNamespace": "default",
       "sourcePod": "guestbook-ui-abc123",
       "sourceIP": "10.0.1.5",
+      "sourceWorkload": "guestbook-ui",
       "destNamespace": "default",
       "destPod": "redis-master-def456",
       "destIP": "10.0.1.10",
+      "destWorkload": "redis-master",
       "protocol": "TCP",
       "destPort": 6379,
       "summary": "TCP Flags: SYN",
-      "isReply": false
+      "isReply": false,
+      "allowedBy": ["default/allow-redis"]
     }
   ],
   "hubble": true,
   "summary": { "total": 42, "forwarded": 40, "dropped": 2, "error": 0 }
 }
 ```
+
+Fields that Hubble did not resolve are omitted:
+
+| Field | Description |
+|-------|-------------|
+| `time` | RFC 3339 in UTC with a fixed nine-digit fraction, so string order equals time order |
+| `sourceWorkload`, `destWorkload` | Owning workload of the pod (e.g. the Deployment name) |
+| `sourceIdentity`, `destIdentity` | Cilium reserved identity for non-pod peers: `world` (or `world-ipv4` / `world-ipv6`), `host`, `kube-apiserver`, `remote-node`, ... |
+| `destDNS` | First DNS name Hubble saw for the destination IP |
+| `allowedBy`, `deniedBy` | Policies Cilium reports as having allowed or denied the flow, as `namespace/name` (or `name` for clusterwide policies). Empty for drops caused only by default deny. |
 
 If Hubble Relay is not configured, the response is `{ "flows": [], "hubble": false, "message": "Hubble Relay is not configured" }`.
 

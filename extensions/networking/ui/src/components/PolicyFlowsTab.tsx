@@ -11,6 +11,7 @@ import {
   fontWeight,
   spacing,
   panel,
+  useVisibleInterval,
 } from '@argoplane/shared';
 import { fetchFlows, fetchEndpoints } from '../api';
 import {
@@ -132,9 +133,9 @@ export const PolicyFlowsTab: React.FC<{ resource: any; tree?: any; application: 
     const controller = new AbortController();
     setLoading(true);
     fetchData(controller.signal);
-    const i = setInterval(() => fetchData(controller.signal), REFRESH_INTERVAL);
-    return () => { controller.abort(); clearInterval(i); };
+    return () => controller.abort();
   }, [fetchData]);
+  useVisibleInterval(fetchData, REFRESH_INTERVAL);
 
   const flows = flowsResponse?.flows || [];
   const hubbleAvailable = flowsResponse?.hubble ?? false;
@@ -193,7 +194,8 @@ export const PolicyFlowsTab: React.FC<{ resource: any; tree?: any; application: 
 
   const PAGE_SIZE = 50;
   const totalPages = Math.max(1, Math.ceil(filteredFlows.length / PAGE_SIZE));
-  const pageFlows = filteredFlows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const curPage = Math.min(page, totalPages - 1); // a refresh may shrink the list
+  const pageFlows = filteredFlows.slice(curPage * PAGE_SIZE, (curPage + 1) * PAGE_SIZE);
 
   // Full-view loading only before the first data arrives; refreshes keep the view.
   const hasData = flowsResponse !== null || endpoints.length > 0;
@@ -329,9 +331,9 @@ export const PolicyFlowsTab: React.FC<{ resource: any; tree?: any; application: 
             </div>
             {totalPages > 1 && (
               <div style={paginationRow}>
-                <button style={pageBtn} disabled={page === 0} onClick={() => setPage(page - 1)}>Prev</button>
-                <span style={pageLabelStyle}>{page + 1} / {totalPages}</span>
-                <button style={pageBtn} disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>Next</button>
+                <button style={pageBtn} disabled={curPage === 0} onClick={() => setPage(curPage - 1)}>Prev</button>
+                <span style={pageLabelStyle}>{curPage + 1} / {totalPages}</span>
+                <button style={pageBtn} disabled={curPage >= totalPages - 1} onClick={() => setPage(curPage + 1)}>Next</button>
               </div>
             )}
             </>

@@ -81,3 +81,5 @@ Add `data-theme="dark"` or class `theme-dark` to any parent element. Semantic to
 - Orange accent: orange-400 instead of orange-500
 - Status squares remain the same (pop naturally against dark)
 
+In extensions, every `colors.*` value from `@argoplane/shared` is `var(--ap-ext-<key>)` and flips under ArgoCD's `.theme-dark` (the gray scale inverts, so `gray800` is primary text in both themes). Never do string arithmetic on them (no `${colors.x}18` alpha suffixes) and don't pass them to canvas APIs.
+

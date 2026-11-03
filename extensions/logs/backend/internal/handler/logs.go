@@ -114,6 +114,21 @@ func (h *Logs) Handle(w http.ResponseWriter, r *http.Request) {
 	if entries == nil {
 		entries = []loki.LogEntry{}
 	}
+	if severity != "" {
+		// The LogQL filter only narrows; keep exactly the lines whose detected
+		// severity was requested, so the list matches the badges and counts.
+		wanted := make(map[string]bool)
+		for _, s := range strings.Split(severity, ",") {
+			wanted[s] = true
+		}
+		kept := entries[:0]
+		for _, e := range entries {
+			if wanted[e.Severity] {
+				kept = append(kept, e)
+			}
+		}
+		entries = kept
+	}
 
 	writeJSON(w, logsResponse{
 		Entries: entries,

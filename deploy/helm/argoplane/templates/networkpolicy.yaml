@@ -1,0 +1,36 @@
+{{- $backends := list }}
+{{- range $name, $ext := .Values.extensions }}
+{{- if $ext.enabled }}
+{{- $backends = append $backends (printf "argoplane-%s-backend" $name) }}
+{{- end }}
+{{- end }}
+{{- if and .Values.networkPolicy.enabled $backends }}
+---
+# The backends trust ArgoCD's identity headers, so only argocd-server (and the
+# chart's own test pods) may reach them. Without this, any pod in the cluster
+# could forge Argocd-Application-Name and read another app's data.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: argoplane-backends
+  namespace: {{ include "argoplane.argocdNamespace" . }}
+  labels:
+    {{- include "argoplane.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values:
+          {{- toYaml $backends | nindent 10 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- toYaml .Values.networkPolicy.argocdServerSelector | nindent 14 }}
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: argoplane
+{{- end }}

@@ -77,6 +77,6 @@ func podSelectorForKind(namespace, name, kind string) string {
 		// Deployments create pods like "name-<replicaset>-<hash>"
 		// StatefulSets create pods like "name-0", "name-1"
 		// name is a regex anchor here, so quote it for the regex matcher.
-		return fmt.Sprintf(`namespace="%s",pod=~"%s-.*"`, ns, regexp.QuoteMeta(name))
+		return fmt.Sprintf(`namespace="%s",pod=~"%s-.*"`, ns, EscapePromQLLabel(regexp.QuoteMeta(name)))
 	}
 }

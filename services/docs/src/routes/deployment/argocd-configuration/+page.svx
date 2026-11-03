@@ -4,9 +4,9 @@ description: Wire up ArgoCD with proxy extensions, RBAC, custom styles, and UI b
 ---
 
 <script>
-  import Tabs from '$lib/components/docs/Tabs.svelte';
-  import Callout from '$lib/components/docs/Callout.svelte';
-  import Accordion from '$lib/components/docs/Accordion.svelte';
+  import Tabs from '#lib/components/docs/Tabs.svelte';
+  import Callout from '#lib/components/docs/Callout.svelte';
+  import Accordion from '#lib/components/docs/Accordion.svelte';
 </script>
 
 # ArgoCD Configuration
@@ -83,10 +83,30 @@ p, role:developer, extensions, invoke, events, allow
 ArgoCD's RBAC decides who may invoke an extension. On top of that, every ArgoPlane backend enforces namespace scoping on its data endpoints:
 
 - Each request must carry the `Argocd-Application-Name` header in `namespace:name` format. ArgoCD's proxy sets it automatically; requests without it get a `403`.
-- The backend fetches that Application from the Kubernetes API and builds the set of namespaces it manages: the destination namespace plus every namespace in `status.resources`.
+- The backend fetches that Application from the Kubernetes API and builds the set of namespaces it manages: the destination namespace plus every namespace in `status.resources`. Resources in the `argoproj.io` group are skipped, so an app-of-apps does not gain access to the ArgoCD namespace through its child Application CRs. The events, networking and vulnerabilities backends cache the Application for 10 seconds, because one UI refresh sends several requests.
 - If the requested namespace is not in that set, the backend returns `403 namespace not managed by this application`.
 
 The result: a user can only pull metrics, logs, flows, vulnerabilities, or events for namespaces their Application actually deploys to, even if they craft requests by hand.
+
+This relies on the identity headers coming from argocd-server. A pod that reaches a backend Service directly could set them itself. The Helm chart therefore deploys a NetworkPolicy that admits traffic to the backends only from pods labeled `app.kubernetes.io/name: argocd-server` (and the chart's own test pods). If your argocd-server pods carry different labels, set `networkPolicy.argocdServerSelector`. If you deploy with the dev manifests or Kustomize instead of the chart, add an equivalent policy yourself.
+
+### Multi-cluster ArgoCD
+
+The events, networking and vulnerabilities backends read from the cluster they run in. If one ArgoCD deploys to several clusters, an app targeting cluster X with namespace `payments` would otherwise see this cluster's `payments` namespace, which may belong to another team.
+
+Set `CLUSTER_NAME`, `CLUSTER_SERVER` or both on those backends to name the cluster they read from. The backend then rejects apps whose `spec.destination` points elsewhere with `403 application deploys to a cluster this backend does not serve`. An app matches if its `destination.name` equals `CLUSTER_NAME` or its `destination.server` equals `CLUSTER_SERVER` (a trailing slash is ignored). Apps often set only one of the two, so set both. With neither set, the check is off.
+
+```yaml
+extensions:
+  events:
+    env:
+      CLUSTER_NAME: "in-cluster"
+      CLUSTER_SERVER: "https://kubernetes.default.svc"
+```
+
+To serve several clusters, run one backend per cluster and list each in the proxy config with a `cluster: { name | server }` entry, so ArgoCD routes every app to the backend for its cluster. The check then catches requests that reach the wrong one.
+
+Metrics and logs are different: they query shared datastores, so their fix is a cluster label filter on the queries (tracked in [issue #109](https://github.com/natrontech/argoplane/issues/109)).
 
 ### What the backends need
 

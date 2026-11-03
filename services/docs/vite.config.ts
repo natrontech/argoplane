@@ -4,6 +4,50 @@ import { defineConfig } from 'vite';
 import { execSync } from 'child_process';
 import { readdirSync, statSync } from 'fs';
 import { join, relative } from 'path';
+import adapter from '@sveltejs/adapter-static';
+import { mdsvex, escapeSvelte, type MdsvexOptions } from 'mdsvex';
+import { createHighlighter } from 'shiki';
+import remarkGfm from 'remark-gfm';
+import rehypeSlug from 'rehype-slug';
+import rehypeAutolinkHeadings from 'rehype-autolink-headings';
+
+const highlighter = await createHighlighter({
+	themes: ['github-dark', 'github-light'],
+	langs: [
+		'javascript',
+		'typescript',
+		'svelte',
+		'html',
+		'css',
+		'bash',
+		'json',
+		'yaml',
+		'go',
+		'dockerfile',
+		'markdown'
+	]
+});
+
+const mdsvexOptions: MdsvexOptions = {
+	extensions: ['.svx'],
+	highlight: {
+		highlighter: async (code: string, lang?: string | null) => {
+			const html = escapeSvelte(
+				highlighter.codeToHtml(code, {
+					lang: lang ?? 'text',
+					themes: {
+						light: 'github-light',
+						dark: 'github-dark'
+					}
+				})
+			);
+			return `{@html \`${html}\`}`;
+		}
+	},
+	remarkPlugins: [remarkGfm],
+	// @ts-expect-error mdsvex's types predate unified 11; runtime is fine
+	rehypePlugins: [rehypeSlug, [rehypeAutolinkHeadings, { behavior: 'wrap' }]]
+};
 
 function gitLastUpdatedPlugin() {
 	const virtualModuleId = 'virtual:git-timestamps';
@@ -51,5 +95,18 @@ function gitLastUpdatedPlugin() {
 }
 
 export default defineConfig({
-	plugins: [tailwindcss(), gitLastUpdatedPlugin(), sveltekit()]
+	plugins: [
+		tailwindcss(),
+		gitLastUpdatedPlugin(),
+		sveltekit({
+			extensions: ['.svelte', '.svx'],
+			preprocess: [mdsvex(mdsvexOptions)],
+			adapter: adapter({
+				fallback: '404.html'
+			}),
+			paths: {
+				base: (process.env.BASE_PATH || '') as '' | `/${string}`
+			}
+		})
+	]
 });

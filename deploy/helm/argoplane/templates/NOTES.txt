@@ -99,4 +99,4 @@ Docs site is deployed. Access it via:
   kubectl port-forward svc/argoplane-docs {{ .Values.services.docs.port }}:{{ .Values.services.docs.port }}
 {{- end }}
 
-For more information: https://docs.argoplane.io/deployment
+For more information: https://natrontech.github.io/argoplane/deployment

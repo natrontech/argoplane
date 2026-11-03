@@ -12,6 +12,7 @@ import {
   spacing,
   panel,
   input as inputStyle,
+  useVisibleInterval,
 } from '@argoplane/shared';
 import { fetchEvents } from '../api';
 import { KubeEvent, SinceRange, SINCE_LABELS } from '../types';
@@ -47,7 +48,7 @@ export const AppEventsView: React.FC<AppViewProps> = ({ application, tree }) => 
   const [searchText, setSearchText] = React.useState('');
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
   const [since, setSince] = React.useState<SinceRange>('1h');
-  const [scope, setScope] = useStickyScope();
+  const [scope, setScope] = useStickyScope('events');
 
   const namespace = application?.spec?.destination?.namespace || '';
   const appName = application?.metadata?.name || '';
@@ -109,10 +110,7 @@ export const AppEventsView: React.FC<AppViewProps> = ({ application, tree }) => 
     fetchAll();
   }, [fetchAll]);
 
-  React.useEffect(() => {
-    const interval = setInterval(fetchAll, REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchAll]);
+  useVisibleInterval(fetchAll, REFRESH_INTERVAL);
 
   // App scoping: keep only events about objects that belong to this app.
   const scopedEvents = React.useMemo(() => {

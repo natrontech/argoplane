@@ -49,6 +49,8 @@ The backend automatically detects log severity from line content:
 - **Bracket format**: `[ERROR]`, `[WARN]`, `[INFO]`, `[DEBUG]`
 - **Fallback**: lines without severity markers default to `info`
 
+The severity filter uses the same rules, so filtering for `error` shows exactly the lines marked as errors. A JSON line with `"level":"info"` whose message mentions an error stays `info`.
+
 ## Backend
 
 The logs backend queries Loki:

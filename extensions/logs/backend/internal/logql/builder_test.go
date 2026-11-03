@@ -1,6 +1,8 @@
 package logql
 
 import (
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -52,8 +54,37 @@ func TestWithCluster(t *testing.T) {
 func TestWithClusterBeforeFilters(t *testing.T) {
 	sel := WithCluster(ForNamespace("ns", ""), "cluster", "prod")
 	got := WithSeverity(WithFilter(sel, "err"), []string{"error"})
-	want := `{namespace="ns", cluster="prod"} |= "err" |~ "(?i)(error)"`
-	if got != want {
+	// Only the order matters here; WithSeverity's regex is tested on its own.
+	want := `{namespace="ns", cluster="prod"} |= "err" |~ `
+	if !strings.HasPrefix(got, want) {
 		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestWithSeverityMatchesDetectSeverity(t *testing.T) {
+	q := WithSeverity(`{namespace="ns"}`, []string{"error"})
+	quoted := q[strings.Index(q, "|~ ")+3:]
+	pattern, err := strconv.Unquote(quoted)
+	if err != nil {
+		t.Fatalf("filter is not a valid quoted string: %s", quoted)
+	}
+	re := regexp.MustCompile(pattern) // Loki uses RE2, same as Go
+	for line, want := range map[string]bool{
+		// "error" in the message of an info line must not match.
+		`{"level":"info","caller":"errorhandler/errorhandler.go:36","msg":"rpc error: code = Unavailable desc = connection error"}`: false,
+		`{"level":"error","msg":"boom"}`: true,
+		`time=x level=err msg=boom`:      true,
+		`[FATAL] disk full`:              true,
+		`2026-11-03 ERROR: failed`:       true,
+	} {
+		if got := re.MatchString(line); got != want {
+			t.Errorf("filter match = %v, want %v for %s", got, want, line)
+		}
+		if got := DetectSeverity(line) == "error"; got != want {
+			t.Errorf("DetectSeverity disagrees for %s", line)
+		}
+	}
+	if got := WithSeverity("{}", []string{"error", "info"}); got != "{}" {
+		t.Errorf("info can't be selected by regex, want no filter, got %s", got)
 	}
 }

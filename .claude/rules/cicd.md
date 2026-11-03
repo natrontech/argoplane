@@ -35,7 +35,7 @@ The release workflow automatically updates Chart.yaml during packaging so the pu
 
 Published as OCI artifact: `oci://ghcr.io/natrontech/charts/argoplane`
 
-Install: `helm install argoplane oci://ghcr.io/natrontech/charts/argoplane --version 0.2.0`
+Install: `helm install argoplane oci://ghcr.io/natrontech/charts/argoplane -n argocd`
 
 ## Consistency Check
 

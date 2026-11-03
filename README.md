@@ -62,7 +62,7 @@ ArgoCD UI
 **Helm (recommended):**
 
 ```sh
-helm install argoplane oci://ghcr.io/natrontech/charts/argoplane --version 0.2.0
+helm install argoplane oci://ghcr.io/natrontech/charts/argoplane -n argocd
 ```
 
 Each extension can be enabled or disabled individually in `values.yaml`. The chart deploys extension backends, proxy configuration, RBAC policies, and UI bundles (via an init container on argocd-server).

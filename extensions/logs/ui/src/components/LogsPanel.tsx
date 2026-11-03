@@ -7,6 +7,7 @@ import {
   fontSize,
   panel,
   spacing,
+  useVisibleInterval,
 } from '@argoplane/shared';
 import { fetchLogs, fetchLabelValues } from '../api';
 import { ExtensionProps, LogEntry, Severity, TimeSelection, logEntryKey, resolveTimeSelection } from '../types';
@@ -151,11 +152,7 @@ export const LogsPanel: React.FC<ExtensionProps> = ({ resource, tree, applicatio
     fetchAll();
   }, [fetchAll]);
 
-  React.useEffect(() => {
-    if (paused) return;
-    const interval = setInterval(fetchAll, REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchAll, paused]);
+  useVisibleInterval(fetchAll, REFRESH_INTERVAL, !paused);
 
   const handleSeverityToggle = React.useCallback((severity: Severity) => {
     setActiveSeverities((prev) => {

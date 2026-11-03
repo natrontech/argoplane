@@ -121,7 +121,7 @@ body {
   line-height: 1.2;
 }
 
-/* "by ArgoPlane" as subtitle (styled as link to argoplane.io) */
+/* "by ArgoPlane" as subtitle (styled as link to the ArgoPlane docs) */
 .sidebar__logo-container::after {
   content: "by ArgoPlane ↗";
   display: block;
@@ -822,7 +822,7 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center !important;
 }
 
-/* "by ArgoPlane" subtitle (styled as link to argoplane.io) */
+/* "by ArgoPlane" subtitle (styled as link to the ArgoPlane docs) */
 .login__box .login__logo::before {
   content: "by ArgoPlane ↗";
   order: 99;

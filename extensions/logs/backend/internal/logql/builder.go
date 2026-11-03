@@ -75,19 +75,25 @@ func WithFilter(base, text string) string {
 	return fmt.Sprintf(`%s |= %q`, base, text)
 }
 
-// WithSeverity appends severity line filters for the given severities.
-// This uses case-insensitive regex matching on common severity patterns.
-// Each severity value is escaped to prevent regex injection.
+// WithSeverity narrows a query to lines DetectSeverity would classify as one
+// of severities, using the same patterns. Matching the bare word instead
+// ("error") hit info lines like `"level":"info","msg":"rpc error"`.
+// "info" is also the fallback for lines without any marker, which no regex
+// can select, so when it is requested the query is left unfiltered and the
+// caller must filter on DetectSeverity.
 func WithSeverity(base string, severities []string) string {
-	if len(severities) == 0 {
+	var parts []string
+	for _, s := range severities {
+		re := severityRegex(s)
+		if s == "info" || re == "" {
+			return base
+		}
+		parts = append(parts, re)
+	}
+	if len(parts) == 0 {
 		return base
 	}
-	escaped := make([]string, len(severities))
-	for i, s := range severities {
-		escaped[i] = regexp.QuoteMeta(s)
-	}
-	pattern := strings.Join(escaped, "|")
-	return fmt.Sprintf(`%s |~ "(?i)(%s)"`, base, pattern)
+	return fmt.Sprintf(`%s |~ %q`, base, strings.Join(parts, "|"))
 }
 
 // VolumeQuery wraps a stream selector in count_over_time for volume charts.

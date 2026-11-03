@@ -128,6 +128,11 @@ func (a *Authorizer) allowedNamespaces(ctx context.Context, appNs, appName strin
 		if !ok {
 			continue
 		}
+		// Child Application CRs (app-of-apps) live in the ArgoCD namespace;
+		// listing them must not grant read access to that namespace.
+		if g, _ := m["group"].(string); g == "argoproj.io" {
+			continue
+		}
 		if ns, ok := m["namespace"].(string); ok && ns != "" {
 			allowed[ns] = struct{}{}
 		}

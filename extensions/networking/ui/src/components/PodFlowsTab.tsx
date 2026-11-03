@@ -11,6 +11,7 @@ import {
   fontWeight,
   spacing,
   panel,
+  useVisibleInterval,
 } from '@argoplane/shared';
 import { fetchFlows, fetchPoliciesWithOwnership, fetchEndpoints } from '../api';
 import {
@@ -84,8 +85,10 @@ function findMatchingPolicies(
       if (!selectorMatches) continue;
     }
 
+    // Only policies with rules for this direction enforce it.
     const hasRulesForDirection = flow.direction === 'INGRESS' ? p.hasIngress : p.hasEgress;
-    matches.push({ policy: p, defaultDeny: !hasRulesForDirection });
+    if (!hasRulesForDirection) continue;
+    matches.push({ policy: p, defaultDeny: false });
   }
 
   return matches;
@@ -161,7 +164,7 @@ export const PodFlowsTab: React.FC<{ resource: any; tree?: any; application: any
 
   const fetchData = React.useCallback((signal?: AbortSignal) => {
     if (!namespace) return;
-    const flowsP = fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter, directionFilter, undefined, signal)
+    const flowsP = fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter, directionFilter, [podName], signal)
       .catch(() => null);
     const policiesP = fetchPoliciesWithOwnership(namespace, resourceRefs, appNamespace, appName, project, signal)
       .catch(() => null);
@@ -185,15 +188,15 @@ export const PodFlowsTab: React.FC<{ resource: any; tree?: any; application: any
       })
       .catch((err) => { if (mountedRef.current && !signal?.aborted) setError(err.message); })
       .finally(() => { if (mountedRef.current && !signal?.aborted) setLoading(false); });
-  }, [namespace, appNamespace, appName, project, resourceRefs, timeRange, verdictFilter, directionFilter]);
+  }, [namespace, appNamespace, appName, project, resourceRefs, timeRange, verdictFilter, directionFilter, podName]);
 
   React.useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     fetchData(controller.signal);
-    const i = setInterval(() => fetchData(controller.signal), REFRESH_INTERVAL);
-    return () => { controller.abort(); clearInterval(i); };
+    return () => controller.abort();
   }, [fetchData]);
+  useVisibleInterval(fetchData, REFRESH_INTERVAL);
 
   const flows = flowsResponse?.flows || [];
   const hubbleAvailable = flowsResponse?.hubble ?? false;
@@ -224,7 +227,8 @@ export const PodFlowsTab: React.FC<{ resource: any; tree?: any; application: any
 
   const PAGE_SIZE = 50;
   const totalPages = Math.max(1, Math.ceil(filteredFlows.length / PAGE_SIZE));
-  const pageFlows = filteredFlows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const curPage = Math.min(page, totalPages - 1); // a refresh may shrink the list
+  const pageFlows = filteredFlows.slice(curPage * PAGE_SIZE, (curPage + 1) * PAGE_SIZE);
 
   // Full-view loading only before the first data arrives; refreshes keep the view.
   const hasData = flowsResponse !== null || policies.length > 0 || endpoints.length > 0;
@@ -378,9 +382,9 @@ export const PodFlowsTab: React.FC<{ resource: any; tree?: any; application: any
             </div>
             {totalPages > 1 && (
               <div style={paginationRow}>
-                <button style={pageBtn} disabled={page === 0} onClick={() => setPage(page - 1)}>Prev</button>
-                <span style={pageLabelStyle}>{page + 1} / {totalPages}</span>
-                <button style={pageBtn} disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>Next</button>
+                <button style={pageBtn} disabled={curPage === 0} onClick={() => setPage(curPage - 1)}>Prev</button>
+                <span style={pageLabelStyle}>{curPage + 1} / {totalPages}</span>
+                <button style={pageBtn} disabled={curPage >= totalPages - 1} onClick={() => setPage(curPage + 1)}>Next</button>
               </div>
             )}
             </>

@@ -4,7 +4,7 @@ description: How ArgoPlane extensions work
 ---
 
 <script>
-  import ArchitectureDiagram from '$lib/components/docs/ArchitectureDiagram.svelte';
+  import ArchitectureDiagram from '#lib/components/docs/ArchitectureDiagram.svelte';
 </script>
 
 # Architecture
@@ -56,7 +56,9 @@ Backend services receive these headers from ArgoCD's proxy:
 
 ### Namespace scoping
 
-Every backend enforces namespace-level authorization on its data endpoints. The `Argocd-Application-Name` header (set automatically by ArgoCD's proxy) identifies the calling Application. The backend looks up that Application via the Kubernetes API and only serves data for namespaces it manages: the destination namespace plus any namespace in `status.resources`. Requests for other namespaces get a `403`.
+Every backend enforces namespace-level authorization on its data endpoints. The `Argocd-Application-Name` header (set automatically by ArgoCD's proxy) identifies the calling Application. The backend looks up that Application via the Kubernetes API and only serves data for namespaces it manages: the destination namespace plus any namespace in `status.resources`, except resources in the `argoproj.io` group. An app-of-apps lists its child Application CRs, which live in the ArgoCD namespace; counting them would grant read access to that namespace. Requests for other namespaces get a `403`.
+
+The backends trust these headers, so they must only be reachable through argocd-server. The Helm chart ships a NetworkPolicy (`networkPolicy.enabled`, on by default) that allows ingress to the backends only from argocd-server pods.
 
 ## Extension registration types
 

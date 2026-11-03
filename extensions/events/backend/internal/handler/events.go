@@ -12,6 +12,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -51,7 +52,7 @@ type Event struct {
 	InvolvedObject InvolvedObject `json:"involvedObject"`
 	Count          int32          `json:"count"`
 	FirstTimestamp string         `json:"firstTimestamp"`
-	LastTimestamp   string         `json:"lastTimestamp"`
+	LastTimestamp  string         `json:"lastTimestamp"`
 	Source         Source         `json:"source"`
 }
 
@@ -163,8 +164,17 @@ func (h *EventsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	// Page through the full event list: the API server returns events in
 	// name order, so a single capped List call could drop the newest events.
+	// Let the API server filter by object so a busy namespace's other
+	// events don't count against maxEvents.
+	sel := fields.Set{}
+	if kind != "" {
+		sel["involvedObject.kind"] = kind
+	}
+	if name != "" {
+		sel["involvedObject.name"] = name
+	}
 	var items []corev1.Event
-	opts := metav1.ListOptions{Limit: eventListLimit}
+	opts := metav1.ListOptions{Limit: eventListLimit, FieldSelector: fields.SelectorFromSet(sel).String()}
 	for {
 		events, err := h.client.CoreV1().Events(namespace).List(ctx, opts)
 		if err != nil {
@@ -257,4 +267,3 @@ func filterAndConvert(items []corev1.Event, kind, name, eventType string, cutoff
 		},
 	}
 }
-

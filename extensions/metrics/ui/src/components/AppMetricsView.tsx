@@ -13,11 +13,13 @@ import {
   fontWeight,
   spacing,
   panel,
+  useVisibleInterval,
 } from '@argoplane/shared';
 import { useStickyScope } from '@argoplane/shared';
 import { fetchAppMetrics, fetchPodBreakdown } from '../api';
 import { MetricData, PodMetric } from '../types';
 import { SERIES_COLORS } from '../utils/palette';
+import { formatCPU, formatMemory, formatNetwork, formatMaybe } from '../utils/format';
 import { ConfigDashboard } from './ConfigDashboard';
 
 interface AppViewProps {
@@ -38,7 +40,7 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
   const [loading, setLoading] = React.useState(true);
   const [loaded, setLoaded] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [scope, setScope] = useStickyScope();
+  const [scope, setScope] = useStickyScope('metrics');
 
   const namespace = application?.spec?.destination?.namespace || '';
   const appName = application?.metadata?.name || '';
@@ -128,10 +130,7 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
     fetchAll();
   }, [fetchAll]);
 
-  React.useEffect(() => {
-    const interval = setInterval(fetchAll, REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchAll]);
+  useVisibleInterval(fetchAll, REFRESH_INTERVAL);
 
   if (!namespace) {
     return <div style={panel}><EmptyState message="No destination namespace configured for this application" /></div>;
@@ -226,14 +225,14 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
                         <span style={{ ...podDot, background: SERIES_COLORS[i % SERIES_COLORS.length] }} />
                         {p.pod}
                       </td>
-                      <td style={{ ...td, color: cpuOverLimit ? colors.redText : undefined }}>{p.cpu}m</td>
-                      <td style={tdDim}>{p.cpuRequest !== '-' ? `${p.cpuRequest}m` : '-'}</td>
-                      <td style={tdDim}>{p.cpuLimit !== '-' ? `${p.cpuLimit}m` : '-'}</td>
-                      <td style={{ ...td, color: memOverLimit ? colors.redText : undefined }}>{p.memory} MiB</td>
-                      <td style={tdDim}>{p.memoryRequest !== '-' ? `${p.memoryRequest} MiB` : '-'}</td>
-                      <td style={tdDim}>{p.memoryLimit !== '-' ? `${p.memoryLimit} MiB` : '-'}</td>
-                      <td style={td}>{p.netRx} KB/s</td>
-                      <td style={td}>{p.netTx} KB/s</td>
+                      <td style={{ ...td, color: cpuOverLimit ? colors.redText : undefined }}>{formatMaybe(p.cpu, formatCPU)}</td>
+                      <td style={tdDim}>{formatMaybe(p.cpuRequest, formatCPU)}</td>
+                      <td style={tdDim}>{formatMaybe(p.cpuLimit, formatCPU)}</td>
+                      <td style={{ ...td, color: memOverLimit ? colors.redText : undefined }}>{formatMaybe(p.memory, formatMemory)}</td>
+                      <td style={tdDim}>{formatMaybe(p.memoryRequest, formatMemory)}</td>
+                      <td style={tdDim}>{formatMaybe(p.memoryLimit, formatMemory)}</td>
+                      <td style={td}>{formatMaybe(p.netRx, formatNetwork)}</td>
+                      <td style={td}>{formatMaybe(p.netTx, formatNetwork)}</td>
                       <td style={{
                         ...td,
                         color: Number(p.restarts) > 0 ? colors.redText : undefined,

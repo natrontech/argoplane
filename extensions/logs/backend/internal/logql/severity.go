@@ -49,7 +49,21 @@ func init() {
 			re:       regexp.MustCompile(r.pattern),
 			severity: r.severity,
 		})
+		severitySource[r.severity] = append(severitySource[r.severity], r.pattern)
 	}
+}
+
+// severitySource holds the raw patterns per severity, so the LogQL line
+// filter can match exactly what DetectSeverity classifies.
+var severitySource = map[string][]string{}
+
+// severityRegex returns one RE2 alternation of every pattern for sev, or ""
+// for a severity without patterns.
+func severityRegex(sev string) string {
+	if len(severitySource[sev]) == 0 {
+		return ""
+	}
+	return "(?:" + strings.Join(severitySource[sev], "|") + ")"
 }
 
 // DetectSeverity analyzes a log line and returns its severity level.

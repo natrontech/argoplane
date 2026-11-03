@@ -133,6 +133,8 @@ Returns instant summary or time series metrics for a specific workload or pod.
 ]
 ```
 
+`value` is always expressed in `unit`: CPU in millicores, memory in MiB, network in KB/s. The backend does not switch to cores or GiB for large values.
+
 **Range response** (with `range`):
 
 ```json
@@ -204,14 +206,20 @@ Returns per-pod instant metrics for the pod details table.
 [
   {
     "pod": "guestbook-ui-abc123",
-    "cpu": "12.5 m",
-    "memory": "45.2 MiB",
-    "netRx": "1.2 KB/s",
-    "netTx": "0.8 KB/s",
+    "cpu": "12.5",
+    "cpuRequest": "100.0",
+    "cpuLimit": "1500.0",
+    "memory": "45.2",
+    "memoryRequest": "64.0",
+    "memoryLimit": "1024.0",
+    "netRx": "1.2",
+    "netTx": "0.8",
     "restarts": "0"
   }
 ]
 ```
+
+Values are strings in fixed units: CPU in millicores, memory in MiB, network in KB/s. A missing request or limit is `"-"`. The UI scales them for display (`1500.0` millicores shows as `1.50 cores`).
 
 ### Per-pod time series
 

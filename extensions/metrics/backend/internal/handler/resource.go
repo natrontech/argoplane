@@ -164,25 +164,13 @@ func rangeParams(timeRange string, end time.Time) (start time.Time, step time.Du
 	}
 }
 
+// formatValue renders val in the fixed unit displayUnit names (millicores,
+// MiB, KB/s), so the UI can append that unit and compare values numerically.
 func formatValue(val float64, unit string) string {
-	if math.IsNaN(val) || math.IsInf(val, 0) {
-		return "0"
+	if unit == "count" {
+		return fmt.Sprintf("%.0f", convertValue(val, unit))
 	}
-	switch unit {
-	case "millicores":
-		if val >= 1000 {
-			return fmt.Sprintf("%.2f", val/1000)
-		}
-		return fmt.Sprintf("%.1f", val)
-	case "bytes":
-		return formatBytes(val)
-	case "bytes/s":
-		return formatBytes(val)
-	case "count":
-		return fmt.Sprintf("%.0f", val)
-	default:
-		return fmt.Sprintf("%.2f", val)
-	}
+	return fmt.Sprintf("%.1f", convertValue(val, unit))
 }
 
 func displayUnit(unit string) string {
@@ -212,17 +200,4 @@ func convertValue(val float64, unit string) float64 {
 	default:
 		return val
 	}
-}
-
-func formatBytes(val float64) string {
-	if val >= 1024*1024*1024 {
-		return fmt.Sprintf("%.2f", val/(1024*1024*1024))
-	}
-	if val >= 1024*1024 {
-		return fmt.Sprintf("%.1f", val/(1024*1024))
-	}
-	if val >= 1024 {
-		return fmt.Sprintf("%.1f", val/1024)
-	}
-	return fmt.Sprintf("%.0f", val)
 }
