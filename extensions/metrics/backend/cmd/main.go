@@ -23,6 +23,8 @@ type Config struct {
 	PrometheusURL string `envconfig:"PROMETHEUS_URL" default:"http://kube-prometheus-kube-prome-prometheus.monitoring.svc:9090"`
 	LogLevel      string `envconfig:"LOG_LEVEL" default:"info"`
 	ConfigPath    string `envconfig:"CONFIG_PATH" default:""`
+	ClusterLabel  string `envconfig:"CLUSTER_LABEL" default:""`
+	ClusterMap    string `envconfig:"CLUSTER_MAP" default:""`
 }
 
 func main() {
@@ -33,6 +35,15 @@ func main() {
 	}
 
 	setupLogging(cfg.LogLevel)
+
+	clusterMap, err := handler.ParseClusterConfig(cfg.ClusterLabel, cfg.ClusterMap)
+	if err != nil {
+		slog.Error("invalid cluster filter config", "error", err)
+		os.Exit(1)
+	}
+	if cfg.ClusterLabel == "" && cfg.ClusterMap != "" {
+		slog.Warn("CLUSTER_MAP is set but CLUSTER_LABEL is empty, cluster filter is off")
+	}
 
 	// Load dashboard config (custom file or built-in defaults)
 	var dashCfg *config.DashboardConfig
@@ -62,7 +73,7 @@ func main() {
 	}
 
 	promClient := prometheus.NewClient(cfg.PrometheusURL)
-	auth := handler.NewAuthorizer(dynClient)
+	auth := handler.NewAuthorizer(dynClient, cfg.ClusterLabel, clusterMap)
 
 	// Existing handlers (backward compatible)
 	resourceHandler := handler.NewResource(promClient, auth)

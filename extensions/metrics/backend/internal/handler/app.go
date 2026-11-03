@@ -39,7 +39,8 @@ func (h *App) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.auth.AuthorizeNamespace(w, r, namespace) {
+	cluster, ok := h.auth.AuthorizeNamespace(w, r, namespace)
+	if !ok {
 		return
 	}
 
@@ -54,7 +55,7 @@ func (h *App) Handle(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
 	defer cancel()
 
-	queries := query.AppMetrics(namespace, pods)
+	queries := query.AppMetrics(namespace, pods, h.auth.clusterLabel, cluster)
 	resp := appResponse{}
 
 	// Instant summary

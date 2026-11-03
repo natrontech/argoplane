@@ -113,7 +113,8 @@ func (h *Dashboard) HandleGraph(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"namespace is required"}`, http.StatusBadRequest)
 		return
 	}
-	if !h.auth.AuthorizeNamespace(w, r, namespace) {
+	cluster, ok := h.auth.AuthorizeNamespace(w, r, namespace)
+	if !ok {
 		return
 	}
 
@@ -122,7 +123,7 @@ func (h *Dashboard) HandleGraph(w http.ResponseWriter, r *http.Request) {
 		"application", applicationName, "groupKind", groupKind,
 		"row", rowName, "graph", graphName,
 		"namespace", namespace, "name", name,
-		"duration", duration, "user", username,
+		"duration", duration, "user", username, "cluster", cluster,
 	)
 
 	// Find graph config
@@ -147,14 +148,16 @@ func (h *Dashboard) HandleGraph(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ponytail: dashboard PromQL templates only ever reference {{.namespace}} and
-	// {{.podFilter}}, so we build a closed set of known vars and escape each value
-	// with EscapePromQLLabel before substitution. This blocks PromQL injection
-	// (a value can no longer break out of a label matcher) without enumerating
-	// every possible query param. If a new template var is ever needed, add it here.
+	// ponytail: dashboard PromQL templates only reference this closed set of vars.
+	// Each value is escaped with EscapePromQLLabel before substitution, so it cannot
+	// break out of a label matcher. clusterMatcher is a pre-rendered
+	// `,<label>="<escaped>"` (or "" when the filter is off) built by ClusterMatcher
+	// from a validated label name. If a new template var is ever needed, add it here.
 	vars := map[string]string{
-		"namespace": query.EscapePromQLLabel(namespace),
-		"name":      query.EscapePromQLLabel(name),
+		"namespace":      query.EscapePromQLLabel(namespace),
+		"name":           query.EscapePromQLLabel(name),
+		"cluster":        query.EscapePromQLLabel(cluster),
+		"clusterMatcher": query.ClusterMatcher(h.auth.clusterLabel, cluster),
 	}
 
 	// Set podFilter: if specific pods are requested, use them as a regex OR;

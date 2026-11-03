@@ -13,9 +13,10 @@ type NamedQuery struct {
 }
 
 // ResourceMetrics returns PromQL queries for a workload's metrics.
-// Kind must be "Deployment", "StatefulSet", or "Pod".
-func ResourceMetrics(namespace, name, kind string) []NamedQuery {
-	podSelector := podSelectorForKind(namespace, name, kind)
+// Kind must be "Deployment", "StatefulSet", or "Pod". When clusterLabel and
+// cluster are set, queries are scoped to that cluster.
+func ResourceMetrics(namespace, name, kind, clusterLabel, cluster string) []NamedQuery {
+	podSelector := podSelectorForKind(namespace, name, kind) + ClusterMatcher(clusterLabel, cluster)
 
 	return []NamedQuery{
 		{

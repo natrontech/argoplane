@@ -56,12 +56,13 @@ func (h *PerPod) Handle(w http.ResponseWriter, r *http.Request) {
 		kind = "Deployment"
 	}
 
-	if !h.auth.AuthorizeNamespace(w, r, namespace) {
+	cluster, ok := h.auth.AuthorizeNamespace(w, r, namespace)
+	if !ok {
 		return
 	}
 
 	username := r.Header.Get("Argocd-Username")
-	slog.Debug("per-pod series", "namespace", namespace, "name", name, "kind", kind, "range", timeRange, "user", username)
+	slog.Debug("per-pod series", "namespace", namespace, "name", name, "kind", kind, "range", timeRange, "user", username, "cluster", cluster)
 
 	ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
 	defer cancel()
@@ -89,6 +90,7 @@ func (h *PerPod) Handle(w http.ResponseWriter, r *http.Request) {
 	} else {
 		podSelector = fmt.Sprintf(`namespace="%s"`, query.EscapePromQLLabel(namespace))
 	}
+	podSelector += query.ClusterMatcher(h.auth.clusterLabel, cluster)
 
 	type metricDef struct {
 		name  string

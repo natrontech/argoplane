@@ -58,7 +58,8 @@ func (h *Resource) Handle(w http.ResponseWriter, r *http.Request) {
 		kind = "Deployment"
 	}
 
-	if !h.auth.AuthorizeNamespace(w, r, namespace) {
+	cluster, ok := h.auth.AuthorizeNamespace(w, r, namespace)
+	if !ok {
 		return
 	}
 
@@ -68,7 +69,7 @@ func (h *Resource) Handle(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
 	defer cancel()
 
-	queries := query.ResourceMetrics(namespace, name, kind)
+	queries := query.ResourceMetrics(namespace, name, kind, h.auth.clusterLabel, cluster)
 	w.Header().Set("Content-Type", "application/json")
 
 	if timeRange != "" {
