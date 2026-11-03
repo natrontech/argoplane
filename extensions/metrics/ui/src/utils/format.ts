@@ -39,3 +39,9 @@ export function formatTimeLabel(iso: string, range: string): string {
   }
   return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 }
+
+/** Formats a backend value string with f, passing through "-" and non-numbers. */
+export function formatMaybe(value: string, f: (n: number) => string): string {
+  const n = parseFloat(value);
+  return isNaN(n) ? value : f(n);
+}

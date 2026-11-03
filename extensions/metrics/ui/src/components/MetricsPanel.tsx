@@ -12,10 +12,12 @@ import {
   fontWeight,
   panel,
   spacing,
+  useVisibleInterval,
 } from '@argoplane/shared';
 import { fetchMetrics, fetchPodBreakdown } from '../api';
 import { ExtensionProps, MetricData, PodMetric } from '../types';
 import { SERIES_COLORS } from '../utils/palette';
+import { formatCPU, formatMemory, formatNetwork, formatMaybe } from '../utils/format';
 import { ConfigDashboard } from './ConfigDashboard';
 
 const REFRESH_INTERVAL = 30_000;
@@ -78,10 +80,7 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
     fetchAll();
   }, [fetchAll]);
 
-  React.useEffect(() => {
-    const interval = setInterval(fetchAll, REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchAll]);
+  useVisibleInterval(fetchAll, REFRESH_INTERVAL);
 
   if (!namespace || !name) {
     return <EmptyState message="No namespace or name available for this resource" />;
@@ -176,14 +175,14 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
                         <span style={{ ...podDot, background: SERIES_COLORS[i % SERIES_COLORS.length] }} />
                         {p.pod}
                       </td>
-                      <td style={{ ...td, color: cpuOverLimit ? colors.redText : undefined }}>{p.cpu}m</td>
-                      <td style={tdDim}>{p.cpuRequest !== '-' ? `${p.cpuRequest}m` : '-'}</td>
-                      <td style={tdDim}>{p.cpuLimit !== '-' ? `${p.cpuLimit}m` : '-'}</td>
-                      <td style={{ ...td, color: memOverLimit ? colors.redText : undefined }}>{p.memory} MiB</td>
-                      <td style={tdDim}>{p.memoryRequest !== '-' ? `${p.memoryRequest} MiB` : '-'}</td>
-                      <td style={tdDim}>{p.memoryLimit !== '-' ? `${p.memoryLimit} MiB` : '-'}</td>
-                      <td style={td}>{p.netRx} KB/s</td>
-                      <td style={td}>{p.netTx} KB/s</td>
+                      <td style={{ ...td, color: cpuOverLimit ? colors.redText : undefined }}>{formatMaybe(p.cpu, formatCPU)}</td>
+                      <td style={tdDim}>{formatMaybe(p.cpuRequest, formatCPU)}</td>
+                      <td style={tdDim}>{formatMaybe(p.cpuLimit, formatCPU)}</td>
+                      <td style={{ ...td, color: memOverLimit ? colors.redText : undefined }}>{formatMaybe(p.memory, formatMemory)}</td>
+                      <td style={tdDim}>{formatMaybe(p.memoryRequest, formatMemory)}</td>
+                      <td style={tdDim}>{formatMaybe(p.memoryLimit, formatMemory)}</td>
+                      <td style={td}>{formatMaybe(p.netRx, formatNetwork)}</td>
+                      <td style={td}>{formatMaybe(p.netTx, formatNetwork)}</td>
                       <td style={{
                         ...td,
                         color: Number(p.restarts) > 0 ? colors.redText : undefined,

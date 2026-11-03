@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -35,6 +36,9 @@ func main() {
 		slog.Error("failed to create in-cluster config", "error", err)
 		os.Exit(1)
 	}
+	// Bound every API call: a stuck List would otherwise hold the handler
+	// past the server's WriteTimeout until the client disconnects.
+	kubeConfig.Timeout = 25 * time.Second
 
 	dynClient, err := dynamic.NewForConfig(kubeConfig)
 	if err != nil {
@@ -69,7 +73,7 @@ func main() {
 		WriteTimeout: 30 * time.Second,
 	}
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
 	go func() {

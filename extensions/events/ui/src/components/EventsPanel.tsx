@@ -9,6 +9,7 @@ import {
   fontSize,
   fontWeight,
   colors,
+  useVisibleInterval,
 } from '@argoplane/shared';
 import { fetchEvents } from '../api';
 import { KubeEvent, SinceRange, SINCE_LABELS, ExtensionProps } from '../types';
@@ -74,10 +75,7 @@ export const EventsPanel: React.FC<ExtensionProps> = ({ resource, application })
     fetchAll();
   }, [fetchAll]);
 
-  React.useEffect(() => {
-    const interval = setInterval(fetchAll, REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchAll]);
+  useVisibleInterval(fetchAll, REFRESH_INTERVAL);
 
   const sinceOptions = (Object.keys(SINCE_LABELS) as SinceRange[]).map((s) =>
     React.createElement('option', { key: s, value: s }, SINCE_LABELS[s]),

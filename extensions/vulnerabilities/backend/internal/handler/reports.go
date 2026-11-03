@@ -38,7 +38,7 @@ func (h *ReportsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	auditLog(r, "vulnerability.reports", namespace, "resource", resourceFilter, "kind", kindFilter)
 
-	list, err := h.client.Resource(types.VulnerabilityReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{Limit: 500})
+	list, err := h.client.Resource(types.VulnerabilityReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{Limit: 500, LabelSelector: resourceLabelSelector(nonEmpty(resourceFilter))})
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "failed to list vulnerability reports")
 		return
@@ -197,4 +197,12 @@ func nestedInt(obj map[string]interface{}, key string) int {
 	default:
 		return 0
 	}
+}
+
+// nonEmpty returns []string{s}, or nil for "" so no selector is built.
+func nonEmpty(s string) []string {
+	if s == "" {
+		return nil
+	}
+	return []string{s}
 }

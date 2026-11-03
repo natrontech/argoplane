@@ -23,15 +23,15 @@ type DataPoint struct {
 
 // apiResponse is the top-level Prometheus API response.
 type apiResponse struct {
-	Status string   `json:"status"`
-	Data   apiData  `json:"data"`
-	Error  string   `json:"error,omitempty"`
+	Status string  `json:"status"`
+	Data   apiData `json:"data"`
+	Error  string  `json:"error,omitempty"`
 }
 
 // apiData holds the typed result from Prometheus.
 type apiData struct {
-	ResultType string          `json:"resultType"`
-	Result     []apiResult     `json:"result"`
+	ResultType string      `json:"resultType"`
+	Result     []apiResult `json:"result"`
 }
 
 // apiResult represents a single result entry.

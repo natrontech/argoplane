@@ -25,7 +25,9 @@ export const PieChart: React.FC<PieChartProps> = ({ segments, size = 140 }) => {
   const paths = segments
     .filter(s => s.value > 0)
     .map(segment => {
-      const angle = (segment.value / total) * 2 * Math.PI;
+      // An arc can't start and end at the same point, so a 100% segment
+      // would draw nothing; stop just short of a full turn.
+      const angle = Math.min((segment.value / total) * 2 * Math.PI, 2 * Math.PI - 1e-4);
       const endAngle = startAngle + angle;
       const largeArc = angle > Math.PI ? 1 : 0;
 

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Loading, colors, fonts, fontSize, spacing, radius } from '@argoplane/shared';
+import { Loading, colors, fonts, fontSize, spacing, radius, useVisibleInterval } from '@argoplane/shared';
 import { fetchGraphData } from '../api';
 import { GraphDataResponse, DashboardGraph } from '../types';
 import { MetricsChart } from './MetricsChart';
@@ -57,10 +57,7 @@ export const GraphPanel: React.FC<GraphPanelProps> = ({
     fetchData();
   }, [fetchData]);
 
-  React.useEffect(() => {
-    const interval = setInterval(fetchData, REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchData]);
+  useVisibleInterval(fetchData, REFRESH_INTERVAL);
 
   if (loading && !data) {
     return (

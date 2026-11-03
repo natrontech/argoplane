@@ -11,6 +11,7 @@ import {
   fontSize,
   panel,
   spacing,
+  useVisibleInterval,
 } from '@argoplane/shared';
 import { useStickyScope } from '@argoplane/shared';
 import { fetchLogs, fetchLabelValues } from '../api';
@@ -47,7 +48,7 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
     type: 'relative',
     relative: '1h',
   });
-  const [scope, setScope] = useStickyScope();
+  const [scope, setScope] = useStickyScope('logs');
 
   const namespace = application?.spec?.destination?.namespace || '';
   const appName = application?.metadata?.name || '';
@@ -143,11 +144,7 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
     fetchAll();
   }, [fetchAll]);
 
-  React.useEffect(() => {
-    if (paused) return;
-    const interval = setInterval(fetchAll, REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchAll, paused]);
+  useVisibleInterval(fetchAll, REFRESH_INTERVAL, !paused);
 
   const handleSeverityToggle = React.useCallback((severity: Severity) => {
     setActiveSeverities((prev) => {
