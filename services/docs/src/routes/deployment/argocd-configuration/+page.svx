@@ -106,7 +106,7 @@ extensions:
 
 To serve several clusters, run one backend per cluster and list each in the proxy config with a `cluster: { name | server }` entry, so ArgoCD routes every app to the backend for its cluster. The check then catches requests that reach the wrong one.
 
-Metrics and logs are different: they query shared datastores, so their fix is a cluster label filter on the queries (tracked in [issue #109](https://github.com/natrontech/argoplane/issues/109)).
+Metrics and logs are different: they often query a Prometheus and Loki shared by several clusters. Set `CLUSTER_LABEL` (and optionally `CLUSTER_MAP`) on those two backends to scope every query to the Application's destination cluster. See "Cluster filter" on the Metrics extension page.
 
 ### What the backends need
 
