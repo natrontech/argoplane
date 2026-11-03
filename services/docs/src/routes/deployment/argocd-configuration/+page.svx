@@ -83,10 +83,12 @@ p, role:developer, extensions, invoke, events, allow
 ArgoCD's RBAC decides who may invoke an extension. On top of that, every ArgoPlane backend enforces namespace scoping on its data endpoints:
 
 - Each request must carry the `Argocd-Application-Name` header in `namespace:name` format. ArgoCD's proxy sets it automatically; requests without it get a `403`.
-- The backend fetches that Application from the Kubernetes API and builds the set of namespaces it manages: the destination namespace plus every namespace in `status.resources`.
+- The backend fetches that Application from the Kubernetes API and builds the set of namespaces it manages: the destination namespace plus every namespace in `status.resources`. Resources in the `argoproj.io` group are skipped, so an app-of-apps does not gain access to the ArgoCD namespace through its child Application CRs.
 - If the requested namespace is not in that set, the backend returns `403 namespace not managed by this application`.
 
 The result: a user can only pull metrics, logs, flows, vulnerabilities, or events for namespaces their Application actually deploys to, even if they craft requests by hand.
+
+This relies on the identity headers coming from argocd-server. A pod that reaches a backend Service directly could set them itself. The Helm chart therefore deploys a NetworkPolicy that admits traffic to the backends only from pods labeled `app.kubernetes.io/name: argocd-server` (and the chart's own test pods). If your argocd-server pods carry different labels, set `networkPolicy.argocdServerSelector`. If you deploy with the dev manifests or Kustomize instead of the chart, add an equivalent policy yourself.
 
 ### What the backends need
 
