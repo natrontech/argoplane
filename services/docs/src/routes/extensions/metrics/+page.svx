@@ -107,6 +107,10 @@ PromQL query expressions support Go `text/template` syntax. All URL query parame
 | `{{.name}}` | Resource name pattern (pods: exact, workloads: `name-.*`) | `guestbook-ui-.*` |
 | `{{.application}}` | ArgoCD application name | `guestbook` |
 | `{{.duration}}` | Selected time range | `1h` |
+| `{{.cluster}}` | Cluster label value of the Application, empty when the cluster filter is off | `prod` |
+| `{{.clusterMatcher}}` | Pre-rendered `,<label>="<value>"` matcher, empty when the cluster filter is off | `,cluster="prod"` |
+
+Put `{{.clusterMatcher}}` directly after the namespace matcher, e.g. `{namespace="{{.namespace}}"{{.clusterMatcher}},pod=~"{{.podFilter}}"}`. The built-in dashboards do this; custom dashboards must add it themselves to be filtered by cluster.
 
 ### Config structure
 
@@ -203,6 +207,26 @@ You can define different dashboards for different ArgoCD applications. The backe
 | `PORT` | No | `8080` | HTTP server port |
 | `LOG_LEVEL` | No | `info` | Log level (debug, info, warn, error) |
 | `CONFIG_PATH` | No | (empty) | Path to custom dashboard config JSON. Omit to use built-in defaults. |
+| `CLUSTER_LABEL` | No | (empty) | Label that identifies the cluster in Prometheus, e.g. `cluster`. Empty disables the cluster filter. |
+| `CLUSTER_MAP` | No | (empty) | JSON object mapping ArgoCD cluster names or server URLs to label values. See [Cluster filter](#cluster-filter). |
+
+### Cluster filter
+
+With a Prometheus or VictoriaMetrics shared by several clusters, set `CLUSTER_LABEL` to scope every query to the Application's destination cluster. The value is resolved from `spec.destination` in this order:
+
+1. `CLUSTER_MAP` entry for the destination name
+2. `CLUSTER_MAP` entry for the destination server URL (trailing `/` ignored)
+3. The destination name itself
+4. Otherwise no cluster filter
+
+A map value of `""` disables the filter for that cluster. Apps on the ArgoCD cluster default to the name `in-cluster`, so map it to your hub's label value (or `""`):
+
+```bash
+CLUSTER_LABEL=cluster
+CLUSTER_MAP='{"in-cluster":"hub","https://10.0.0.1:6443":"prod"}'
+```
+
+The label must be present on every series, e.g. via Prometheus `external_labels` or a remote-write relabel. The filter scopes views; it is not tenant isolation, since unresolved Applications fall back to no filter.
 
 ## Proxy configuration
 

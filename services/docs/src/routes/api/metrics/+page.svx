@@ -80,7 +80,7 @@ Executes a PromQL template for a specific graph and returns time series data.
 | `pods` | string | No | | Comma-separated pod names; overrides `name` as the pod filter |
 | `duration` | string | No | `1h` | Time range: `1h`, `6h`, `24h`, `7d` |
 
-PromQL templates support the variables `{{.namespace}}`, `{{.name}}`, and `{{.podFilter}}` (built from `pods` or `name`). Values are escaped before substitution to prevent PromQL injection.
+PromQL templates support the variables `{{.namespace}}`, `{{.name}}`, `{{.podFilter}}` (built from `pods` or `name`), `{{.cluster}}` and `{{.clusterMatcher}}` (set when `CLUSTER_LABEL` is configured). Values are escaped before substitution to prevent PromQL injection.
 
 **Response:**
 
