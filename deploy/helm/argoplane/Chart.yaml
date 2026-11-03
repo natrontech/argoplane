@@ -2,9 +2,9 @@ apiVersion: v2
 name: argoplane
 description: A package of ArgoCD UI extensions
 type: application
-version: 1.5.1
-appVersion: "1.5.1"
-home: https://argoplane.io
+version: 1.6.2
+appVersion: "1.6.2"
+home: https://natrontech.github.io/argoplane
 annotations:
   artifacthub.io/license: Apache-2.0
 sources:
@@ -20,4 +20,4 @@ keywords:
   - kubernetes
   - metrics
   - networking
-icon: https://argoplane.io/logo.svg
+icon: https://raw.githubusercontent.com/natrontech/argoplane/main/assets/argoplane_logo.svg

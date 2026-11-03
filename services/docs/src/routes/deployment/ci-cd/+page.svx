@@ -66,12 +66,12 @@ Published as an OCI artifact:
 ```bash
 # Install a specific version
 helm install argoplane oci://ghcr.io/natrontech/charts/argoplane \
-  --version 0.2.0 \
+  --version 1.6.2 \
   --namespace argocd
 
 # Pull and inspect
-helm pull oci://ghcr.io/natrontech/charts/argoplane --version 0.2.0
-helm show values oci://ghcr.io/natrontech/charts/argoplane --version 0.2.0
+helm pull oci://ghcr.io/natrontech/charts/argoplane --version 1.6.2
+helm show values oci://ghcr.io/natrontech/charts/argoplane --version 1.6.2
 ```
 
 The chart version and `appVersion` always match the release tag. The `appVersion` is the default image tag for all extension backends.
@@ -109,13 +109,13 @@ After a release is published, deploy to a cluster:
 ```bash
 # Fresh install
 helm install argoplane oci://ghcr.io/natrontech/charts/argoplane \
-  --version 0.2.0 \
+  --version 1.6.2 \
   --namespace argocd \
   -f values-prod.yaml
 
 # Upgrade existing
 helm upgrade argoplane oci://ghcr.io/natrontech/charts/argoplane \
-  --version 0.2.0 \
+  --version 1.6.2 \
   --namespace argocd \
   -f values-prod.yaml
 ```

@@ -2,7 +2,7 @@
 // Loaded as an ArgoCD UI extension from /tmp/extensions/
 (function() {
   'use strict';
-  var AP_URL = 'https://argoplane.io';
+  var AP_URL = 'https://natrontech.github.io/argoplane';
 
   function attachLink(selector, pseudo) {
     document.querySelectorAll(selector).forEach(function(el) {
