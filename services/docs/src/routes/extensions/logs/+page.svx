@@ -70,6 +70,10 @@ The logs backend queries Loki:
 | `LOKI_TENANT_ID` | No | (empty) | Loki tenant ID for multi-tenant mode |
 | `PORT` | No | `8083` | HTTP server port |
 | `LOG_LEVEL` | No | `info` | Log level |
+| `CLUSTER_LABEL` | No | (empty) | Loki stream label that identifies the cluster, e.g. `cluster`. Empty disables the cluster filter. |
+| `CLUSTER_MAP` | No | (empty) | JSON object mapping ArgoCD cluster names or server URLs to label values |
+
+With a Loki shared by several clusters, `CLUSTER_LABEL` scopes log queries and label discovery to the Application's destination cluster. Resolution and `CLUSTER_MAP` work as described under "Cluster filter" on the metrics extension page. The label must be a stream label; structured metadata is not matched.
 
 ## RBAC
 

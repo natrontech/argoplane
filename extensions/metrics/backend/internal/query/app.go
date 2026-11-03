@@ -21,10 +21,11 @@ func podFilter(pods []string) string {
 }
 
 // AppMetrics returns PromQL queries aggregated across containers in a namespace.
-// When pods is non-empty, queries are scoped to only those pods.
-func AppMetrics(namespace string, pods []string) []NamedQuery {
+// When pods is non-empty, queries are scoped to only those pods. When
+// clusterLabel and cluster are set, queries are scoped to that cluster.
+func AppMetrics(namespace string, pods []string, clusterLabel, cluster string) []NamedQuery {
 	namespace = EscapePromQLLabel(namespace)
-	pf := podFilter(pods)
+	pf := podFilter(pods) + ClusterMatcher(clusterLabel, cluster)
 	return []NamedQuery{
 		{
 			Name:  "CPU Usage",

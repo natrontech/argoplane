@@ -72,6 +72,11 @@ extensions:
     env:
       PROMETHEUS_URL: "http://kube-prometheus-kube-prome-prometheus.monitoring.svc:9090"
       LOG_LEVEL: "info"
+      # Filter queries by the Application's destination cluster (off when empty)
+      # CLUSTER_LABEL: "cluster"
+      # Optional map from ArgoCD cluster name or server URL to label value;
+      # "" disables the filter for that cluster
+      # CLUSTER_MAP: '{"in-cluster":"hub","https://10.0.0.1:6443":"prod"}'
     # -- Extra environment variables (list format)
     extraEnv: []
     # -- Resource requests and limits
@@ -187,6 +192,11 @@ extensions:
       LOKI_URL: "http://loki.monitoring.svc:3100"
       LOKI_TENANT_ID: ""
       LOG_LEVEL: "info"
+      # Filter queries by the Application's destination cluster (off when empty)
+      # CLUSTER_LABEL: "cluster"
+      # Optional map from ArgoCD cluster name or server URL to label value;
+      # "" disables the filter for that cluster
+      # CLUSTER_MAP: '{"in-cluster":"hub","https://10.0.0.1:6443":"prod"}'
     extraEnv: []
     resources:
       requests:
