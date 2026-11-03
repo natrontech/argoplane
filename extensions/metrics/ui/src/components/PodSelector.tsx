@@ -135,7 +135,7 @@ const chip: React.CSSProperties = {
 
 const chipSelected: React.CSSProperties = {
   ...chip,
-  background: `${colors.orange500}18`,
+  background: colors.orange50,
   borderColor: colors.orange500,
   color: colors.orange600,
 };
