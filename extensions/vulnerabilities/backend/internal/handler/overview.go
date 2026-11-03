@@ -43,12 +43,9 @@ func (h *OverviewHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	auditLog(r, "vulnerability.overview", req.Namespace)
 
-	listOpts := metav1.ListOptions{Limit: 500, LabelSelector: resourceLabelSelector(req.Resources)}
-	list, err := h.client.Resource(types.VulnerabilityReportGVR).Namespace(req.Namespace).List(r.Context(), listOpts)
-	if err != nil {
-		WriteError(w, http.StatusInternalServerError, "failed to list vulnerability reports")
-		return
-	}
+	var truncated bool
+	listOpts := metav1.ListOptions{LabelSelector: resourceLabelSelector(req.Resources)}
+	reportList := h.client.Resource(types.VulnerabilityReportGVR).Namespace(req.Namespace).List
 
 	totalSummary := types.VulnerabilitySummary{}
 	totalFixable := 0
@@ -57,7 +54,11 @@ func (h *OverviewHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	seen := make(map[string]bool)
 	images := make([]types.ImageReport, 0)
 
-	for _, item := range list.Items {
+	for item, err := range eachReport(r.Context(), reportList, listOpts, &truncated) {
+		if err != nil {
+			WriteError(w, http.StatusInternalServerError, "failed to list vulnerability reports")
+			return
+		}
 		report := parseReport(item)
 
 		// Deduplicate by image:tag.
@@ -87,5 +88,6 @@ func (h *OverviewHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		Fixable:   totalFixable,
 		Images:    images,
 		Namespace: req.Namespace,
+		Truncated: truncated,
 	})
 }

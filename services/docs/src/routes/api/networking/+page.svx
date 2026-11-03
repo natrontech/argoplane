@@ -21,6 +21,8 @@ POST /api/v1/policies-with-ownership
 
 Returns all Cilium network policies affecting a namespace (namespace-scoped and clusterwide), each tagged with ownership: `app` if the policy belongs to the calling Application's resource tree, `platform` otherwise.
 
+Clusterwide policies are filtered to those that can select pods in the namespace. A policy whose `endpointSelector` has no namespace term (a platform default deny, allow DNS) is returned. One pinned to other namespaces through `io.kubernetes.pod.namespace` (in `matchLabels`, or `In`/`NotIn` in `matchExpressions`) is not, and neither is a host policy with only a `nodeSelector`. Selectors on namespace labels can't be checked without the Namespace object and are returned. Clusterwide policies in the Application's own resource tree are always returned.
+
 **Request body:**
 
 ```json
