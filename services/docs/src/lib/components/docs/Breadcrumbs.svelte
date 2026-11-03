@@ -1,17 +1,16 @@
 <script lang="ts">
-	import { base } from '$app/paths';
-	import { page } from '$app/stores';
-	import { navigation } from '$lib/config/navigation';
-	import type { NavItem } from '$lib/types';
+	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
+	import { navigation } from '#lib/config/navigation.ts';
+	import type { NavItem } from '#lib/types/index.ts';
 	import { ChevronRight } from 'lucide-svelte';
 
 	interface Crumb {
 		title: string;
-		href: string;
+		href: NavItem['href'];
 	}
 
-	function findCrumbs(pathname: string): Crumb[] {
-		const path = pathname.startsWith(base) ? pathname.slice(base.length) || '/' : pathname;
+	function findCrumbs(path: string): Crumb[] {
 		if (path === '/') return [];
 
 		const crumbs: Crumb[] = [];
@@ -36,12 +35,12 @@
 		return crumbs;
 	}
 
-	let crumbs = $derived(findCrumbs($page.url.pathname));
+	let crumbs = $derived(findCrumbs(page.route.id ?? '/'));
 </script>
 
 {#if crumbs.length > 0}
 	<nav class="mb-4 flex items-center gap-1.5 text-xs" aria-label="Breadcrumb">
-		<a href="{base}/" class="text-gray-400 no-underline hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400">
+		<a href={resolve('/')} class="text-gray-400 no-underline hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400">
 			Docs
 		</a>
 		{#each crumbs as crumb, i}
@@ -49,7 +48,7 @@
 			{#if i === crumbs.length - 1}
 				<span class="text-gray-600 dark:text-gray-300">{crumb.title}</span>
 			{:else}
-				<a href="{base}{crumb.href}" class="text-gray-400 no-underline hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400">
+				<a href={resolve(crumb.href)} class="text-gray-400 no-underline hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400">
 					{crumb.title}
 				</a>
 			{/if}

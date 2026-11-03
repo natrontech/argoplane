@@ -80,6 +80,11 @@ updates:
       interval: monthly
     cooldown:
       default-days: 7
+    # SvelteKit and svelte-check pin TypeScript to ^5 || ^6 as their peer.
+    # Bump the TypeScript major by hand once they support it.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     groups:
       npm-dependencies:
         patterns:
