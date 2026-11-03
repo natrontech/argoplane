@@ -50,11 +50,13 @@ function endpoint(ns: string, pod: string, workload: string | undefined, identit
     const name = workload || podWorkload(pod);
     return { id: `${ns}/${name}`, label: name, sub: ns === appNs ? '' : ns, filter: name, center: ns === appNs };
   }
-  if (identity && identity !== 'world') {
+  // Cilium splits "world" into world-ipv4 / world-ipv6 on dual-stack setups.
+  const world = identity?.startsWith('world') ?? false;
+  if (identity && !world) {
     return { id: `reserved:${identity}`, label: identity, sub: 'reserved', filter: ip || identity, center: false };
   }
   const name = dns || ip || 'unknown';
-  return { id: `ext:${name}`, label: name, sub: identity === 'world' || dns ? 'world' : 'ip', filter: name, center: false };
+  return { id: `ext:${name}`, label: name, sub: world || dns ? 'world' : 'ip', filter: name, center: false };
 }
 
 function buildGraph(flows: FlowSummary[], appNs: string): { nodes: Map<string, MapNode>; edges: MapEdge[] } {
