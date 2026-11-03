@@ -167,7 +167,7 @@ Fields that Hubble did not resolve are omitted:
 |-------|-------------|
 | `time` | RFC 3339 in UTC with a fixed nine-digit fraction, so string order equals time order |
 | `sourceWorkload`, `destWorkload` | Owning workload of the pod (e.g. the Deployment name) |
-| `sourceIdentity`, `destIdentity` | Cilium reserved identity for non-pod peers: `world`, `host`, `kube-apiserver`, `remote-node`, ... |
+| `sourceIdentity`, `destIdentity` | Cilium reserved identity for non-pod peers: `world` (or `world-ipv4` / `world-ipv6`), `host`, `kube-apiserver`, `remote-node`, ... |
 | `destDNS` | First DNS name Hubble saw for the destination IP |
 | `allowedBy`, `deniedBy` | Policies Cilium reports as having allowed or denied the flow, as `namespace/name` (or `name` for clusterwide policies). Empty for drops caused only by default deny. |
 

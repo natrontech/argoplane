@@ -42,7 +42,6 @@ echo "      guestbook-policy          CiliumNetworkPolicy  (restricts ingress to
 echo "      traffic-generator-egress  CiliumNetworkPolicy  (restricts traffic-allowed egress)"
 echo ""
 echo "    Platform-managed resources (NOT in ArgoCD tree, show as 'platform' ownership):"
-echo "      platform-default-deny-ingress   CiliumClusterwideNetworkPolicy  (baseline deny-all ingress)"
 echo "      platform-allow-dns              CiliumClusterwideNetworkPolicy  (baseline allow DNS)"
 echo "      platform-allow-health-probes    CiliumClusterwideNetworkPolicy  (allow kubelet probes)"
 echo "      platform-allow-monitoring       CiliumNetworkPolicy             (allow monitoring scraping)"

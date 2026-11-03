@@ -31,7 +31,7 @@ Query log entries from Loki with optional filters.
 | `kind` | string | No | - | Resource kind (`Deployment`, `StatefulSet`) |
 | `container` | string | No | - | Container name |
 | `filter` | string | No | - | Free-text line filter |
-| `severity` | string | No | - | Comma-separated: `debug`, `info`, `warn`, `error` |
+| `severity` | string | No | - | Comma-separated: `debug`, `info`, `warn`, `error`. Returns only lines whose detected `severity` is in the list, so a message that merely contains the word "error" stays `info`. |
 | `start` | string | No | 1h ago | RFC3339 timestamp |
 | `end` | string | No | now | RFC3339 timestamp |
 | `limit` | integer | No | 500 | Max entries (1-5000) |
