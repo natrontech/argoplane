@@ -1,6 +1,9 @@
 package handler
 
 import (
+	"context"
+	"iter"
+	"log/slog"
 	"net/http"
 	"sort"
 
@@ -38,14 +41,14 @@ func (h *ReportsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	auditLog(r, "vulnerability.reports", namespace, "resource", resourceFilter, "kind", kindFilter)
 
-	list, err := h.client.Resource(types.VulnerabilityReportGVR).Namespace(namespace).List(r.Context(), metav1.ListOptions{Limit: 500, LabelSelector: resourceLabelSelector(nonEmpty(resourceFilter))})
-	if err != nil {
-		WriteError(w, http.StatusInternalServerError, "failed to list vulnerability reports")
-		return
-	}
-
-	reports := make([]types.ImageReport, 0, len(list.Items))
-	for _, item := range list.Items {
+	var truncated bool
+	opts := metav1.ListOptions{LabelSelector: resourceLabelSelector(nonEmpty(resourceFilter))}
+	reports := make([]types.ImageReport, 0)
+	for item, err := range eachReport(r.Context(), h.client.Resource(types.VulnerabilityReportGVR).Namespace(namespace).List, opts, &truncated) {
+		if err != nil {
+			WriteError(w, http.StatusInternalServerError, "failed to list vulnerability reports")
+			return
+		}
 		report := parseReport(item)
 
 		if resourceFilter != "" && report.ResourceName != resourceFilter {
@@ -64,6 +67,50 @@ func (h *ReportsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	})
 
 	WriteJSON(w, reports)
+}
+
+// Trivy reports are listed a page at a time and only their parsed form is
+// kept, so one page of raw objects (SBOMs can be several MB each) bounds
+// memory. maxReports caps a single request; hitting it marks the response
+// truncated.
+const (
+	reportPageSize = 100
+	maxReports     = 5000
+)
+
+// listFunc is the List method of a dynamic resource client.
+type listFunc func(ctx context.Context, opts metav1.ListOptions) (*unstructured.UnstructuredList, error)
+
+// eachReport yields every report matching opts, following Continue tokens.
+// A List error is yielded once and ends the sequence. After maxReports it
+// stops and sets *truncated.
+func eachReport(ctx context.Context, list listFunc, opts metav1.ListOptions, truncated *bool) iter.Seq2[unstructured.Unstructured, error] {
+	return func(yield func(unstructured.Unstructured, error) bool) {
+		opts.Limit = reportPageSize
+		n := 0
+		for {
+			page, err := list(ctx, opts)
+			if err != nil {
+				yield(unstructured.Unstructured{}, err)
+				return
+			}
+			for _, item := range page.Items {
+				if n == maxReports {
+					*truncated = true
+					slog.Warn("report list truncated", "max", maxReports)
+					return
+				}
+				n++
+				if !yield(item, nil) {
+					return
+				}
+			}
+			if page.GetContinue() == "" {
+				return
+			}
+			opts.Continue = page.GetContinue()
+		}
+	}
 }
 
 func severityScore(s types.VulnerabilitySummary) int {

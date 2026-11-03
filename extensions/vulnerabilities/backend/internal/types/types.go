@@ -85,6 +85,8 @@ type SbomOverviewResponse struct {
 	Reports         []SbomReport `json:"reports"`
 	TotalComponents int          `json:"totalComponents"`
 	Namespace       string       `json:"namespace"`
+	// Truncated is true when the namespace has more reports than one request reads.
+	Truncated bool `json:"truncated,omitempty"`
 }
 
 // AuditCheck represents a single configuration audit finding.
@@ -122,6 +124,8 @@ type AuditOverviewResponse struct {
 	Summary   VulnerabilitySummary `json:"summary"`
 	Reports   []AuditReport        `json:"reports"`
 	Namespace string               `json:"namespace"`
+	// Truncated is true when the namespace has more reports than one request reads.
+	Truncated bool `json:"truncated,omitempty"`
 }
 
 // VulnerabilitySummary holds counts per severity level.
@@ -179,4 +183,6 @@ type OverviewResponse struct {
 	Fixable   int                  `json:"fixable"`
 	Images    []ImageReport        `json:"images"`
 	Namespace string               `json:"namespace"`
+	// Truncated is true when the namespace has more reports than one request reads.
+	Truncated bool `json:"truncated,omitempty"`
 }

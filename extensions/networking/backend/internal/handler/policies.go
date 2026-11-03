@@ -98,6 +98,12 @@ func (h *PoliciesHandler) HandleWithOwnership(w http.ResponseWriter, r *http.Req
 		if appResources[key] {
 			ps.Ownership = "app"
 		} else {
+			// Skip platform policies pinned to other namespaces: they don't
+			// affect this app and would show another tenant's selectors and
+			// CIDRs.
+			if !selectsNamespace(item, req.Namespace) {
+				continue
+			}
 			ps.Ownership = "platform"
 		}
 		policies = append(policies, ps)
@@ -108,6 +114,80 @@ func (h *PoliciesHandler) HandleWithOwnership(w http.ResponseWriter, r *http.Req
 	}
 
 	WriteJSON(w, policies)
+}
+
+// selectsNamespace reports whether a clusterwide policy can select pods in ns.
+// A selector without a namespace constraint applies everywhere (default deny,
+// allow DNS) and does. A policy with only a nodeSelector is a host policy and
+// selects no pods. Selectors on namespace labels can't be evaluated without
+// the Namespace object, so they count as matching.
+func selectsNamespace(obj unstructured.Unstructured, ns string) bool {
+	var specs []map[string]interface{}
+	if spec, ok, _ := unstructured.NestedMap(obj.Object, "spec"); ok {
+		specs = append(specs, spec)
+	}
+	if list, ok, _ := unstructured.NestedSlice(obj.Object, "specs"); ok {
+		for _, raw := range list {
+			if spec, ok := raw.(map[string]interface{}); ok {
+				specs = append(specs, spec)
+			}
+		}
+	}
+	for _, spec := range specs {
+		sel, ok := spec["endpointSelector"].(map[string]interface{})
+		if ok && selectorAdmitsNamespace(sel, ns) {
+			return true
+		}
+	}
+	return false
+}
+
+// selectorAdmitsNamespace checks the pod-namespace terms of a label selector.
+func selectorAdmitsNamespace(sel map[string]interface{}, ns string) bool {
+	if labels, ok := sel["matchLabels"].(map[string]interface{}); ok {
+		for k, v := range labels {
+			if isNamespaceKey(k) && fmt.Sprint(v) != ns {
+				return false
+			}
+		}
+	}
+	exprs, _ := sel["matchExpressions"].([]interface{})
+	for _, raw := range exprs {
+		expr, _ := raw.(map[string]interface{})
+		key, _ := expr["key"].(string)
+		if !isNamespaceKey(key) {
+			continue
+		}
+		values, _ := expr["values"].([]interface{})
+		listed := false
+		for _, v := range values {
+			if fmt.Sprint(v) == ns {
+				listed = true
+			}
+		}
+		switch expr["operator"] {
+		case "In":
+			if !listed {
+				return false
+			}
+		case "NotIn":
+			if listed {
+				return false
+			}
+		case "DoesNotExist":
+			return false // every pod has a namespace
+		}
+	}
+	return true
+}
+
+// isNamespaceKey matches Cilium's pod-namespace label with or without its
+// source prefix ("k8s:", "any:").
+func isNamespaceKey(key string) bool {
+	if i := strings.Index(key, ":"); i >= 0 {
+		key = key[i+1:]
+	}
+	return key == "io.kubernetes.pod.namespace"
 }
 
 // ParsePolicySummary extracts a PolicySummary from an unstructured Cilium policy.

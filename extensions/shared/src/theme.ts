@@ -3,7 +3,8 @@
 // Keep in sync with the canonical CSS custom properties.
 // Pastel palette with minimal pixel art influence.
 
-export const colors = {
+// Light values, mirroring design-system/tokens.css.
+const light = {
   // Primary accent (pastel orange)
   orange50: '#FFF7ED',
   orange100: '#FFEDD5',
@@ -51,6 +52,64 @@ export const colors = {
 
   white: '#FFFFFF',
 };
+
+type ColorName = keyof typeof light;
+
+// Dark values, applied under ArgoCD's `.theme-dark` class. The gray scale
+// inverts, so every key keeps its role: gray800 is primary text, gray200 a
+// border, white the field background. This matches the semantic dark tokens
+// in tokens.css. Status squares (*Solid) and pastel borders stay as they are.
+const dark: Partial<Record<ColorName, string>> = {
+  orange50: '#2E2118',
+  orange100: '#3D2B1D',
+  orange200: '#5C3F28',
+  orange300: '#D47A42',
+  orange400: '#E8935A',
+  orange500: '#F0A868',
+  orange600: '#F5C28B',
+
+  greenLight: '#052E16',
+  greenText: '#4ADE80',
+  redLight: '#450A0A',
+  redText: '#F87171',
+  yellowLight: '#422006',
+  yellowText: '#FACC15',
+  blueLight: '#172554',
+  blueText: '#60A5FA',
+
+  gray50: '#292524',
+  gray100: '#36322F',
+  gray200: '#44403C',
+  gray300: '#57534E',
+  gray400: '#78716C',
+  gray500: '#A8A29E',
+  gray600: '#D6D3D1',
+  gray700: '#E7E5E4',
+  gray800: '#F5F5F4',
+  gray900: '#FAFAF9',
+
+  white: '#1C1917',
+};
+
+// Each color is a CSS custom property, so inline styles and SVG fills follow
+// the ArgoCD theme without a re-render. The names are prefixed `--ap-ext-` so
+// they never clash with the `--ap-*` tokens in argoplane-styles.css.
+export const colors = {} as Record<ColorName, string>;
+for (const name of Object.keys(light) as ColorName[]) {
+  colors[name] = `var(--ap-ext-${name})`;
+}
+
+const decls = (values: Partial<Record<ColorName, string>>) =>
+  Object.entries(values).map(([name, value]) => `--ap-ext-${name}:${value};`).join('');
+
+// Every bundle carries this module; the id makes the first one win.
+const STYLE_ID = 'argoplane-color-tokens';
+if (typeof document !== 'undefined' && !document.getElementById(STYLE_ID)) {
+  const style = document.createElement('style');
+  style.id = STYLE_ID;
+  style.textContent = `:root{${decls(light)}}.theme-dark,[data-theme="dark"]{${decls(dark)}}`;
+  document.head.appendChild(style);
+}
 
 export const fonts = {
   body: "'Heebo', sans-serif",
