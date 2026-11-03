@@ -42,19 +42,20 @@ func (h *AuditHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
 
 	auditLog(r, "audit.overview", req.Namespace)
 
-	listOpts := metav1.ListOptions{Limit: 500, LabelSelector: resourceLabelSelector(req.Resources)}
-	list, err := h.client.Resource(types.ConfigAuditReportGVR).Namespace(req.Namespace).List(r.Context(), listOpts)
-	if err != nil {
-		WriteError(w, http.StatusInternalServerError, "failed to list config audit reports")
-		return
-	}
+	var truncated bool
+	listOpts := metav1.ListOptions{LabelSelector: resourceLabelSelector(req.Resources)}
+	reportList := h.client.Resource(types.ConfigAuditReportGVR).Namespace(req.Namespace).List
 
 	totalSummary := types.VulnerabilitySummary{}
-	reports := make([]types.AuditReport, 0, len(list.Items))
+	reports := make([]types.AuditReport, 0, 0)
 
 	// Deduplicate: keep the newest report per resource kind+name (handles old ReplicaSets from rollouts).
 	newest := make(map[string]int) // key -> index in reports
-	for _, item := range list.Items {
+	for item, err := range eachReport(r.Context(), reportList, listOpts, &truncated) {
+		if err != nil {
+			WriteError(w, http.StatusInternalServerError, "failed to list config audit reports")
+			return
+		}
 		report := parseAuditReport(item)
 		key := report.ResourceKind + "/" + report.ResourceName
 
@@ -85,6 +86,7 @@ func (h *AuditHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
 		Summary:   totalSummary,
 		Reports:   reports,
 		Namespace: req.Namespace,
+		Truncated: truncated,
 	})
 }
 

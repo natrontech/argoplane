@@ -44,19 +44,20 @@ func (h *SbomHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
 
 	auditLog(r, "sbom.overview", req.Namespace)
 
-	listOpts := metav1.ListOptions{Limit: 500, LabelSelector: resourceLabelSelector(req.Resources)}
-	list, err := h.client.Resource(types.SbomReportGVR).Namespace(req.Namespace).List(r.Context(), listOpts)
-	if err != nil {
-		WriteError(w, http.StatusInternalServerError, "failed to list sbom reports")
-		return
-	}
+	var truncated bool
+	listOpts := metav1.ListOptions{LabelSelector: resourceLabelSelector(req.Resources)}
+	reportList := h.client.Resource(types.SbomReportGVR).Namespace(req.Namespace).List
 
 	totalComponents := 0
-	reports := make([]types.SbomReport, 0, len(list.Items))
+	reports := make([]types.SbomReport, 0, 0)
 
 	// Deduplicate by image:tag (same image in old/new ReplicaSets).
 	seen := make(map[string]bool)
-	for _, item := range list.Items {
+	for item, err := range eachReport(r.Context(), reportList, listOpts, &truncated) {
+		if err != nil {
+			WriteError(w, http.StatusInternalServerError, "failed to list sbom reports")
+			return
+		}
 		report := parseSbomReport(item)
 		imageKey := report.Registry + "/" + report.Image + ":" + report.Tag
 		if seen[imageKey] {
@@ -72,6 +73,7 @@ func (h *SbomHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
 		Reports:         reports,
 		TotalComponents: totalComponents,
 		Namespace:       req.Namespace,
+		Truncated:       truncated,
 	})
 }
 
