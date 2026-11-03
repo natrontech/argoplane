@@ -86,23 +86,21 @@ func (b *FlowBuffer) Flows(ctx context.Context, req FlowsRequest) ([]FlowSummary
 
 	// Merge fresh flows into buffer.
 	for _, f := range fresh {
-		key := flowKey(f)
-		nsFlows[key] = f
+		nsFlows[flowKey(f)] = f
 	}
 
-	// Prune flows older than retention period.
-	cutoff := time.Now().Add(-b.retention)
-	for key, f := range nsFlows {
-		t, parseErr := time.Parse(time.RFC3339Nano, f.Time)
-		if parseErr != nil || t.Before(cutoff) {
-			delete(nsFlows, key)
+	// Prune every namespace, not just this one: a namespace viewed once would
+	// otherwise keep up to maxPerNs flows for the life of the process.
+	cutoff := time.Now().Add(-b.retention).UTC().Format(timeFormat)
+	for ns, m := range b.flows {
+		for key, f := range m {
+			if f.Time < cutoff {
+				delete(m, key)
+			}
 		}
-	}
-
-	// ponytail: drop the namespace's map entry once it's empty so the top-level
-	// flows map doesn't grow unbounded across every namespace ever requested.
-	if len(nsFlows) == 0 {
-		delete(b.flows, req.Namespace)
+		if len(m) == 0 {
+			delete(b.flows, ns)
+		}
 	}
 
 	// If buffer exceeds max, keep only the newest entries.
@@ -110,32 +108,28 @@ func (b *FlowBuffer) Flows(ctx context.Context, req FlowsRequest) ([]FlowSummary
 		evictOldest(nsFlows, b.maxPerNs)
 	}
 
-	// Build result: filter to the requested time window and apply verdict/direction filters.
-	windowCutoff := time.Now().Add(-req.Since)
-	result := make([]FlowSummary, 0, min(len(nsFlows), int(req.Limit)))
+	// Build result: filter to the requested time window and apply filters.
+	// The caller applies req.Limit after counting, so summaries cover the
+	// whole window.
+	windowCutoff := time.Now().Add(-req.Since).UTC().Format(timeFormat)
+	result := make([]FlowSummary, 0, len(nsFlows))
 	for _, f := range nsFlows {
-		t, parseErr := time.Parse(time.RFC3339Nano, f.Time)
-		if parseErr != nil || t.Before(windowCutoff) {
+		if f.Time < windowCutoff {
 			continue
 		}
-		if !matchesVerdictFilter(f, req.Verdict) {
+		if !matchesVerdictFilter(f, req.Verdict) || !matchesDirectionFilter(f, req.Direction) {
 			continue
 		}
-		if !matchesDirectionFilter(f, req.Direction) {
+		if req.Pods != nil && !req.Pods[f.SourcePod] && !req.Pods[f.DestPod] {
 			continue
 		}
 		result = append(result, f)
 	}
 
-	// Sort by time descending (newest first).
+	// Newest first. Times are fixed-width UTC, so string order is time order.
 	slices.SortFunc(result, func(a, b FlowSummary) int {
-		return cmp.Compare(b.Time, a.Time) // reverse: newest first
+		return cmp.Compare(b.Time, a.Time)
 	})
-
-	// Apply limit.
-	if req.Limit > 0 && int64(len(result)) > req.Limit {
-		result = result[:req.Limit]
-	}
 
 	return result, nil
 }

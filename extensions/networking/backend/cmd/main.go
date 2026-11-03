@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -18,11 +19,11 @@ import (
 )
 
 type Config struct {
-	Port                   string        `envconfig:"PORT" default:"8082"`
-	LogLevel               string        `envconfig:"LOG_LEVEL" default:"info"`
-	HubbleRelayURL         string        `envconfig:"HUBBLE_RELAY_URL" default:""`
-	FlowBufferRetention    time.Duration `envconfig:"FLOW_BUFFER_RETENTION" default:"15m"`
-	FlowBufferMaxPerNs     int           `envconfig:"FLOW_BUFFER_MAX_PER_NS" default:"5000"`
+	Port                string        `envconfig:"PORT" default:"8082"`
+	LogLevel            string        `envconfig:"LOG_LEVEL" default:"info"`
+	HubbleRelayURL      string        `envconfig:"HUBBLE_RELAY_URL" default:""`
+	FlowBufferRetention time.Duration `envconfig:"FLOW_BUFFER_RETENTION" default:"15m"`
+	FlowBufferMaxPerNs  int           `envconfig:"FLOW_BUFFER_MAX_PER_NS" default:"5000"`
 }
 
 func main() {
@@ -89,7 +90,7 @@ func main() {
 		WriteTimeout: 30 * time.Second,
 	}
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
 	go func() {

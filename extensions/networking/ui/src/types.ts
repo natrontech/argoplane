@@ -41,15 +41,21 @@ export interface FlowSummary {
   sourceNamespace: string;
   sourcePod: string;
   sourceIP?: string;
+  sourceWorkload?: string;
+  sourceIdentity?: string;
   destNamespace: string;
   destPod: string;
   destIP?: string;
   destDNS?: string;
+  destWorkload?: string;
+  destIdentity?: string;
   protocol: string;
   destPort: number;
   dropReason?: string;
   summary: string;
   isReply: boolean;
+  allowedBy?: string[];
+  deniedBy?: string[];
 }
 
 export interface FlowsResponse {
