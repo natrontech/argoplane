@@ -71,6 +71,8 @@ export const AppEventsView: React.FC<AppViewProps> = ({ application, tree }) => 
     [treeKeysStr],
   );
 
+  const hasTree = !!tree?.nodes;
+
   const abortRef = React.useRef<AbortController | null>(null);
   React.useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -116,9 +118,9 @@ export const AppEventsView: React.FC<AppViewProps> = ({ application, tree }) => 
 
   // App scoping: keep only events about objects that belong to this app.
   const scopedEvents = React.useMemo(() => {
-    if (scope !== 'app' || treeKeys.size === 0) return events;
+    if (scope !== 'app' || !hasTree) return events;
     return events.filter((e) => treeKeys.has(`${e.involvedObject.kind}/${e.involvedObject.name}`));
-  }, [events, scope, treeKeys]);
+  }, [events, scope, treeKeys, hasTree]);
 
   // Summary counts over all events in scope, before the type filter.
   const totalCount = scopedEvents.length;

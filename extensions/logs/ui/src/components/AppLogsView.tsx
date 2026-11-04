@@ -60,6 +60,8 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
   const podsKey = extractPodNames(tree, namespace).join('|');
   const treePodNames = React.useMemo(() => (podsKey ? podsKey.split('|') : []), [podsKey]);
   const scopedPods = scope === 'app' && treePodNames.length > 0 ? treePodNames : undefined;
+  // A loaded tree without pods scopes to nothing; an empty pods param would mean the whole namespace.
+  const noPods = scope === 'app' && !!tree?.nodes && treePodNames.length === 0;
 
   const mountedRef = React.useRef(true);
   React.useEffect(() => {
@@ -86,7 +88,7 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
 
     abortRef.current?.abort();
 
-    if (activeSeverities.size === 0) {
+    if (activeSeverities.size === 0 || noPods) {
       // Nothing selected: skip the fetch instead of querying without a filter.
       setEntries([]);
       setTotalEntries(0);
@@ -126,18 +128,23 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
       })
       .catch((err) => { if (!controller.signal.aborted) setError(err.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
-  }, [namespace, selectedPod, selectedContainer, debouncedSearch, activeSeverities, timeSelection, appNamespace, appName, project, scopedPods]);
+  }, [namespace, selectedPod, selectedContainer, debouncedSearch, activeSeverities, timeSelection, appNamespace, appName, project, scopedPods, noPods]);
 
   // Fetch containers and pods for dropdowns
   React.useEffect(() => {
     if (!namespace) return;
+    if (noPods) {
+      setContainers([]);
+      setPods([]);
+      return;
+    }
     fetchLabelValues('container', namespace, appNamespace, appName, project, scopedPods)
       .then((vals) => { if (mountedRef.current) setContainers(vals || []); })
       .catch(() => { if (mountedRef.current) setContainers([]); });
     fetchLabelValues('pod', namespace, appNamespace, appName, project, scopedPods)
       .then((vals) => { if (mountedRef.current) setPods(vals || []); })
       .catch(() => { if (mountedRef.current) setPods([]); });
-  }, [namespace, appNamespace, appName, project, scopedPods]);
+  }, [namespace, appNamespace, appName, project, scopedPods, noPods]);
 
   // Fetch data when filters change (but not on every keystroke thanks to debounce)
   React.useEffect(() => {
@@ -281,7 +288,9 @@ export const AppLogsView: React.FC<AppViewProps> = ({ application, tree }) => {
         {entries.length === 0 ? (
           <EmptyState message={noSeverities
             ? 'No severities selected. Enable at least one severity to see logs.'
-            : 'No logs found for the selected filters'} />
+            : noPods
+              ? 'This application has no pods in this namespace.'
+              : 'No logs found for the selected filters'} />
         ) : (
           entries.map((entry) => (
             <LogLine key={logEntryKey(entry)} entry={entry} showPod={true} />

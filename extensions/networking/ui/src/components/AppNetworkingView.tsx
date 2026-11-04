@@ -287,6 +287,8 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
     [treePodNamesKey],
   );
   const scopedPods = scope === 'app' && treePodNames.length > 0 ? treePodNames : undefined;
+  // A loaded tree without pods scopes to nothing; an empty pods param would mean the whole namespace.
+  const noPods = scope === 'app' && !!tree?.nodes && treePodNames.length === 0;
 
   const resourceRefsKey: string = !tree?.nodes ? '' : tree.nodes
     .filter((n: any) => n.namespace === namespace || !n.namespace)
@@ -325,8 +327,8 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
     if (!namespace) return;
     Promise.all([
       fetchPoliciesWithOwnership(namespace, resourceRefs, appNamespace, appName, project, signal).catch(() => null),
-      fetchEndpoints(namespace, appNamespace, appName, project, scopedPods, signal).catch(() => null),
-      fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter, directionFilter, scopedPods, signal).catch(() => null),
+      noPods ? [] : fetchEndpoints(namespace, appNamespace, appName, project, scopedPods, signal).catch(() => null),
+      noPods ? { flows: [], hubble: true } : fetchFlows(namespace, appNamespace, appName, project, timeRange, 500, verdictFilter, directionFilter, scopedPods, signal).catch(() => null),
     ]).then(([pol, ep, fl]) => {
       // Drop stale responses: a newer fetch (new filters) may already be in flight.
       if (!mountedRef.current || signal?.aborted) return;
@@ -344,7 +346,7 @@ export const AppNetworkingView: React.FC<{ application: any; tree?: any }> = ({ 
     })
       .catch((err) => { if (mountedRef.current && !signal?.aborted) setError(err.message); })
       .finally(() => { if (mountedRef.current && !signal?.aborted) setLoading(false); });
-  }, [namespace, appNamespace, appName, project, resourceRefs, timeRange, verdictFilter, directionFilter, scope, scopedPods]);
+  }, [namespace, appNamespace, appName, project, resourceRefs, timeRange, verdictFilter, directionFilter, scope, scopedPods, noPods]);
 
   React.useEffect(() => {
     const controller = new AbortController();
