@@ -88,12 +88,14 @@ func (h *Pods) Handle(w http.ResponseWriter, r *http.Request) {
 	txQuery := fmt.Sprintf(`sum by (pod) (rate(container_network_transmit_bytes_total{%s}[5m]))`, podSelector)
 	restartQuery := fmt.Sprintf(`sum by (pod) (kube_pod_container_status_restarts_total{%s})`, podSelector)
 
-	// queryOrLog runs an instant query and logs (rather than swallows) any error,
-	// returning partial results so a single failed query doesn't drop the whole table.
+	// queryOrLog runs an instant query and records any failure: the table can't
+	// mark a missing column, so "-" or "0" restarts would pass for real values.
+	failed := false
 	queryOrLog := func(name, q string) []prometheus.Sample {
 		samples, err := h.prom.Query(ctx, q)
 		if err != nil {
 			slog.Warn("pod breakdown query failed", "metric", name, "error", err)
+			failed = true
 		}
 		return samples
 	}
@@ -107,6 +109,10 @@ func (h *Pods) Handle(w http.ResponseWriter, r *http.Request) {
 	rxSamples := queryOrLog("netRx", rxQuery)
 	txSamples := queryOrLog("netTx", txQuery)
 	restartSamples := queryOrLog("restarts", restartQuery)
+	if failed {
+		http.Error(w, `{"error":"failed to query Prometheus"}`, http.StatusBadGateway)
+		return
+	}
 
 	// Build per-pod map
 	pods := make(map[string]*podMetric)
