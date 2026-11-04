@@ -62,6 +62,8 @@ List Kubernetes events with optional filters.
 }
 ```
 
+Each response carries the newest 5000 events in the time window. The response adds `"truncated": true` when the window holds more, or when the namespace is too large to read within 10 seconds (the newest events may then be missing); `events` and `summary` cover only the events kept. The field is left out otherwise.
+
 ### Health check
 
 ```
