@@ -29,6 +29,7 @@ export interface Summary {
 export interface EventResponse {
   events: KubeEvent[];
   summary: Summary;
+  truncated?: boolean;
 }
 
 export interface ExtensionProps {

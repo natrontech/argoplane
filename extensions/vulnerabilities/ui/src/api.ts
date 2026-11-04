@@ -25,7 +25,7 @@ export async function fetchOverview(
   resources?: string[]
 ): Promise<OverviewResponse> {
   const body: any = { namespace };
-  if (resources && resources.length > 0) body.resources = resources;
+  if (resources) body.resources = resources;
   const response = await fetch('/extensions/vulnerabilities/api/v1/overview', {
     method: 'POST',
     headers: {
@@ -55,7 +55,7 @@ export async function fetchAuditOverview(
   resources?: string[]
 ): Promise<AuditOverviewResponse> {
   const body: any = { namespace };
-  if (resources && resources.length > 0) body.resources = resources;
+  if (resources) body.resources = resources;
   const response = await fetch('/extensions/vulnerabilities/api/v1/audit/overview', {
     method: 'POST',
     headers: {
@@ -85,7 +85,7 @@ export async function fetchSecretsOverview(
   resources?: string[]
 ): Promise<SecretOverviewResponse> {
   const body: any = { namespace };
-  if (resources && resources.length > 0) body.resources = resources;
+  if (resources) body.resources = resources;
   const response = await fetch('/extensions/vulnerabilities/api/v1/secrets/overview', {
     method: 'POST',
     headers: {
@@ -111,7 +111,7 @@ export async function fetchSbomOverview(
   resources?: string[]
 ): Promise<SbomOverviewResponse> {
   const body: any = { namespace };
-  if (resources && resources.length > 0) body.resources = resources;
+  if (resources) body.resources = resources;
   const response = await fetch('/extensions/vulnerabilities/api/v1/sbom/overview', {
     method: 'POST',
     headers: {

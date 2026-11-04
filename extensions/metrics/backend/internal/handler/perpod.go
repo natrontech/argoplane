@@ -127,8 +127,8 @@ func (h *PerPod) Handle(w http.ResponseWriter, r *http.Request) {
 		allSeries, err := h.prom.QueryRange(ctx, m.query, start, end, step)
 		if err != nil {
 			slog.Warn("per-pod range query failed", "metric", m.name, "error", err)
-			results = append(results, perPodSeries{Metric: m.name, Unit: displayUnit(m.unit), Timestamps: tsStrings, Pods: []podTimeline{}})
-			continue
+			http.Error(w, `{"error":"failed to query Prometheus"}`, http.StatusBadGateway)
+			return
 		}
 
 		pps := perPodSeries{Metric: m.name, Unit: displayUnit(m.unit), Timestamps: tsStrings, Pods: []podTimeline{}}

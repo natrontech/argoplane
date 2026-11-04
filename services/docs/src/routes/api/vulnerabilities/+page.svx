@@ -15,6 +15,10 @@ Every data endpoint requires the `Argocd-Application-Name` header (`namespace:na
 
 Reports are read from the Kubernetes API 100 at a time, up to 5000 per request. The vulnerability, config audit and SBOM overviews add `"truncated": true` when a namespace has more; the field is left out otherwise. A CSV export stops at the same limit. The exposed secrets overview still reads a single page of 500.
 
+### Resource filter
+
+The overview endpoints take an optional `resources` list of workload names. Names that are not valid Kubernetes label values are ignored. If the list is empty or no name in it is valid, the response is empty; only a request without `resources` returns every report in the namespace.
+
 ## Endpoints
 
 ### Get vulnerability reports

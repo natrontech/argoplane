@@ -19,10 +19,12 @@ import (
 // eventListLimit caps the number of events fetched per List call.
 const eventListLimit = 500
 
-// maxEvents bounds the total events accumulated across paginated List calls.
-// ponytail: 5000 covers even busy namespaces within the default 1h event TTL;
-// raise it or add server-side field selectors if that ever proves too small.
+// maxEvents bounds the events kept for one response; the newest ones win.
 const maxEvents = 5000
+
+// maxScanTime bounds paging, leaving requestTimeout room to answer with what was
+// read. The default client-go rate limit makes a huge namespace take this long.
+const maxScanTime = 10 * time.Second
 
 // requestTimeout bounds the time spent serving a single events request.
 const requestTimeout = 15 * time.Second
@@ -42,6 +44,9 @@ func NewEventsHandler(client kubernetes.Interface, auth *Authorizer) *EventsHand
 type EventResponse struct {
 	Events  []Event `json:"events"`
 	Summary Summary `json:"summary"`
+	// Truncated is true when the time window holds more events than one
+	// response carries, or more than one request can read.
+	Truncated bool `json:"truncated,omitempty"`
 }
 
 // Event is a simplified Kubernetes event for the API response.
@@ -162,10 +167,8 @@ func (h *EventsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), requestTimeout)
 	defer cancel()
 
-	// Page through the full event list: the API server returns events in
-	// name order, so a single capped List call could drop the newest events.
-	// Let the API server filter by object so a busy namespace's other
-	// events don't count against maxEvents.
+	// Let the API server filter by object so a busy namespace's other events
+	// don't have to be read.
 	sel := fields.Set{}
 	if kind != "" {
 		sel["involvedObject.kind"] = kind
@@ -173,25 +176,58 @@ func (h *EventsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	if name != "" {
 		sel["involvedObject.name"] = name
 	}
-	var items []corev1.Event
 	opts := metav1.ListOptions{Limit: eventListLimit, FieldSelector: fields.SelectorFromSet(sel).String()}
-	for {
-		events, err := h.client.CoreV1().Events(namespace).List(ctx, opts)
-		if err != nil {
-			slog.Error("failed to list events", "error", err, "namespace", namespace)
-			WriteError(w, http.StatusInternalServerError, "failed to list events")
-			return
-		}
-		items = append(items, events.Items...)
-		if events.Continue == "" || len(items) >= maxEvents {
-			break
-		}
-		opts.Continue = events.Continue
+	items, truncated, err := h.recentEvents(ctx, namespace, opts, cutoff, time.Now().Add(maxScanTime))
+	if err != nil {
+		slog.Error("failed to list events", "error", err, "namespace", namespace)
+		WriteError(w, http.StatusInternalServerError, "failed to list events")
+		return
 	}
 
 	result := filterAndConvert(items, kind, name, eventType, cutoff)
+	result.Truncated = truncated
 
 	WriteJSON(w, result)
+}
+
+// recentEvents pages through the event list and keeps the newest maxEvents not
+// older than cutoff. The API server returns events in name order, so stopping at
+// a count would drop the newest ones. Paging stops early after stopAt. truncated
+// reports that events were dropped or left unread.
+func (h *EventsHandler) recentEvents(ctx context.Context, namespace string, opts metav1.ListOptions, cutoff, stopAt time.Time) ([]corev1.Event, bool, error) {
+	var items []corev1.Event
+	truncated := false
+	for {
+		events, err := h.client.CoreV1().Events(namespace).List(ctx, opts)
+		if err != nil {
+			return nil, false, fmt.Errorf("failed to list events: %w", err)
+		}
+		for i := range events.Items {
+			if !eventTimestamp(&events.Items[i]).Before(cutoff) {
+				items = append(items, events.Items[i])
+			}
+		}
+		if len(items) > maxEvents {
+			// Break timestamp ties by name so refreshes keep the same events.
+			sort.Slice(items, func(i, j int) bool {
+				ti, tj := eventTimestamp(&items[i]), eventTimestamp(&items[j])
+				if ti.Equal(tj) {
+					return items[i].Name > items[j].Name
+				}
+				return ti.After(tj)
+			})
+			items = items[:maxEvents]
+			truncated = true
+		}
+		if events.Continue == "" {
+			return items, truncated, nil
+		}
+		if time.Now().After(stopAt) {
+			slog.Warn("event scan stopped early", "namespace", namespace, "kept", len(items))
+			return items, true, nil
+		}
+		opts.Continue = events.Continue
+	}
 }
 
 // filterAndConvert filters Kubernetes events and converts them to the API response format.

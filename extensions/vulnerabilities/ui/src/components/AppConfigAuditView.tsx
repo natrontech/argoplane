@@ -6,7 +6,7 @@ import {
   MetricCard,
   Input,
   ScopeToggle,
-  extractWorkloadNames,
+  extractAuditableNames,
   colors,
   fonts,
   fontSize,
@@ -108,10 +108,10 @@ export const AppConfigAuditView: React.FC<{ application: any; tree?: any }> = ({
   const destNamespace = application?.spec?.destination?.namespace || 'default';
 
   // ArgoCD passes a fresh tree object on every app refresh. Memoize on a
-  // stable string key so unchanged workloads don't re-trigger the fetch.
-  const workloadsKey = extractWorkloadNames(tree, destNamespace).sort().join('|');
-  const workloads = React.useMemo(() => (workloadsKey ? workloadsKey.split('|') : []), [workloadsKey]);
-  const scopedResources = scope === 'app' && workloads.length > 0 ? workloads : undefined;
+  // stable string key so unchanged resources don't re-trigger the fetch.
+  const resourcesKey = extractAuditableNames(tree, destNamespace).sort().join('|');
+  const resources = React.useMemo(() => (resourcesKey ? resourcesKey.split('|') : []), [resourcesKey]);
+  const scopedResources = scope === 'app' && tree?.nodes ? resources : undefined;
 
   React.useEffect(() => {
     const controller = new AbortController();
@@ -137,7 +137,15 @@ export const AppConfigAuditView: React.FC<{ application: any; tree?: any }> = ({
   if (loading && !data) return <div style={panel}><Loading /></div>;
   if (error) return <div style={panel}><EmptyState message={`Failed to load config audit data: ${error}`} /></div>;
   if (!data || data.reports.length === 0) {
-    return <div style={panel}><EmptyState message="No config audit reports found. Enable configAuditScannerEnabled in the Trivy Operator." /></div>;
+    // Keep the toggle: the sticky scope would otherwise trap the user on this page.
+    return (
+      <div style={panel}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: spacing[3] }}>
+        <ScopeToggle value={scope} onChange={(s) => setScope(s)} />
+      </div>
+        <EmptyState message={scopedResources?.length === 0 ? 'This application has no resources in this namespace.' : 'No config audit reports found. Enable configAuditScannerEnabled in the Trivy Operator.'} />
+      </div>
+    );
   }
 
   const s = data.summary;

@@ -86,12 +86,8 @@ func (h *Resource) handleInstant(ctx context.Context, w http.ResponseWriter, que
 		samples, err := h.prom.Query(ctx, q.Query)
 		if err != nil {
 			slog.Warn("query failed", "name", q.Name, "error", err)
-			results = append(results, instantMetric{
-				Name:  q.Name,
-				Value: "-",
-				Unit:  q.Unit,
-			})
-			continue
+			http.Error(w, `{"error":"failed to query Prometheus"}`, http.StatusBadGateway)
+			return
 		}
 
 		val := 0.0
@@ -124,12 +120,8 @@ func (h *Resource) handleRange(ctx context.Context, w http.ResponseWriter, queri
 		series, err := h.prom.QueryRange(ctx, q.Query, start, end, step)
 		if err != nil {
 			slog.Warn("range query failed", "name", q.Name, "error", err)
-			results = append(results, timeSeriesMetric{
-				Name:   q.Name,
-				Unit:   displayUnit(q.Unit),
-				Series: []dataPoint{},
-			})
-			continue
+			http.Error(w, `{"error":"failed to query Prometheus"}`, http.StatusBadGateway)
+			return
 		}
 
 		tsm := timeSeriesMetric{

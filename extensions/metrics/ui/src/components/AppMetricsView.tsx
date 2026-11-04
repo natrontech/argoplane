@@ -75,6 +75,9 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
     return treePodNames.length > 0 ? treePodNames : undefined;
   }, [scope, treePodNames]);
 
+  // A loaded tree without pods scopes to nothing; an empty pods param would mean the whole namespace.
+  const noPods = scope === 'app' && !!tree?.nodes && treePodNames.length === 0;
+
   const abortRef = React.useRef<AbortController | null>(null);
   React.useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -85,6 +88,11 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
     }
 
     abortRef.current?.abort();
+    if (noPods) {
+      setError(null);
+      setLoading(false);
+      return;
+    }
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -123,7 +131,7 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
       })
       .catch((err) => { if (!controller.signal.aborted) setError(err.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
-  }, [namespace, appNamespace, appName, project, treePodNames, treeWorkloads, scope, scopedPodNames]);
+  }, [namespace, appNamespace, appName, project, treePodNames, treeWorkloads, scope, scopedPodNames, noPods]);
 
   React.useEffect(() => {
     setLoading(true);
@@ -134,6 +142,17 @@ export const AppMetricsView: React.FC<AppViewProps> = ({ application, tree }) =>
 
   if (!namespace) {
     return <div style={panel}><EmptyState message="No destination namespace configured for this application" /></div>;
+  }
+
+  if (noPods) {
+    return (
+      <div style={panel}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: spacing[3] }}>
+          <ScopeToggle value={scope} onChange={setScope} />
+        </div>
+        <EmptyState message="This application has no pods in this namespace." />
+      </div>
+    );
   }
 
   if (loading && !loaded) return <div style={panel}><Loading /></div>;

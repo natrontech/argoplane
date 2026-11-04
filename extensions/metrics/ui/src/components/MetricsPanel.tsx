@@ -57,7 +57,7 @@ export const MetricsPanel: React.FC<ExtensionProps> = ({ resource, application }
 
     if (isWorkload) {
       promises.push(
-        fetchPodBreakdown(namespace, name, kind, appNamespace, appName, project, undefined, controller.signal).catch(() => []),
+        fetchPodBreakdown(namespace, name, kind, appNamespace, appName, project, undefined, controller.signal),
       );
     } else {
       promises.push(Promise.resolve([]));

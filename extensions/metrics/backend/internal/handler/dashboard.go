@@ -198,8 +198,7 @@ func (h *Dashboard) HandleGraph(w http.ResponseWriter, r *http.Request) {
 	allSeries, err := h.prom.QueryRange(ctx, promQL, start, end, step)
 	if err != nil {
 		slog.Warn("graph query failed", "graph", graphName, "error", err)
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(graphDataResponse{Series: []graphSeries{}})
+		http.Error(w, `{"error":"failed to query Prometheus"}`, http.StatusBadGateway)
 		return
 	}
 

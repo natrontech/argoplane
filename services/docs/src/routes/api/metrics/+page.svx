@@ -273,4 +273,4 @@ All endpoints return errors as JSON:
 { "error": "description of what went wrong" }
 ```
 
-HTTP status codes: `400` for missing parameters, `403` when namespace authorization fails, `404` for config lookups that fail, `500` for internal errors.
+HTTP status codes: `400` for missing parameters, `403` when namespace authorization fails, `404` for config lookups that fail, `500` for internal errors, `502` when a Prometheus query fails. A `502` covers the whole response: one failed query fails the request rather than returning partial data. The exception is a graph's threshold lines, which are left out if their query fails.

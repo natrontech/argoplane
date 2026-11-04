@@ -43,6 +43,7 @@ export const AppEventsView: React.FC<AppViewProps> = ({ application, tree }) => 
   const [loading, setLoading] = React.useState(true);
   const [loaded, setLoaded] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [truncated, setTruncated] = React.useState(false);
 
   const [typeFilter, setTypeFilter] = React.useState<TypeFilter>('All');
   const [searchText, setSearchText] = React.useState('');
@@ -69,6 +70,8 @@ export const AppEventsView: React.FC<AppViewProps> = ({ application, tree }) => 
     () => new Set(treeKeysStr ? treeKeysStr.split('|') : []),
     [treeKeysStr],
   );
+
+  const hasTree = !!tree?.nodes;
 
   const abortRef = React.useRef<AbortController | null>(null);
   React.useEffect(() => () => abortRef.current?.abort(), []);
@@ -98,6 +101,7 @@ export const AppEventsView: React.FC<AppViewProps> = ({ application, tree }) => 
       .then((resp) => {
         if (controller.signal.aborted) return;
         setEvents(resp.events || []);
+        setTruncated(!!resp.truncated);
         setError(null);
         setLoaded(true);
       })
@@ -114,9 +118,9 @@ export const AppEventsView: React.FC<AppViewProps> = ({ application, tree }) => 
 
   // App scoping: keep only events about objects that belong to this app.
   const scopedEvents = React.useMemo(() => {
-    if (scope !== 'app' || treeKeys.size === 0) return events;
+    if (scope !== 'app' || !hasTree) return events;
     return events.filter((e) => treeKeys.has(`${e.involvedObject.kind}/${e.involvedObject.name}`));
-  }, [events, scope, treeKeys]);
+  }, [events, scope, treeKeys, hasTree]);
 
   // Summary counts over all events in scope, before the type filter.
   const totalCount = scopedEvents.length;
@@ -217,6 +221,7 @@ export const AppEventsView: React.FC<AppViewProps> = ({ application, tree }) => 
     // On a failed background refresh keep the table and show an inline note.
     error && loaded && React.createElement('div', { style: refreshErrorNote },
       `Refresh failed: ${error}. Showing last loaded data.`),
+    truncated && React.createElement('div', { style: refreshErrorNote }, 'Too many events in this time range. This list and its counts are incomplete.'),
     React.createElement(EventsTable, {
       events: filteredEvents,
       loading: loading && !loaded,

@@ -36,7 +36,7 @@ export const AppSbomView: React.FC<{ application: any; tree?: any }> = ({ applic
   // stable string key so unchanged workloads don't re-trigger the fetch.
   const workloadsKey = extractWorkloadNames(tree, destNamespace).sort().join('|');
   const workloads = React.useMemo(() => (workloadsKey ? workloadsKey.split('|') : []), [workloadsKey]);
-  const scopedResources = scope === 'app' && workloads.length > 0 ? workloads : undefined;
+  const scopedResources = scope === 'app' && tree?.nodes ? workloads : undefined;
 
   React.useEffect(() => {
     const controller = new AbortController();
@@ -55,7 +55,15 @@ export const AppSbomView: React.FC<{ application: any; tree?: any }> = ({ applic
   if (loading && !data) return <div style={panel}><Loading /></div>;
   if (error) return <div style={panel}><EmptyState message={`Failed to load: ${error}`} /></div>;
   if (!data || data.reports.length === 0) {
-    return <div style={panel}><EmptyState message="No SBOM reports found. Enable sbomGenerationEnabled in the Trivy Operator." /></div>;
+    // Keep the toggle: the sticky scope would otherwise trap the user on this page.
+    return (
+      <div style={panel}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: spacing[3] }}>
+        <ScopeToggle value={scope} onChange={(s) => setScope(s)} />
+      </div>
+        <EmptyState message={scopedResources?.length === 0 ? 'This application has no workloads in this namespace.' : 'No SBOM reports found. Enable sbomGenerationEnabled in the Trivy Operator.'} />
+      </div>
+    );
   }
 
   const bodyCell: React.CSSProperties = { padding: `${spacing[2]}px ${spacing[3]}px`, fontSize: fontSize.sm, fontFamily: fonts.mono, borderBottom: `1px solid ${colors.gray100}` };

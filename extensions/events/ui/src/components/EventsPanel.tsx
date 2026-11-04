@@ -33,6 +33,7 @@ export const EventsPanel: React.FC<ExtensionProps> = ({ resource, application })
   const [loading, setLoading] = React.useState(true);
   const [loaded, setLoaded] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [truncated, setTruncated] = React.useState(false);
   const [since, setSince] = React.useState<SinceRange>('1h');
 
   const namespace = resource?.metadata?.namespace || '';
@@ -63,6 +64,7 @@ export const EventsPanel: React.FC<ExtensionProps> = ({ resource, application })
       .then((resp) => {
         if (controller.signal.aborted) return;
         setEvents(resp.events || []);
+        setTruncated(!!resp.truncated);
         setError(null);
         setLoaded(true);
       })
@@ -106,6 +108,7 @@ export const EventsPanel: React.FC<ExtensionProps> = ({ resource, application })
     // On a failed background refresh keep the table and show an inline note.
     error && loaded && React.createElement('div', { style: refreshErrorNote },
       `Refresh failed: ${error}. Showing last loaded data.`),
+    truncated && React.createElement('div', { style: refreshErrorNote }, 'Too many events in this time range. This list and its counts are incomplete.'),
     React.createElement(EventsTable, {
       events,
       loading: loading && !loaded,
