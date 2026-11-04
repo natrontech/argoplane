@@ -65,12 +65,28 @@ export function extractPodNames(tree: any, namespace: string): string[] {
     .map((n: any) => n.name) as string[];
 }
 
-/** Extract workload names (Deployment, StatefulSet, DaemonSet, ReplicaSet, Job) from tree. */
+const WORKLOAD_KINDS = new Set(['Deployment', 'StatefulSet', 'DaemonSet', 'ReplicaSet', 'ReplicationController', 'Job', 'CronJob']);
+
+// Trivy Operator reports a pod with a built-in controller under that controller.
+const isControlledPod = (n: any) =>
+  n.kind === 'Pod' && (n.parentRefs || []).some((p: any) => WORKLOAD_KINDS.has(p.kind));
+
+/**
+ * Extract the names Trivy Operator labels image reports with: workload controllers,
+ * plus pods no built-in controller owns (bare, or owned by a custom resource).
+ */
 export function extractWorkloadNames(tree: any, namespace: string): string[] {
   if (!tree?.nodes) return [];
-  const workloadKinds = new Set(['Deployment', 'StatefulSet', 'DaemonSet', 'ReplicaSet', 'Job', 'CronJob']);
   return tree.nodes
-    .filter((n: any) => workloadKinds.has(n.kind) && n.namespace === namespace)
+    .filter((n: any) => n.namespace === namespace && (WORKLOAD_KINDS.has(n.kind) || (n.kind === 'Pod' && !isControlledPod(n))))
+    .map((n: any) => n.name) as string[];
+}
+
+/** Extract the names for config audit reports, which also cover Services, ConfigMaps, Roles and so on. */
+export function extractAuditableNames(tree: any, namespace: string): string[] {
+  if (!tree?.nodes) return [];
+  return tree.nodes
+    .filter((n: any) => n.namespace === namespace && !isControlledPod(n))
     .map((n: any) => n.name) as string[];
 }
 

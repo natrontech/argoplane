@@ -17,7 +17,7 @@ Reports are read from the Kubernetes API 100 at a time, up to 5000 per request. 
 
 ### Resource filter
 
-The overview endpoints take an optional `resources` list of workload names. Names that are not valid Kubernetes label values are ignored. If no name in the list is valid, the response is empty; only a missing or empty list returns every report in the namespace.
+The overview endpoints take an optional `resources` list of workload names. Names that are not valid Kubernetes label values are ignored. If the list is empty or no name in it is valid, the response is empty; only a request without `resources` returns every report in the namespace.
 
 ## Endpoints
 

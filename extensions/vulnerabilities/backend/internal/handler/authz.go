@@ -177,10 +177,10 @@ const matchNoReports = "trivy-operator.resource.name,!trivy-operator.resource.na
 
 // resourceLabelSelector builds a Kubernetes label selector that filters Trivy reports
 // to only those belonging to the given workload resource names. Names that are not
-// valid Kubernetes label values are dropped to prevent selector injection. No
-// resources means no filter; resources with no valid name match no report.
+// valid Kubernetes label values are dropped to prevent selector injection. A nil
+// list means no filter; a list with no valid name, or none at all, matches no report.
 func resourceLabelSelector(resources []string) string {
-	if len(resources) == 0 {
+	if resources == nil {
 		return ""
 	}
 	valid := make([]string, 0, len(resources))
