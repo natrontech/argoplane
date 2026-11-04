@@ -171,10 +171,18 @@ func auditLog(r *http.Request, action, namespace string, extra ...any) {
 	slog.Info("security.audit", args...)
 }
 
+// matchNoReports is a label selector no object can satisfy: the label must both
+// exist and not exist. An empty selector would match everything instead.
+const matchNoReports = "trivy-operator.resource.name,!trivy-operator.resource.name"
+
 // resourceLabelSelector builds a Kubernetes label selector that filters Trivy reports
 // to only those belonging to the given workload resource names. Names that are not
-// valid Kubernetes label values are dropped to prevent selector injection.
+// valid Kubernetes label values are dropped to prevent selector injection. No
+// resources means no filter; resources with no valid name match no report.
 func resourceLabelSelector(resources []string) string {
+	if len(resources) == 0 {
+		return ""
+	}
 	valid := make([]string, 0, len(resources))
 	for _, name := range resources {
 		if len(name) > 63 || !validLabelValue.MatchString(name) {
@@ -184,7 +192,7 @@ func resourceLabelSelector(resources []string) string {
 		valid = append(valid, name)
 	}
 	if len(valid) == 0 {
-		return ""
+		return matchNoReports
 	}
 	return fmt.Sprintf("trivy-operator.resource.name in (%s)", strings.Join(valid, ","))
 }

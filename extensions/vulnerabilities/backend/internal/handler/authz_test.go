@@ -3,6 +3,8 @@ package handler
 import (
 	"strings"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 func TestResourceLabelSelector(t *testing.T) {
@@ -19,7 +21,7 @@ func TestResourceLabelSelector(t *testing.T) {
 		{
 			name:      "malicious name dropped",
 			resources: []string{"x) or (1"},
-			want:      "",
+			want:      matchNoReports,
 		},
 		{
 			name:      "comma injection dropped, valid kept",
@@ -30,6 +32,16 @@ func TestResourceLabelSelector(t *testing.T) {
 			name:      "empty input",
 			resources: nil,
 			want:      "",
+		},
+		{
+			name:      "empty list",
+			resources: []string{},
+			want:      "",
+		},
+		{
+			name:      "only an empty name",
+			resources: []string{""},
+			want:      matchNoReports,
 		},
 	}
 
@@ -47,5 +59,19 @@ func TestResourceLabelSelectorRejectsParens(t *testing.T) {
 	got := resourceLabelSelector([]string{"x) or (1"})
 	if strings.Contains(got, ")") || strings.Contains(got, "x) or") {
 		t.Errorf("malicious name leaked into selector: %q", got)
+	}
+}
+
+// The selector must parse the way the API server parses it and match nothing,
+// with or without the label present.
+func TestMatchNoReportsMatchesNothing(t *testing.T) {
+	sel, err := labels.Parse(matchNoReports)
+	if err != nil {
+		t.Fatalf("selector does not parse: %v", err)
+	}
+	for _, set := range []labels.Set{nil, {"trivy-operator.resource.name": "web"}} {
+		if sel.Matches(set) {
+			t.Errorf("selector matched %v", set)
+		}
 	}
 }
