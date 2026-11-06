@@ -7,20 +7,19 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/dynamic"
 
 	"github.com/natrontech/argoplane/extensions/vulnerabilities/backend/internal/types"
 )
 
 // SecretsHandler handles exposed secret report queries.
 type SecretsHandler struct {
-	client dynamic.Interface
-	auth   *Authorizer
+	clients Clients
+	auth    *Authorizer
 }
 
 // NewSecretsHandler creates a new SecretsHandler.
-func NewSecretsHandler(client dynamic.Interface, auth *Authorizer) *SecretsHandler {
-	return &SecretsHandler{client: client, auth: auth}
+func NewSecretsHandler(clients Clients, auth *Authorizer) *SecretsHandler {
+	return &SecretsHandler{clients: clients, auth: auth}
 }
 
 // HandleOverview returns an aggregated exposed secret overview for a namespace.
@@ -46,7 +45,12 @@ func (h *SecretsHandler) HandleOverview(w http.ResponseWriter, r *http.Request) 
 	auditLog(r, "secrets.overview", req.Namespace)
 
 	listOpts := metav1.ListOptions{Limit: 500, LabelSelector: resourceLabelSelector(req.Resources)}
-	list, err := h.client.Resource(types.ExposedSecretReportGVR).Namespace(req.Namespace).List(r.Context(), listOpts)
+	cl, err := clientFor(h.clients, r)
+	if err != nil {
+		WriteError(w, http.StatusBadGateway, "cannot reach the cluster this application deploys to")
+		return
+	}
+	list, err := cl.Resource(types.ExposedSecretReportGVR).Namespace(req.Namespace).List(r.Context(), listOpts)
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "failed to list exposed secret reports")
 		return

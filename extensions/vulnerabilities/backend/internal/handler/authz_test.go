@@ -135,10 +135,10 @@ func TestOverviewEndpointsHonorResourceFilter(t *testing.T) {
 		field  string
 		handle http.HandlerFunc
 	}{
-		{"overview", "images", NewOverviewHandler(client, auth).Handle},
-		{"audit", "reports", NewAuditHandler(client, auth).HandleOverview},
-		{"secrets", "reports", NewSecretsHandler(client, auth).HandleOverview},
-		{"sbom", "reports", NewSbomHandler(client, auth).HandleOverview},
+		{"overview", "images", NewOverviewHandler(Static(client), auth).Handle},
+		{"audit", "reports", NewAuditHandler(Static(client), auth).HandleOverview},
+		{"secrets", "reports", NewSecretsHandler(Static(client), auth).HandleOverview},
+		{"sbom", "reports", NewSbomHandler(Static(client), auth).HandleOverview},
 	}
 	filters := []struct {
 		name string

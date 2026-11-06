@@ -7,20 +7,19 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/dynamic"
 
 	"github.com/natrontech/argoplane/extensions/vulnerabilities/backend/internal/types"
 )
 
 // AuditHandler handles config audit report queries.
 type AuditHandler struct {
-	client dynamic.Interface
-	auth   *Authorizer
+	clients Clients
+	auth    *Authorizer
 }
 
 // NewAuditHandler creates a new AuditHandler.
-func NewAuditHandler(client dynamic.Interface, auth *Authorizer) *AuditHandler {
-	return &AuditHandler{client: client, auth: auth}
+func NewAuditHandler(clients Clients, auth *Authorizer) *AuditHandler {
+	return &AuditHandler{clients: clients, auth: auth}
 }
 
 // HandleOverview returns an aggregated config audit overview for a namespace.
@@ -44,7 +43,12 @@ func (h *AuditHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
 
 	var truncated bool
 	listOpts := metav1.ListOptions{LabelSelector: resourceLabelSelector(req.Resources)}
-	reportList := h.client.Resource(types.ConfigAuditReportGVR).Namespace(req.Namespace).List
+	cl, err := clientFor(h.clients, r)
+	if err != nil {
+		WriteError(w, http.StatusBadGateway, "cannot reach the cluster this application deploys to")
+		return
+	}
+	reportList := cl.Resource(types.ConfigAuditReportGVR).Namespace(req.Namespace).List
 
 	totalSummary := types.VulnerabilitySummary{}
 	reports := make([]types.AuditReport, 0, 0)

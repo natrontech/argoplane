@@ -282,6 +282,23 @@ extensions:
         - apiGroups: ["argoproj.io"]
           resources: ["applications"]
           verbs: ["get"]
+      # Namespaced (ArgoCD's own namespace), never cluster-wide: this is how the
+      # backend reaches clusters other than the one it runs on. It reads the
+      # cluster Secrets ArgoCD already registered and builds a client for
+      # whichever cluster the Application deploys to.
+      #
+      # Needed only in a hub-spoke install. If ArgoCD manages just its own
+      # cluster, drop this block and the backend falls back to its in-cluster
+      # client for everything.
+      #
+      # Note the real cost before enabling: RBAC cannot filter by label, so
+      # "list secrets" in this namespace also exposes argocd-secret, which holds
+      # the server signing key. Scope stays namespaced to keep workload secrets
+      # across the fleet out of reach.
+      namespacedRules:
+        - apiGroups: [""]
+          resources: ["secrets"]
+          verbs: ["get", "list"]
 
   events:
     enabled: false

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/dynamic"
 
 	"github.com/natrontech/argoplane/extensions/vulnerabilities/backend/internal/types"
 )
@@ -61,13 +60,13 @@ func flushCSV(w *csv.Writer) bool {
 
 // ExportHandler handles CSV export of vulnerability and audit reports.
 type ExportHandler struct {
-	client dynamic.Interface
-	auth   *Authorizer
+	clients Clients
+	auth    *Authorizer
 }
 
 // NewExportHandler creates a new ExportHandler.
-func NewExportHandler(client dynamic.Interface, auth *Authorizer) *ExportHandler {
-	return &ExportHandler{client: client, auth: auth}
+func NewExportHandler(clients Clients, auth *Authorizer) *ExportHandler {
+	return &ExportHandler{clients: clients, auth: auth}
 }
 
 // Handle exports reports as CSV based on the type query parameter.
@@ -111,7 +110,12 @@ func (h *ExportHandler) exportVulnerabilities(w http.ResponseWriter, r *http.Req
 	seen := make(map[string]bool)
 	var truncated bool
 	done := 0
-	for item, err := range eachReport(r.Context(), h.client.Resource(types.VulnerabilityReportGVR).Namespace(namespace).List, metav1.ListOptions{}, &truncated) {
+	cl, err := clientFor(h.clients, r)
+	if err != nil {
+		WriteError(w, http.StatusBadGateway, "cannot reach the cluster this application deploys to")
+		return
+	}
+	for item, err := range eachReport(r.Context(), cl.Resource(types.VulnerabilityReportGVR).Namespace(namespace).List, metav1.ListOptions{}, &truncated) {
 		if err != nil {
 			exportFailed(w, writer, done, err, "failed to list vulnerability reports")
 			return
@@ -158,7 +162,12 @@ func (h *ExportHandler) exportSecrets(w http.ResponseWriter, r *http.Request, na
 	seen := make(map[string]bool)
 	var truncated bool
 	done := 0
-	for item, err := range eachReport(r.Context(), h.client.Resource(types.ExposedSecretReportGVR).Namespace(namespace).List, metav1.ListOptions{}, &truncated) {
+	cl, err := clientFor(h.clients, r)
+	if err != nil {
+		WriteError(w, http.StatusBadGateway, "cannot reach the cluster this application deploys to")
+		return
+	}
+	for item, err := range eachReport(r.Context(), cl.Resource(types.ExposedSecretReportGVR).Namespace(namespace).List, metav1.ListOptions{}, &truncated) {
 		if err != nil {
 			exportFailed(w, writer, done, err, "failed to list exposed secret reports")
 			return
@@ -203,7 +212,12 @@ func (h *ExportHandler) exportSbom(w http.ResponseWriter, r *http.Request, names
 	seen := make(map[string]bool)
 	var truncated bool
 	done := 0
-	for item, err := range eachReport(r.Context(), h.client.Resource(types.SbomReportGVR).Namespace(namespace).List, metav1.ListOptions{}, &truncated) {
+	cl, err := clientFor(h.clients, r)
+	if err != nil {
+		WriteError(w, http.StatusBadGateway, "cannot reach the cluster this application deploys to")
+		return
+	}
+	for item, err := range eachReport(r.Context(), cl.Resource(types.SbomReportGVR).Namespace(namespace).List, metav1.ListOptions{}, &truncated) {
 		if err != nil {
 			exportFailed(w, writer, done, err, "failed to list sbom reports")
 			return
@@ -246,7 +260,12 @@ func (h *ExportHandler) exportAudit(w http.ResponseWriter, r *http.Request, name
 	seen := make(map[string]bool)
 	var truncated bool
 	done := 0
-	for item, err := range eachReport(r.Context(), h.client.Resource(types.ConfigAuditReportGVR).Namespace(namespace).List, metav1.ListOptions{}, &truncated) {
+	cl, err := clientFor(h.clients, r)
+	if err != nil {
+		WriteError(w, http.StatusBadGateway, "cannot reach the cluster this application deploys to")
+		return
+	}
+	for item, err := range eachReport(r.Context(), cl.Resource(types.ConfigAuditReportGVR).Namespace(namespace).List, metav1.ListOptions{}, &truncated) {
 		if err != nil {
 			exportFailed(w, writer, done, err, "failed to list config audit reports")
 			return
