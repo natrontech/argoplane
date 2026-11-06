@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"path"
@@ -98,26 +99,34 @@ func NewRegistry(local dynamic.Interface, namespace, inClusterHost string) *Regi
 // Local returns the hub's own client — the one that can read Application CRs.
 func (r *Registry) Local() dynamic.Interface { return r.local }
 
-// For returns a client for the cluster an Application deploys to, identified
-// by the destination's name, its server URL, or both. ArgoCD Applications set
-// one or the other, so both are accepted.
+// Destination identifies the cluster an Application deploys to. ArgoCD
+// Applications set either a name or a server, and the project scopes which
+// registered clusters are usable.
+type Destination struct {
+	Name    string
+	Server  string
+	Project string
+}
+
+// For returns a client for the cluster the Application deploys to.
 //
-// The hub's own API server yields the local client. Anything else must match a
-// registered cluster Secret: there is deliberately no fallback to the local
-// client, which would quietly answer with the wrong cluster's reports.
-func (r *Registry) For(ctx context.Context, clusterName, clusterServer string) (dynamic.Interface, error) {
-	server := normalize(clusterServer)
-	if server != "" && r.localHosts[server] {
+// The hub's own API server yields the local client. Anything else must match
+// exactly one registered cluster Secret: there is deliberately no fallback to
+// the local client, which would quietly answer with the wrong cluster's
+// reports.
+func (r *Registry) For(ctx context.Context, d Destination) (dynamic.Interface, error) {
+	d.Server = normalize(d.Server)
+	if d.Name == "" && d.Server == "" {
+		return nil, errors.New("application has no destination cluster")
+	}
+	if d.Server != "" && r.localHosts[d.Server] {
 		return r.local, nil
 	}
 
-	key := server
-	if key == "" {
-		key = "name/" + clusterName
-	}
-	if clusterName == "" && server == "" {
-		return nil, fmt.Errorf("application has no destination cluster")
-	}
+	// Keyed on the whole destination, so a cache hit can only ever come from a
+	// request that would resolve the same way. Keying on the server alone let
+	// a request naming a different cluster reuse this entry.
+	key := d.Project + "|" + d.Name + "|" + d.Server
 
 	r.mu.RLock()
 	cached, ok := r.cache[key]
@@ -126,7 +135,7 @@ func (r *Registry) For(ctx context.Context, clusterName, clusterServer string) (
 		return cached, nil
 	}
 
-	client, err := r.build(ctx, clusterName, server)
+	client, err := r.build(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -145,12 +154,14 @@ func (r *Registry) For(ctx context.Context, clusterName, clusterServer string) (
 
 // build finds the cluster Secret whose server matches key and turns it into a
 // dynamic client.
-func (r *Registry) build(ctx context.Context, clusterName, clusterServer string) (dynamic.Interface, error) {
+func (r *Registry) build(ctx context.Context, d Destination) (dynamic.Interface, error) {
 	secrets, err := r.local.Resource(secretGVR).Namespace(r.namespace).
 		List(ctx, metav1.ListOptions{LabelSelector: secretTypeSelector})
 	if err != nil {
 		return nil, fmt.Errorf("listing cluster secrets: %w", err)
 	}
+
+	var matches []unstructured.Unstructured
 
 	for _, s := range secrets.Items {
 		// Read through the unstructured form, where Secret data is still the
@@ -167,12 +178,53 @@ func (r *Registry) build(ctx context.Context, clusterName, clusterServer string)
 			return nil, fmt.Errorf("decoding name of cluster secret %s: %w", s.GetName(), err)
 		}
 
-		switch {
-		case clusterServer != "" && normalize(string(server)) == clusterServer:
-		case clusterName != "" && string(name) == clusterName:
-		default:
+		project, err := base64.StdEncoding.DecodeString(data["project"])
+		if err != nil {
+			return nil, fmt.Errorf("decoding project of cluster secret %s: %w", s.GetName(), err)
+		}
+
+		// A project-scoped cluster belongs to that project alone. Ignoring
+		// this would let an Application in one project read reports from
+		// another project's cluster, which ArgoCD itself would never deploy
+		// to. An empty project means the cluster is global.
+		if p := string(project); p != "" && p != d.Project {
 			continue
 		}
+
+		// Match on every field the Application actually supplied. Applications
+		// set one or the other, but if both are present they must agree:
+		// accepting either alone would let them disagree and resolve to a
+		// cluster the Application never named.
+		if d.Server != "" && normalize(string(server)) != d.Server {
+			continue
+		}
+		if d.Name != "" && string(name) != d.Name {
+			continue
+		}
+
+		matches = append(matches, s)
+	}
+
+	// ArgoCD does not require cluster names to be unique and errors when one
+	// resolves to several clusters ("there are N clusters with the same
+	// name"). Picking the first would silently read whichever Secret the API
+	// happened to return first.
+	if len(matches) > 1 {
+		names := make([]string, 0, len(matches))
+		for _, m := range matches {
+			names = append(names, m.GetName())
+		}
+		return nil, fmt.Errorf("destination name=%q server=%q matches %d cluster secrets: %s",
+			d.Name, d.Server, len(matches), strings.Join(names, ", "))
+	}
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("no registered cluster matches name=%q server=%q", d.Name, d.Server)
+	}
+
+	{
+		s := matches[0]
+		data, _, _ := unstructured.NestedStringMap(s.Object, "data")
+		server, _ := base64.StdEncoding.DecodeString(data["server"])
 
 		// An Application that names its destination gives no URL; the Secret
 		// is where the real endpoint comes from.
@@ -233,7 +285,6 @@ func (r *Registry) build(ctx context.Context, clusterName, clusterServer string)
 		return client, nil
 	}
 
-	return nil, fmt.Errorf("no registered cluster matches name=%q server=%q", clusterName, clusterServer)
 }
 
 // isGCPExec reports whether the exec plugin is argocd-k8s-auth's gcp mode.

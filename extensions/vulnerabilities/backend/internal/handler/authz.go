@@ -15,6 +15,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+
+	"github.com/natrontech/argoplane/extensions/vulnerabilities/backend/internal/cluster"
 )
 
 // applicationGVR is the GroupVersionResource for ArgoCD Applications.
@@ -109,21 +111,24 @@ func (a *Authorizer) application(ctx context.Context, appNs, appName string) (*u
 // spec.destination.server. An Application that names its destination instead
 // leaves that header untouched, so a client could supply any value and read
 // another cluster's reports. The Application is the only trustworthy source.
-func (a *Authorizer) Destination(ctx context.Context, r *http.Request) (name, server string, err error) {
+func (a *Authorizer) Destination(ctx context.Context, r *http.Request) (cluster.Destination, error) {
 	appNs, appName, ok := appFromHeader(r)
 	if !ok {
-		return "", "", errors.New("request must come through ArgoCD proxy")
+		return cluster.Destination{}, errors.New("request must come through ArgoCD proxy")
 	}
 	app, err := a.application(ctx, appNs, appName)
 	if err != nil {
-		return "", "", err
+		return cluster.Destination{}, err
 	}
-	name, _, _ = unstructured.NestedString(app.Object, "spec", "destination", "name")
-	server, _, _ = unstructured.NestedString(app.Object, "spec", "destination", "server")
+	name, _, _ := unstructured.NestedString(app.Object, "spec", "destination", "name")
+	server, _, _ := unstructured.NestedString(app.Object, "spec", "destination", "server")
 	if name == "" && server == "" {
-		return "", "", fmt.Errorf("application %s/%s has no destination cluster", appNs, appName)
+		return cluster.Destination{}, fmt.Errorf("application %s/%s has no destination cluster", appNs, appName)
 	}
-	return name, server, nil
+	// The project decides which registered clusters this Application may use;
+	// a project-scoped cluster Secret belongs to that project alone.
+	project, _, _ := unstructured.NestedString(app.Object, "spec", "project")
+	return cluster.Destination{Name: name, Server: server, Project: project}, nil
 }
 
 // appFromHeader parses the "namespace:name" Argocd-Application-Name header.
