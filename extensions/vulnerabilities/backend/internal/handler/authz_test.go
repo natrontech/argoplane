@@ -99,7 +99,12 @@ func (c reportClient) Namespace(string) dynamic.ResourceInterface { return c }
 
 func (c reportClient) Get(context.Context, string, metav1.GetOptions, ...string) (*unstructured.Unstructured, error) {
 	return &unstructured.Unstructured{Object: map[string]any{
-		"spec": map[string]any{"destination": map[string]any{"namespace": "team-a"}},
+		"spec": map[string]any{"destination": map[string]any{
+			"namespace": "team-a",
+			// Real Applications always name a destination cluster, and the
+			// backend now resolves its client from it rather than a header.
+			"server": "https://kubernetes.default.svc",
+		}},
 	}}, nil
 }
 

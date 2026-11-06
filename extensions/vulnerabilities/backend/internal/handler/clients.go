@@ -15,24 +15,33 @@ import (
 // that authorises the request lives on the hub. The Authorizer keeps using the
 // hub's own client; everything that reads report data goes through here.
 type Clients interface {
-	For(ctx context.Context, serverURL string) (dynamic.Interface, error)
+	For(ctx context.Context, clusterName, clusterServer string) (dynamic.Interface, error)
 }
 
-// clientFor picks the client for the cluster ArgoCD named on this request.
-// ArgoCD sets Argocd-Target-Cluster-URL on every proxy-extension call; an empty
-// value means the hub itself, which Clients resolves to its local client.
+// clientFor resolves the client for the cluster this request's Application
+// deploys to.
 //
-// It logs the cause here so every caller can stay a plain error check: a
-// cluster Secret this backend cannot use would otherwise fail silently behind
-// a generic HTTP error.
-func clientFor(c Clients, r *http.Request) (dynamic.Interface, error) {
-	server := r.Header.Get("Argocd-Target-Cluster-URL")
-	client, err := c.For(r.Context(), server)
+// The destination comes from the Application, never from a request header.
+// ArgoCD only overwrites Argocd-Target-Cluster-URL when the Application sets
+// spec.destination.server; an Application that names its destination instead
+// leaves whatever the caller sent in place, which would let an authorised user
+// read a namespace's reports on a cluster they have no access to.
+func clientFor(c Clients, auth *Authorizer, r *http.Request) (dynamic.Interface, error) {
+	name, server, err := auth.Destination(r.Context(), r)
+	if err != nil {
+		slog.Warn("security.rejected",
+			"reason", "could not resolve the application's destination cluster",
+			"error", err,
+			"app", r.Header.Get("Argocd-Application-Name"))
+		return nil, err
+	}
+
+	client, err := c.For(r.Context(), name, server)
 	if err != nil {
 		slog.Error("failed to resolve target cluster",
 			"error", err,
-			"cluster_url", server,
-			"cluster_name", r.Header.Get("Argocd-Target-Cluster-Name"),
+			"cluster_name", name,
+			"cluster_server", server,
 			"app", r.Header.Get("Argocd-Application-Name"))
 		return nil, err
 	}
@@ -46,6 +55,6 @@ type static struct{ client dynamic.Interface }
 // Static adapts a single client to the Clients interface.
 func Static(client dynamic.Interface) Clients { return static{client: client} }
 
-func (s static) For(context.Context, string) (dynamic.Interface, error) {
+func (s static) For(context.Context, string, string) (dynamic.Interface, error) {
 	return s.client, nil
 }

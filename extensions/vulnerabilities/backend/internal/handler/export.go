@@ -110,7 +110,7 @@ func (h *ExportHandler) exportVulnerabilities(w http.ResponseWriter, r *http.Req
 	seen := make(map[string]bool)
 	var truncated bool
 	done := 0
-	cl, err := clientFor(h.clients, r)
+	cl, err := clientFor(h.clients, h.auth, r)
 	if err != nil {
 		WriteError(w, http.StatusBadGateway, "cannot reach the cluster this application deploys to")
 		return
@@ -162,7 +162,7 @@ func (h *ExportHandler) exportSecrets(w http.ResponseWriter, r *http.Request, na
 	seen := make(map[string]bool)
 	var truncated bool
 	done := 0
-	cl, err := clientFor(h.clients, r)
+	cl, err := clientFor(h.clients, h.auth, r)
 	if err != nil {
 		WriteError(w, http.StatusBadGateway, "cannot reach the cluster this application deploys to")
 		return
@@ -212,7 +212,7 @@ func (h *ExportHandler) exportSbom(w http.ResponseWriter, r *http.Request, names
 	seen := make(map[string]bool)
 	var truncated bool
 	done := 0
-	cl, err := clientFor(h.clients, r)
+	cl, err := clientFor(h.clients, h.auth, r)
 	if err != nil {
 		WriteError(w, http.StatusBadGateway, "cannot reach the cluster this application deploys to")
 		return
@@ -260,7 +260,7 @@ func (h *ExportHandler) exportAudit(w http.ResponseWriter, r *http.Request, name
 	seen := make(map[string]bool)
 	var truncated bool
 	done := 0
-	cl, err := clientFor(h.clients, r)
+	cl, err := clientFor(h.clients, h.auth, r)
 	if err != nil {
 		WriteError(w, http.StatusBadGateway, "cannot reach the cluster this application deploys to")
 		return

@@ -45,7 +45,7 @@ func (h *SbomHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
 
 	var truncated bool
 	listOpts := metav1.ListOptions{LabelSelector: resourceLabelSelector(req.Resources)}
-	cl, err := clientFor(h.clients, r)
+	cl, err := clientFor(h.clients, h.auth, r)
 	if err != nil {
 		WriteError(w, http.StatusBadGateway, "cannot reach the cluster this application deploys to")
 		return

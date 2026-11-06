@@ -43,7 +43,7 @@ func (h *ReportsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	var truncated bool
 	opts := metav1.ListOptions{LabelSelector: resourceLabelSelector(nonEmpty(resourceFilter))}
 	reports := make([]types.ImageReport, 0)
-	cl, err := clientFor(h.clients, r)
+	cl, err := clientFor(h.clients, h.auth, r)
 	if err != nil {
 		WriteError(w, http.StatusBadGateway, "cannot reach the cluster this application deploys to")
 		return

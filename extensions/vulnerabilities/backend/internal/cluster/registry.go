@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -97,12 +98,25 @@ func NewRegistry(local dynamic.Interface, namespace, inClusterHost string) *Regi
 // Local returns the hub's own client — the one that can read Application CRs.
 func (r *Registry) Local() dynamic.Interface { return r.local }
 
-// For returns a client for the cluster at serverURL. An empty URL, or the hub's
-// own API server, yields the local client.
-func (r *Registry) For(ctx context.Context, serverURL string) (dynamic.Interface, error) {
-	key := normalize(serverURL)
-	if r.localHosts[key] {
+// For returns a client for the cluster an Application deploys to, identified
+// by the destination's name, its server URL, or both. ArgoCD Applications set
+// one or the other, so both are accepted.
+//
+// The hub's own API server yields the local client. Anything else must match a
+// registered cluster Secret: there is deliberately no fallback to the local
+// client, which would quietly answer with the wrong cluster's reports.
+func (r *Registry) For(ctx context.Context, clusterName, clusterServer string) (dynamic.Interface, error) {
+	server := normalize(clusterServer)
+	if server != "" && r.localHosts[server] {
 		return r.local, nil
+	}
+
+	key := server
+	if key == "" {
+		key = "name/" + clusterName
+	}
+	if clusterName == "" && server == "" {
+		return nil, fmt.Errorf("application has no destination cluster")
 	}
 
 	r.mu.RLock()
@@ -112,7 +126,7 @@ func (r *Registry) For(ctx context.Context, serverURL string) (dynamic.Interface
 		return cached, nil
 	}
 
-	client, err := r.build(ctx, key)
+	client, err := r.build(ctx, clusterName, server)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +145,7 @@ func (r *Registry) For(ctx context.Context, serverURL string) (dynamic.Interface
 
 // build finds the cluster Secret whose server matches key and turns it into a
 // dynamic client.
-func (r *Registry) build(ctx context.Context, key string) (dynamic.Interface, error) {
+func (r *Registry) build(ctx context.Context, clusterName, clusterServer string) (dynamic.Interface, error) {
 	secrets, err := r.local.Resource(secretGVR).Namespace(r.namespace).
 		List(ctx, metav1.ListOptions{LabelSelector: secretTypeSelector})
 	if err != nil {
@@ -148,8 +162,26 @@ func (r *Registry) build(ctx context.Context, key string) (dynamic.Interface, er
 		if err != nil {
 			return nil, fmt.Errorf("decoding server of cluster secret %s: %w", s.GetName(), err)
 		}
-		if normalize(string(server)) != key {
+		name, err := base64.StdEncoding.DecodeString(data["name"])
+		if err != nil {
+			return nil, fmt.Errorf("decoding name of cluster secret %s: %w", s.GetName(), err)
+		}
+
+		switch {
+		case clusterServer != "" && normalize(string(server)) == clusterServer:
+		case clusterName != "" && string(name) == clusterName:
+		default:
 			continue
+		}
+
+		// An Application that names its destination gives no URL; the Secret
+		// is where the real endpoint comes from.
+		host := normalize(string(server))
+		if host == "" {
+			return nil, fmt.Errorf("cluster secret %s has no server URL", s.GetName())
+		}
+		if r.localHosts[host] {
+			return r.local, nil
 		}
 
 		var cc clusterConfig
@@ -164,7 +196,7 @@ func (r *Registry) build(ctx context.Context, key string) (dynamic.Interface, er
 		}
 
 		cfg := &rest.Config{
-			Host:    key,
+			Host:    host,
 			Timeout: apiTimeout,
 			TLSClientConfig: rest.TLSClientConfig{
 				Insecure: cc.TLSClientConfig.Insecure,
@@ -201,7 +233,7 @@ func (r *Registry) build(ctx context.Context, key string) (dynamic.Interface, er
 		return client, nil
 	}
 
-	return nil, fmt.Errorf("no registered cluster matches %q", key)
+	return nil, fmt.Errorf("no registered cluster matches name=%q server=%q", clusterName, clusterServer)
 }
 
 // isGCPExec reports whether the exec plugin is argocd-k8s-auth's gcp mode.
@@ -209,7 +241,7 @@ func isGCPExec(e *struct {
 	Command string   `json:"command"`
 	Args    []string `json:"args"`
 }) bool {
-	if e == nil || !strings.Contains(e.Command, "argocd-k8s-auth") {
+	if e == nil || path.Base(e.Command) != "argocd-k8s-auth" {
 		return false
 	}
 	for _, a := range e.Args {
