@@ -62,6 +62,46 @@ make setup-argocd
 make deploy-example
 ```
 
+### Multi-cluster setup (optional)
+
+`make dev-infra` gives you one cluster, where ArgoCD manages itself and every
+backend reads the cluster it runs on. That is the right default, but it never
+exercises the hub-spoke case: Application CRs live beside ArgoCD while the
+reports describing a workload live on the cluster running it.
+
+To get that split, add a spoke:
+
+```bash
+# Hub plus spoke in one go
+make dev-infra-multicluster
+
+# Or add a spoke to a hub you already have
+make spoke
+
+# Remove just the spoke, leaving the hub alone
+make spoke-delete
+```
+
+The spoke is a second kind cluster running Trivy Operator and the demo
+workloads. It is registered with the hub's ArgoCD as an ordinary cluster
+Secret, and a second Application (`argoplane-demo-spoke`) deploys to it.
+
+That Application addresses its destination by **name** rather than server, on
+purpose: ArgoCD only sets the `Argocd-Target-Cluster-URL` header when an
+Application sets `spec.destination.server`, so a name-addressed destination is
+exactly the case a backend reading that header would get wrong. A backend has
+to resolve the destination from the Application itself.
+
+Both Applications stay visible side by side, so the single-cluster and
+multi-cluster paths can be compared directly. `make clean-all` removes the
+spoke along with the hub.
+
+Reports take a few minutes to appear after the spoke comes up:
+
+```bash
+kubectl --context kind-argoplane-dev-spoke get vulnerabilityreports -n argoplane-demo
+```
+
 ### Building a single extension
 
 After editing UI code:
