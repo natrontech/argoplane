@@ -282,6 +282,26 @@ extensions:
         - apiGroups: ["argoproj.io"]
           resources: ["applications"]
           verbs: ["get"]
+      # Empty by default, and only needed where ArgoCD manages other clusters.
+      #
+      # A single-cluster install never reaches this code: a destination of
+      # in-cluster, or the API server's own URL, resolves to the backend's
+      # in-cluster client without any Secret lookup. Granting Secret access
+      # there would be privilege nobody uses.
+      #
+      # For a hub-spoke install, uncomment the rule below. That is what lets
+      # the backend read the cluster Secrets ArgoCD already registered and
+      # build a client for whichever cluster an Application deploys to.
+      #
+      # Understand the cost first: RBAC cannot filter by label, so listing
+      # Secrets in this namespace also exposes argocd-secret, which holds the
+      # server signing key. It stays namespaced so workload Secrets across the
+      # fleet remain out of reach, and list-only because the backend never
+      # fetches a Secret by name.
+      namespacedRules: []
+      #   - apiGroups: [""]
+      #     resources: ["secrets"]
+      #     verbs: ["list"]
 
   events:
     enabled: false

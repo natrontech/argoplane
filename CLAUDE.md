@@ -102,6 +102,7 @@ See [`docs/extension-roadmap.md`](docs/extension-roadmap.md) for details.
 
 ```sh
 make dev-infra       # Create kind cluster + install ArgoCD (idempotent)
+make dev-infra-multicluster  # Same, plus an opt-in spoke cluster (hub-spoke testing)
 make argocd-password # Print admin password
 make argocd-portforward  # Port-forward UI to localhost:8080
 make test-integration    # Run integration tests
@@ -113,7 +114,8 @@ make clean-all           # Destroy everything
 - `make help` shows all available targets
 - `make cluster` creates the kind cluster (idempotent)
 - `make argocd` installs ArgoCD in the cluster (idempotent)
-- `make dev-infra` sets up the full local stack
+- `make dev-infra` sets up the full local stack (single cluster)
+- `make dev-infra-multicluster` adds an opt-in spoke cluster; `make spoke` / `make spoke-delete` manage it against an existing hub
 - `make build-extensions` builds all UI extension bundles
 - `make build-backends` builds all backend Docker images
 - `make build-ui-extensions-image` builds the UI extensions init container image

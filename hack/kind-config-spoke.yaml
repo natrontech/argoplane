@@ -1,0 +1,16 @@
+# Spoke cluster for the optional multi-cluster dev setup (make dev-infra-multicluster).
+#
+# Deliberately not a copy of kind-config.yaml:
+#
+#   - Default CNI stays enabled. Cilium is only needed for the networking
+#     extension, which reads Hubble on the cluster ArgoCD runs on. The spoke
+#     exists to hold workloads and their Trivy reports, so it comes up faster
+#     without one.
+#   - No extraPortMappings. The hub already binds hostPorts 8443/8444, and a
+#     second cluster claiming them would fail to create.
+#   - Single node. Nothing here needs scheduling spread, and one node keeps
+#     the second cluster cheap enough to be worth spinning up.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane

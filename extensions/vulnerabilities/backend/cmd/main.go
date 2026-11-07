@@ -14,6 +14,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 
+	"github.com/natrontech/argoplane/extensions/vulnerabilities/backend/internal/cluster"
 	"github.com/natrontech/argoplane/extensions/vulnerabilities/backend/internal/handler"
 )
 
@@ -22,6 +23,9 @@ type Config struct {
 	LogLevel      string `envconfig:"LOG_LEVEL" default:"info"`
 	ClusterName   string `envconfig:"CLUSTER_NAME"`
 	ClusterServer string `envconfig:"CLUSTER_SERVER"`
+	// ArgocdNamespace is where this backend looks for the cluster Secrets
+	// ArgoCD registers. Only used when it runs beside ArgoCD on the hub.
+	ArgocdNamespace string `envconfig:"ARGOCD_NAMESPACE" default:"argocd"`
 }
 
 func main() {
@@ -48,14 +52,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create handlers.
+	// Report data is read from whichever cluster the Application deploys to,
+	// resolved per request from ArgoCD's own registered cluster Secrets. The
+	// Authorizer deliberately stays on the local client: Application CRs live
+	// here on the hub, not on the cluster running the workload.
+	clients := cluster.NewRegistry(dynClient, config.ArgocdNamespace, kubeConfig.Host)
+
+	// WithCluster is left unset on purpose. It exists to pin a backend to a
+	// single cluster, which is the per-spoke deployment model; this one serves
+	// every registered cluster from the hub.
 	auth := handler.NewAuthorizer(dynClient, handler.WithCluster(config.ClusterName, config.ClusterServer))
-	reportsHandler := handler.NewReportsHandler(dynClient, auth)
-	overviewHandler := handler.NewOverviewHandler(dynClient, auth)
-	auditHandler := handler.NewAuditHandler(dynClient, auth)
-	secretsHandler := handler.NewSecretsHandler(dynClient, auth)
-	sbomHandler := handler.NewSbomHandler(dynClient, auth)
-	exportHandler := handler.NewExportHandler(dynClient, auth)
+	reportsHandler := handler.NewReportsHandler(clients, auth)
+	overviewHandler := handler.NewOverviewHandler(clients, auth)
+	auditHandler := handler.NewAuditHandler(clients, auth)
+	secretsHandler := handler.NewSecretsHandler(clients, auth)
+	sbomHandler := handler.NewSbomHandler(clients, auth)
+	exportHandler := handler.NewExportHandler(clients, auth)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/reports", reportsHandler.Handle)

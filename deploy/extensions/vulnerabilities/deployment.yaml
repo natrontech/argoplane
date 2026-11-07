@@ -39,6 +39,45 @@ subjects:
     name: argoplane-vulnerabilities-backend
     namespace: argocd
 ---
+# Reading the cluster Secrets ArgoCD registers is how the backend reaches a
+# cluster other than its own. Namespaced on purpose: the same rule in the
+# ClusterRole above would hand it every Secret in the cluster.
+#
+# Only used where ArgoCD manages other clusters. In a single-cluster setup the
+# backend never looks a Secret up, so this grant simply goes unused.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: argoplane-vulnerabilities-clusters
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argoplane-vulnerabilities-backend
+    app.kubernetes.io/part-of: argoplane
+rules:
+  # list only: the backend discovers the right Secret by scanning the labelled
+  # set, and never fetches one by name. RBAC cannot filter by label, so this is
+  # as narrow as the lookup allows.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argoplane-vulnerabilities-clusters
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argoplane-vulnerabilities-backend
+    app.kubernetes.io/part-of: argoplane
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: argoplane-vulnerabilities-clusters
+subjects:
+  - kind: ServiceAccount
+    name: argoplane-vulnerabilities-backend
+    namespace: argocd
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

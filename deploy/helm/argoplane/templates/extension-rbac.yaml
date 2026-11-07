@@ -42,5 +42,36 @@ subjects:
     name: argoplane-{{ $name }}-backend
     namespace: {{ include "argoplane.argocdNamespace" $ }}
 {{- end }}
+{{- if $ext.rbac.namespacedRules }}
+---
+# Scoped to the ArgoCD namespace on purpose. Reading the cluster Secrets that
+# hold spoke credentials has to stay namespaced: the same rule in the
+# ClusterRole above would grant this backend every Secret in the cluster.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $.Release.Name }}-{{ $name }}
+  namespace: {{ include "argoplane.argocdNamespace" $ }}
+  labels:
+    {{- include "argoplane.extensionLabels" (dict "name" $name "root" $) | nindent 4 }}
+rules:
+  {{- toYaml $ext.rbac.namespacedRules | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $.Release.Name }}-{{ $name }}
+  namespace: {{ include "argoplane.argocdNamespace" $ }}
+  labels:
+    {{- include "argoplane.extensionLabels" (dict "name" $name "root" $) | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $.Release.Name }}-{{ $name }}
+subjects:
+  - kind: ServiceAccount
+    name: argoplane-{{ $name }}-backend
+    namespace: {{ include "argoplane.argocdNamespace" $ }}
+{{- end }}
 {{- end }}
 {{- end }}

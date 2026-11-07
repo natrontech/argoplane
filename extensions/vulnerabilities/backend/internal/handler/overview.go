@@ -6,20 +6,19 @@ import (
 	"sort"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/dynamic"
 
 	"github.com/natrontech/argoplane/extensions/vulnerabilities/backend/internal/types"
 )
 
 // OverviewHandler handles app-level vulnerability aggregation.
 type OverviewHandler struct {
-	client dynamic.Interface
-	auth   *Authorizer
+	clients Clients
+	auth    *Authorizer
 }
 
 // NewOverviewHandler creates a new OverviewHandler.
-func NewOverviewHandler(client dynamic.Interface, auth *Authorizer) *OverviewHandler {
-	return &OverviewHandler{client: client, auth: auth}
+func NewOverviewHandler(clients Clients, auth *Authorizer) *OverviewHandler {
+	return &OverviewHandler{clients: clients, auth: auth}
 }
 
 // Handle returns an aggregated vulnerability overview for an application's namespace.
@@ -45,7 +44,12 @@ func (h *OverviewHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	var truncated bool
 	listOpts := metav1.ListOptions{LabelSelector: resourceLabelSelector(req.Resources)}
-	reportList := h.client.Resource(types.VulnerabilityReportGVR).Namespace(req.Namespace).List
+	cl, err := clientFor(h.clients, h.auth, r)
+	if err != nil {
+		WriteError(w, http.StatusBadGateway, "cannot reach the cluster this application deploys to")
+		return
+	}
+	reportList := cl.Resource(types.VulnerabilityReportGVR).Namespace(req.Namespace).List
 
 	totalSummary := types.VulnerabilitySummary{}
 	totalFixable := 0
