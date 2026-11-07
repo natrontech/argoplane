@@ -41,6 +41,12 @@ var secretGVR = schema.GroupVersionResource{Version: "v1", Resource: "secrets"}
 // secretTypeSelector matches the Secrets ArgoCD writes for registered clusters.
 const secretTypeSelector = "argocd.argoproj.io/secret-type=cluster"
 
+// inClusterName is the destination name ArgoCD reserves for the cluster it
+// runs on. It has no cluster Secret — ArgoCD resolves the name internally — so
+// it has to be recognised here or every single-cluster install would fail the
+// Secret lookup.
+const inClusterName = "in-cluster"
+
 // gcpScopes mirrors argocd-k8s-auth's own gcp command, so a cluster Secret using
 // that exec plugin keeps working without shipping the binary in this image.
 var gcpScopes = []string{
@@ -120,6 +126,9 @@ func (r *Registry) For(ctx context.Context, d Destination) (dynamic.Interface, e
 		return nil, errors.New("application has no destination cluster")
 	}
 	if d.Server != "" && r.localHosts[d.Server] {
+		return r.local, nil
+	}
+	if d.Server == "" && d.Name == inClusterName {
 		return r.local, nil
 	}
 

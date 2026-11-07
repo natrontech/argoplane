@@ -54,9 +54,12 @@ metadata:
     app.kubernetes.io/name: argoplane-vulnerabilities-backend
     app.kubernetes.io/part-of: argoplane
 rules:
+  # list only: the backend discovers the right Secret by scanning the labelled
+  # set, and never fetches one by name. RBAC cannot filter by label, so this is
+  # as narrow as the lookup allows.
   - apiGroups: [""]
     resources: ["secrets"]
-    verbs: ["get", "list"]
+    verbs: ["list"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

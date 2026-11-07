@@ -246,3 +246,19 @@ func TestCacheIsNotSharedAcrossProjects(t *testing.T) {
 		t.Error("each project must get its own client, not a shared cache entry")
 	}
 }
+
+func TestForResolvesInClusterByName(t *testing.T) {
+	// ArgoCD reserves "in-cluster" for the cluster it runs on and resolves it
+	// internally, so no Secret exists for it. Sending it to the Secret lookup
+	// would break every single-cluster install that names its destination
+	// rather than giving a server URL.
+	reg, local := newTestRegistry()
+
+	got, err := reg.For(context.Background(), Destination{Name: "in-cluster"})
+	if err != nil {
+		t.Fatalf("in-cluster should resolve without a Secret: %v", err)
+	}
+	if got != local {
+		t.Error("in-cluster must resolve to the local client")
+	}
+}
