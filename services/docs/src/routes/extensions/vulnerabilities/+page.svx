@@ -121,7 +121,7 @@ Both default to off, so a single-cluster install is unaffected. Supported cluste
   <code>MULTI_CLUSTER</code> with the Secret rule lets this backend read <code>argocd-secret</code> and every registered cluster's credentials. Anyone who compromises the backend can then mint ArgoCD admin tokens. Read "Multi-cluster ArgoCD" on the <a href="{base}/deployment/argocd-configuration">ArgoCD Configuration</a> page before enabling it.
 </Callout>
 
-The Workload Identity requirement on GKE is covered under "Multi-cluster ArgoCD" on the [ArgoCD Configuration](/deployment/argocd-configuration) page.
+The Workload Identity requirement on GKE is covered under "Multi-cluster ArgoCD" on the <a href="{base}/deployment/argocd-configuration">ArgoCD Configuration</a> page.
 
 ### Trivy Operator CRDs
 

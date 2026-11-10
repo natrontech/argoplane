@@ -89,7 +89,7 @@ extensions:
   <code>MULTI_CLUSTER</code> with the Secret rule lets this backend read <code>argocd-secret</code> and every registered cluster's credentials. Anyone who compromises the backend can then mint ArgoCD admin tokens. Read "Multi-cluster ArgoCD" on the <a href="{base}/deployment/argocd-configuration">ArgoCD Configuration</a> page before enabling it.
 </Callout>
 
-Both default to off, so a single-cluster install is unaffected. The spoke's credentials need read access to events there. Supported auth, the exposure the Secret rule carries, and the GKE Workload Identity requirement are covered under "Multi-cluster ArgoCD" on the [ArgoCD Configuration](/deployment/argocd-configuration) page.
+Both default to off, so a single-cluster install is unaffected. The spoke's credentials need read access to events there. Supported auth, the exposure the Secret rule carries, and the GKE Workload Identity requirement are covered under "Multi-cluster ArgoCD" on the <a href="{base}/deployment/argocd-configuration">ArgoCD Configuration</a> page.
 
 ### RBAC
 
