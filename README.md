@@ -31,7 +31,7 @@ https://github.com/user-attachments/assets/b9c4a296-9d05-46ca-b421-7011a22bf9b9
 | **Observe** | Logs | Log search, severity detection, volume charts (Loki) | ✅ | <img src="assets/demo/application_logs.png"/><br><img src="assets/demo/pod_logs.png"/> |
 | **Secure** | Vulnerabilities | Image CVEs, config audit, exposed secrets, SBOM (Trivy Operator) | ✅ | <img src="assets/demo/application_vulnerabilities.png"/><br><img src="assets/demo/application_configuration_audit.png"/><br><img src="assets/demo/application_exposed_secrets.png"/><br><img src="assets/demo/application_sbom.png"/> |
 | **Observe** | Events | Kubernetes events per resource and application | ✅ | <img src="assets/demo/application_events.png"/><br><img src="assets/demo/pod_events.png"/> |
-| **Observe** | Alerts | Firing and pending Prometheus alerts, app vs platform rules, rule health (read-only) | ✅ | - |
+| **Observe** | Alerts | Firing and pending Prometheus alerts, app vs platform rules, rule health (read-only) | ✅ | <img src="assets/demo/application_alerts.png"/> |
 | **Secure** | Policies | Policy violations, admission results (Kyverno) | Planned | - |
 
 Each extension is independently toggleable. Install only what you need.
