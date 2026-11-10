@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**ArgoPlane** is a collection of ArgoCD UI extensions. It surfaces operational data — metrics, logs, network flows, vulnerabilities, events — inside ArgoCD's UI as resource tabs, app views, and status panels. Each extension is independent and can be deployed on its own.
+**ArgoPlane** is a collection of ArgoCD UI extensions. It surfaces operational data — metrics, logs, network flows, vulnerabilities, events — inside ArgoCD's UI as resource tabs and app views. Each extension is independent and can be deployed on its own.
 
 ## Core Idea
 
@@ -21,7 +21,7 @@ Extensions fall into two categories:
 
 Every ArgoPlane extension follows the same pattern:
 
-1. **React/TypeScript UI extension** registered via `window.extensionsAPI` (resource tabs, status panels, system-level pages, app views, top bar actions)
+1. **React/TypeScript UI extension** registered via `window.extensionsAPI` (resource tabs, app views, system-level pages, top bar actions)
 2. **Go backend service** that queries the underlying system (Prometheus, Cilium, Loki, etc.)
 3. **ArgoCD proxy extension** that routes `/extensions/<name>/*` requests from the UI to the Go backend
 

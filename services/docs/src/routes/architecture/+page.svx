@@ -17,7 +17,7 @@ ArgoPlane is a collection of ArgoCD UI extensions, not a standalone application.
 
 Every ArgoPlane extension has three parts:
 
-1. **UI extension** (React/TypeScript): registers tabs, status panels, or pages via `window.extensionsAPI`
+1. **UI extension** (React/TypeScript): registers tabs, app views, or pages via `window.extensionsAPI`
 2. **Backend service** (Go): queries the underlying system (Prometheus, Loki, Cilium) and exposes an HTTP API
 3. **Proxy extension config**: ArgoCD routes `/extensions/<name>/*` requests from the UI to the Go backend
 
@@ -68,7 +68,6 @@ ArgoCD v3 supports several extension registration methods:
 |--------|----------|
 | `registerResourceExtension` | Tabs on resource detail pages (Deployment, Pod, etc.) |
 | `registerSystemLevelExtension` | Sidebar pages (system-wide views) |
-| `registerStatusPanelExtension` | Status bar items on Application detail |
 | `registerAppViewExtension` | Full-page views within Application detail |
 | `registerTopBarActionMenuExt` | Action buttons in the top bar |
 

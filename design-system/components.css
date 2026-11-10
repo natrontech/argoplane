@@ -1595,7 +1595,7 @@
 
 /* ----------------------------------------------------------------
    DRAWER / FLYOUT
-   Slide-out detail panel (ArgoCD status panel pattern).
+   Slide-out detail panel (ArgoCD flyout pattern).
    Usage: <div class="ap-drawer-overlay">
             <div class="ap-drawer">
               <div class="ap-drawer__header">

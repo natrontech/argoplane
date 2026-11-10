@@ -4,17 +4,16 @@ All ArgoPlane extensions are named by **domain**, not by the underlying tool. Ex
 
 ## Strategy
 
-ArgoPlane is a collection of ArgoCD UI extensions. Each extension attaches operational data to resources and applications inside ArgoCD: resource tabs, app views, status panels, and occasionally a system-level sidebar page for cross-cutting dashboards. Every extension works standalone and has no knowledge of the others.
+ArgoPlane is a collection of ArgoCD UI extensions. Each extension attaches operational data to resources and applications inside ArgoCD: resource tabs, app views, and occasionally a system-level sidebar page for cross-cutting dashboards. Every extension works standalone and has no knowledge of the others.
 
 ### ArgoCD Extension Points
 
-ArgoCD v3.x provides six registration methods. ArgoPlane uses most of them:
+ArgoCD v3.x provides several registration methods. ArgoPlane uses these:
 
 | Method | Where it appears | Used by |
 |--------|-----------------|---------|
 | `registerResourceExtension` | Tab on a K8s resource's sliding panel | Metrics, Networking, Logs, Vulnerabilities, Events |
 | `registerAppViewExtension` | Full-page view in app details | Metrics, Networking, Logs, Vulnerabilities, Events |
-| `registerStatusPanelExtension` | Compact widget in app header status bar | Metrics, Networking |
 | `registerSystemLevelExtension` | Sidebar page (global, not tied to any app) | ArgoPlane Overview (planned) |
 | `registerTopBarActionMenuExt` | Action button in top toolbar | (reserved for future use) |
 | Application tab (`registerResourceExtension` with `argoproj.io/Application`) | Tab on Application resource | (reserved for future use) |
@@ -23,8 +22,8 @@ ArgoCD v3.x provides six registration methods. ArgoPlane uses most of them:
 
 | Category | Domain | Description | Backend | Extension Points |
 |----------|--------|-------------|---------|-----------------|
-| Observe | **metrics** | CPU, memory, request rates, latency, custom PromQL queries | Prometheus | Resource tabs (Deployment, StatefulSet, Pod) + App view + Status panel |
-| Observe | **networking** | Traffic flows (Hubble), network policies, app vs platform ownership | Cilium/Hubble | App view + Status panel + Resource tabs (Pod, CiliumNetworkPolicy, CiliumClusterwideNetworkPolicy) |
+| Observe | **metrics** | CPU, memory, request rates, latency, custom PromQL queries | Prometheus | Resource tabs (Deployment, StatefulSet, Pod) + App view |
+| Observe | **networking** | Traffic flows (Hubble), network policies, app vs platform ownership | Cilium/Hubble | App view + Resource tabs (Pod, CiliumNetworkPolicy, CiliumClusterwideNetworkPolicy) |
 | Observe | **logs** | Historical log search, label-based filtering, severity detection, time range selection, volume charts. No live tail (ArgoCD's built-in Logs tab handles real-time pod streaming; Loki's tail API uses WebSocket which the proxy extension mechanism does not support). | Loki | Resource tabs (Pod, Deployment, StatefulSet) + App view |
 | Secure | **vulnerabilities** | Image vulnerability scanning (CVEs), config audit, exposed secrets detection, SBOM inventory. Per-image severity breakdown, CSV export, deduplication across ReplicaSets. | Trivy Operator (K8s API) | App view (4 tabs: Vulnerabilities, Config Audit, Exposed Secrets, SBOM) |
 | Observe | **events** | Kubernetes events per resource and application. Warning/Normal event filtering, timeline view. | Kubernetes API | Resource tabs + App view |
@@ -34,7 +33,7 @@ ArgoCD v3.x provides six registration methods. ArgoPlane uses most of them:
 
 | Category | Domain | Description | Backend | Extension Points |
 |----------|--------|-------------|---------|-----------------|
-| Secure | **policies** | Policy violations, admission control results, policy reports per app | Kyverno | Resource tabs + App view + Status panel |
+| Secure | **policies** | Policy violations, admission control results, policy reports per app | Kyverno | Resource tabs + App view |
 
 ## System-Level Extensions (Planned)
 

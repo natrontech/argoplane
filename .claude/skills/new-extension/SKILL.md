@@ -35,7 +35,7 @@ extensions/$ARGUMENTS/
 ## Implementation Checklist
 
 1. Create the directory structure above
-2. **UI entry point** (`index.tsx`): register via `window.extensionsAPI.registerResourceExtension` or `registerStatusPanelExtension`
+2. **UI entry point** (`index.tsx`): register via `registerArgoPlaneView` and `registerArgoPlaneResourceTab` from `@argoplane/shared`
 3. **API client** (`api.ts`): fetch from `/extensions/$ARGUMENTS/api/v1/...` with ArgoCD headers
 4. **React component**: display domain-specific data, handle loading/error states
 5. **Go backend** (`cmd/main.go`): HTTP server with health check and domain API endpoints

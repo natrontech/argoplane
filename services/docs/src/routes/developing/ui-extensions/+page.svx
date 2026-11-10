@@ -39,7 +39,6 @@ Every extension entry point registers via `window.extensionsAPI`:
 |--------|----------|
 | `registerResourceExtension(component, group, kind, title, opts?)` | Resource detail tabs |
 | `registerSystemLevelExtension(component, title, path, icon)` | Sidebar pages |
-| `registerStatusPanelExtension(component, title, id, flyout?)` | App status bar items |
 | `registerAppViewExtension(component, title, icon, shouldDisplay?)` | App detail views |
 | `registerTopBarActionMenuExt(component, title, id, flyout?, shouldDisplay?, icon?, isMiddle?)` | Action buttons |
 
@@ -54,8 +53,6 @@ interface ExtensionProps {
   application: any;   // ArgoCD Application object
 }
 ```
-
-Status panel extensions receive `openFlyout()` in props for sliding panels.
 
 ## Proxy API calls
 

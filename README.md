@@ -18,7 +18,7 @@
 
 ---
 
-ArgoPlane is a collection of ArgoCD UI extensions. It adds resource tabs, app views, and status panels so developers can see metrics, logs, network flows, vulnerabilities, and events without leaving ArgoCD. Nothing more, nothing less. Each extension is independent and can be installed on its own.
+ArgoPlane is a collection of ArgoCD UI extensions. It adds resource tabs and app views so developers can see metrics, logs, network flows, vulnerabilities, and events without leaving ArgoCD. Nothing more, nothing less. Each extension is independent and can be installed on its own.
 
 https://github.com/user-attachments/assets/b9c4a296-9d05-46ca-b421-7011a22bf9b9
 
@@ -44,8 +44,7 @@ Every extension follows the same pattern: a **React/TypeScript UI** registers ta
 ArgoCD UI
 ├── ArgoPlane extensions
 │   ├── Resource tabs (per Deployment, Pod, etc.)
-│   ├── App views (per Application)
-│   └── Status panels (app header)
+│   └── App views (per Application)
 │
 │   React/TS ──proxy──▶ Go backends
 │                        ├── Prometheus

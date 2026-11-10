@@ -28,7 +28,6 @@ Every extension entry point registers via `window.extensionsAPI`:
 
 - `registerResourceExtension(component, group, kind, title, opts?)` - resource detail tabs
 - `registerSystemLevelExtension(component, title, options)` - sidebar pages (`options.icon` for FontAwesome class)
-- `registerStatusPanelExtension(component, title, id, flyout?)` - app status bar items
 - `registerTopBarActionMenuExt(component, title, id, flyout?, shouldDisplay?, iconClassName?, isMiddle?)` - action buttons in top toolbar
 - `registerAppViewExtension(component, title, icon, shouldDisplay?)` - app detail views (supports `shouldDisplay` callback since v3.2)
 
@@ -38,9 +37,10 @@ Every extension entry point registers via `window.extensionsAPI`:
 |------|---------|---------|
 | Resource tab | Per-resource operational data | Metrics for a Deployment, flows for a Pod |
 | App view | Per-app operational views | All network flows for this app, all events |
-| Status panel | Health at a glance in app header | CPU/memory summary, flow stats |
 | System-level | Cross-app dashboards (sidebar page) | ArgoPlane Overview, Alerts Dashboard |
 | Top bar action | Global action buttons | Cluster health summary, external links |
+
+Don't register status panels (`registerStatusPanelExtension`, the app-header widgets). ArgoPlane removed them as clutter in `ee64943`, and an alerts badge added later was removed again. Summaries belong in the app view.
 
 ### System-Level Extensions
 
@@ -84,8 +84,6 @@ interface ExtensionProps {
   application: any;   // ArgoCD Application object
 }
 ```
-
-Status panel extensions receive `openFlyout()` in props for sliding panels.
 
 System-level extensions receive no resource-specific props (they're global pages).
 

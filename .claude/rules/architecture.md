@@ -10,11 +10,10 @@ Extensions fall into two categories:
 
 ## Extension Points
 
-ArgoCD v3.x provides six registration methods. Use the right one for each feature:
+ArgoCD v3.x provides several registration methods. ArgoPlane uses these; it does not use status panels in the app header:
 
 - **Resource tabs** (`registerResourceExtension`): per-resource operational data (metrics for a Deployment, flows for a Pod)
 - **App views** (`registerAppViewExtension`): per-app operational views (all network flows for this app, all events)
-- **Status panels** (`registerStatusPanelExtension`): health at a glance in the app header
 - **System-level pages** (`registerSystemLevelExtension`): cross-app dashboards in ArgoCD's sidebar (aggregated alerts, cluster health overview)
 - **Top bar actions** (`registerTopBarActionMenuExt`): global action buttons
 - **Application tabs** (`registerResourceExtension` with `argoproj.io/Application`): tabs on the Application resource itself
@@ -30,7 +29,7 @@ System-level extensions are sidebar pages, not tied to any specific app. Good fo
 
 Every ArgoPlane extension has three parts:
 
-1. **UI extension** (React/TypeScript): registers tabs, status panels, pages, or sidebar entries via `window.extensionsAPI`
+1. **UI extension** (React/TypeScript): registers tabs, app views, pages, or sidebar entries via `window.extensionsAPI`
 2. **Backend service** (Go): queries the underlying system (Prometheus, Hubble, etc.) and exposes an HTTP API
 3. **Proxy extension config**: ArgoCD routes `/extensions/<name>/*` to the backend service
 

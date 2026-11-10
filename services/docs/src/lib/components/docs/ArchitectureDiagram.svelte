@@ -2,7 +2,7 @@
   let activeLayer: string | null = $state(null);
 
   const descriptions: Record<string, string> = {
-    developer: 'Developers interact with ArgoCD UI. ArgoPlane extensions appear as tabs, status panels, and sidebar pages.',
+    developer: 'Developers interact with ArgoCD UI. ArgoPlane extensions appear as tabs, app views, and sidebar pages.',
     gateway: 'ArgoCD validates auth, enforces RBAC, and proxies /extensions/* requests to backend services.',
     extensions: 'Each Go backend queries a specific platform system and returns JSON via ArgoCD proxy.',
     sources: 'Backends query live data from cluster systems. No database. All state is derived.',

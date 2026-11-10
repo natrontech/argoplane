@@ -56,4 +56,4 @@ Build and deploy the **$ARGUMENTS** extension to the local kind cluster.
 
 - Open ArgoCD UI (http://localhost:8080)
 - Navigate to an application
-- Check for the new extension tab or status panel item
+- Check for the new extension tab
