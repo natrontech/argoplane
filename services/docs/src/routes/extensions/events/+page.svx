@@ -3,6 +3,12 @@ title: Events Extension
 description: Kubernetes event visibility for ArgoCD resources and applications
 ---
 
+<script>
+  import { resolve } from '$app/paths';
+  const base = resolve('/').slice(0, -1);
+  import Callout from '#lib/components/docs/Callout.svelte';
+</script>
+
 # Events Extension
 
 The events extension surfaces Kubernetes events inside ArgoCD. Developers can see warnings, scheduling failures, image pull errors, and other cluster events for their resources without leaving ArgoCD.
@@ -78,6 +84,10 @@ extensions:
           resources: ["secrets"]
           verbs: ["list"]
 ```
+
+<Callout type="warning">
+  <code>MULTI_CLUSTER</code> with the Secret rule lets this backend read <code>argocd-secret</code> and every registered cluster's credentials. Anyone who compromises the backend can then mint ArgoCD admin tokens. Read "Multi-cluster ArgoCD" on the <a href="{base}/deployment/argocd-configuration">ArgoCD Configuration</a> page before enabling it.
+</Callout>
 
 Both default to off, so a single-cluster install is unaffected. The spoke's credentials need read access to events there. Supported auth, the exposure the Secret rule carries, and the GKE Workload Identity requirement are covered under "Multi-cluster ArgoCD" on the [ArgoCD Configuration](/deployment/argocd-configuration) page.
 

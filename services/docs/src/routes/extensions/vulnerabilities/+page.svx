@@ -3,6 +3,12 @@ title: Vulnerabilities Extension
 description: Trivy Operator vulnerability scanning and security audit for ArgoCD
 ---
 
+<script>
+  import { resolve } from '$app/paths';
+  const base = resolve('/').slice(0, -1);
+  import Callout from '#lib/components/docs/Callout.svelte';
+</script>
+
 # Vulnerabilities Extension
 
 The vulnerabilities extension surfaces Trivy Operator scan results inside ArgoCD. Developers can see image vulnerabilities, config audit findings, exposed secrets, and software bill of materials (SBOM) for their applications.
@@ -111,7 +117,11 @@ extensions:
 
 Both default to off, so a single-cluster install is unaffected. Supported cluster Secret auth is `bearerToken` and `execProviderConfig` running `argocd-k8s-auth gcp`; EKS `awsAuthConfig`, client certificates and basic auth return an error, as do `proxyUrl` and `tlsClientConfig.serverName`.
 
-The RBAC rule is worth reading before you enable it, and the Workload Identity requirement on GKE: both are covered under "Multi-cluster ArgoCD" on the [ArgoCD Configuration](/deployment/argocd-configuration) page.
+<Callout type="warning">
+  <code>MULTI_CLUSTER</code> with the Secret rule lets this backend read <code>argocd-secret</code> and every registered cluster's credentials. Anyone who compromises the backend can then mint ArgoCD admin tokens. Read "Multi-cluster ArgoCD" on the <a href="{base}/deployment/argocd-configuration">ArgoCD Configuration</a> page before enabling it.
+</Callout>
+
+The Workload Identity requirement on GKE is covered under "Multi-cluster ArgoCD" on the [ArgoCD Configuration](/deployment/argocd-configuration) page.
 
 ### Trivy Operator CRDs
 

@@ -308,6 +308,10 @@ extensions:
       # signs ArgoCD tokens), every repository credential, and every spoke's
       # credentials. Namespaced keeps workload Secrets elsewhere in the
       # cluster out of reach; it does not make the grant narrow.
+      #
+      # This is a privilege escalation path: whoever compromises the backend
+      # can mint ArgoCD admin tokens with server.secretkey and deploy to every
+      # managed cluster. Treat the backend as sensitive as argocd-server.
       namespacedRules: []
       #   - apiGroups: [""]
       #     resources: ["secrets"]
@@ -379,8 +383,9 @@ extensions:
       # Reading ArgoCD's cluster Secrets is how the backend reaches a cluster
       # other than its own; needed together with env MULTI_CLUSTER=true. The
       # grant exposes everything in the ArgoCD namespace, argocd-secret and
-      # every spoke's credentials included: see the vulnerabilities block
-      # above before enabling.
+      # every spoke's credentials included, so whoever compromises the backend
+      # can mint ArgoCD admin tokens. See the vulnerabilities block above
+      # before enabling.
       namespacedRules: []
       #   - apiGroups: [""]
       #     resources: ["secrets"]

@@ -126,7 +126,13 @@ extensions:
 
 **`MULTI_CLUSTER` and `CLUSTER_NAME`/`CLUSTER_SERVER` are mutually exclusive.** If you have followed the section above and pinned the backend to one cluster, an app targeting any other is rejected with `403 application deploys to a cluster this backend does not serve` before the lookup ever runs. Remove those two variables when enabling `MULTI_CLUSTER`.
 
-**Understand the grant before enabling it.** Kubernetes RBAC cannot filter Secrets by label, and `list` returns full Secret data exactly as `get` does. The backend can therefore read everything in the ArgoCD namespace: `argocd-secret` (including `server.secretkey`, which signs ArgoCD tokens), every repository credential, and every registered cluster's credentials. Keeping the rule namespaced stops it reaching workload Secrets elsewhere in the cluster; it does not make it narrow.
+<Callout type="warning">
+  <strong>Enabling this makes the backend as sensitive as argocd-server.</strong> Kubernetes RBAC cannot filter Secrets by label, and <code>list</code> returns full Secret data exactly as <code>get</code> does. Each backend with the grant can therefore read everything in the ArgoCD namespace: <code>argocd-secret</code>, every repository credential, and every registered cluster's credentials, which are usually cluster-admin.
+  <br /><br />
+  That is a privilege escalation path. <code>server.secretkey</code> in <code>argocd-secret</code> signs ArgoCD tokens, so anyone who gets code execution in the backend, or tricks it into reading for them, can mint an ArgoCD admin token and deploy anything to every cluster ArgoCD manages. Keeping the rule namespaced only keeps workload Secrets elsewhere out of reach.
+  <br /><br />
+  Enable it only on the backends that need it, keep the chart's NetworkPolicy in place so only argocd-server can reach them, and restrict who can exec into their pods or change their images as tightly as you do for argocd-server.
+</Callout>
 
 Supported cluster Secret auth:
 
