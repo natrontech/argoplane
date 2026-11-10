@@ -131,7 +131,7 @@ func TestArgoCD_ApplicationCleanup(t *testing.T) {
 
 	// Delete is idempotent: ignore "not found"
 	cmd := exec.CommandContext(ctx, "kubectl", "-n", "argocd", "delete", "app",
-		"argoplane-integration-test", "--wait=true", "--timeout=60s")
+		"argoplane-integration-test", "--interactive=false", "--wait=true", "--timeout=60s")
 	out, err := cmd.CombinedOutput()
 	if err != nil && !strings.Contains(string(out), "not found") {
 		t.Fatalf("failed to delete application: %s: %s", err, out)

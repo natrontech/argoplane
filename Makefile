@@ -49,11 +49,11 @@ spoke-delete: ## Delete the spoke cluster, leaving the hub alone (idempotent)
 		echo "==> Spoke cluster '$(SPOKE_CLUSTER_NAME)' does not exist"; \
 	fi
 	@echo "==> Removing the spoke's registration from the hub"
-	-@kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) delete application argoplane-demo-spoke --ignore-not-found 2>/dev/null || true
-	-@kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) delete secret $(SPOKE_CLUSTER_NAME) --ignore-not-found 2>/dev/null || true
+	-@kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) delete application argoplane-demo-spoke --ignore-not-found --interactive=false 2>/dev/null || true
+	-@kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) delete secret $(SPOKE_CLUSTER_NAME) --ignore-not-found --interactive=false 2>/dev/null || true
 	@echo "==> Returning the backend to single-cluster, and revoking the Secret grant"
 	-@kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) set env deploy/argoplane-vulnerabilities-backend MULTI_CLUSTER- 2>/dev/null || true
-	-@kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) delete role,rolebinding argoplane-vulnerabilities-clusters --ignore-not-found 2>/dev/null || true
+	-@kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) delete role,rolebinding argoplane-vulnerabilities-clusters --ignore-not-found --interactive=false 2>/dev/null || true
 
 # --- CNI (Cilium) ---
 
@@ -193,10 +193,10 @@ deploy-example: ## Deploy demo app for visual testing of all extensions
 
 .PHONY: clean-example
 clean-example: ## Remove demo app and namespace
-	-@kubectl delete application -n $(ARGOCD_NS) argoplane-demo 2>/dev/null || true
-	-@kubectl delete ns argoplane-demo --wait=false 2>/dev/null || true
-	-@kubectl delete ns other-team --wait=false 2>/dev/null || true
-	-@kubectl delete ciliumclusterwidenetworkpolicy platform-allow-dns platform-allow-health-probes 2>/dev/null || true
+	-@kubectl delete application -n $(ARGOCD_NS) argoplane-demo --interactive=false 2>/dev/null || true
+	-@kubectl delete ns argoplane-demo --wait=false --interactive=false 2>/dev/null || true
+	-@kubectl delete ns other-team --wait=false --interactive=false 2>/dev/null || true
+	-@kubectl delete ciliumclusterwidenetworkpolicy platform-allow-dns platform-allow-health-probes --interactive=false 2>/dev/null || true
 
 # --- Testing ---
 
@@ -215,8 +215,8 @@ test-integration-short: ## Run quick integration tests
 .PHONY: clean
 clean: ## Remove test resources, keep cluster
 	@echo "==> Cleaning test resources"
-	-@kubectl delete applications -n $(ARGOCD_NS) -l app.kubernetes.io/part-of=argoplane-test 2>/dev/null || true
-	-@kubectl delete ns argoplane-test --wait=false 2>/dev/null || true
+	-@kubectl delete applications -n $(ARGOCD_NS) -l app.kubernetes.io/part-of=argoplane-test --interactive=false 2>/dev/null || true
+	-@kubectl delete ns argoplane-test --wait=false --interactive=false 2>/dev/null || true
 
 .PHONY: clean-all
 clean-all: spoke-delete cluster-delete ## Destroy everything, including the spoke if one exists

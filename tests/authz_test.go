@@ -58,7 +58,7 @@ func TestExtensions_NamespaceAuthorization(t *testing.T) {
 	}
 	defer func() {
 		cleanup := exec.Command("kubectl", "-n", "argocd", "delete", "app",
-			"argoplane-integration-test", "--wait=false")
+			"argoplane-integration-test", "--interactive=false", "--wait=false")
 		_ = cleanup.Run()
 	}()
 
