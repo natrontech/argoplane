@@ -92,14 +92,22 @@ Application sets `spec.destination.server`, so a name-addressed destination is
 exactly the case a backend reading that header would get wrong. A backend has
 to resolve the destination from the Application itself.
 
-Both Applications stay visible side by side, so the single-cluster and
-multi-cluster paths can be compared directly. `make clean-all` removes the
-spoke along with the hub.
+`make spoke` also enables `MULTI_CLUSTER` on the vulnerabilities backend and
+grants it the Secret read it needs, since neither belongs in a single-cluster
+setup. `make spoke-delete` reverts both.
+
+The two Applications deploy to **different namespaces** on purpose
+(`argoplane-demo` on the hub, `argoplane-demo-spoke` on the spoke). Sharing one
+would mean a backend reading the wrong cluster still found reports with the
+right names, so the setup would look healthy while proving nothing. Apart from
+that they stay visible side by side, so the single-cluster and multi-cluster
+paths can be compared directly. `make clean-all` removes the spoke along with
+the hub.
 
 Reports take a few minutes to appear after the spoke comes up:
 
 ```bash
-kubectl --context kind-argoplane-dev-spoke get vulnerabilityreports -n argoplane-demo
+kubectl --context kind-argoplane-dev-spoke get vulnerabilityreports -n argoplane-demo-spoke
 ```
 
 ### Building a single extension

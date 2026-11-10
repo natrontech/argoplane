@@ -49,6 +49,9 @@ spoke-delete: ## Delete the spoke cluster, leaving the hub alone (idempotent)
 	@echo "==> Removing the spoke's registration from the hub"
 	-@kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) delete application argoplane-demo-spoke --ignore-not-found 2>/dev/null || true
 	-@kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) delete secret $(SPOKE_CLUSTER_NAME) --ignore-not-found 2>/dev/null || true
+	@echo "==> Returning the backend to single-cluster, and revoking the Secret grant"
+	-@kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) set env deploy/argoplane-vulnerabilities-backend MULTI_CLUSTER- 2>/dev/null || true
+	-@kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) delete role,rolebinding argoplane-vulnerabilities-clusters --ignore-not-found 2>/dev/null || true
 
 # --- CNI (Cilium) ---
 

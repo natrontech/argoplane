@@ -21,7 +21,10 @@ SPOKE_CLUSTER="${SPOKE_CLUSTER_NAME:-argoplane-dev-spoke}"
 HUB_CTX="kind-${HUB_CLUSTER}"
 SPOKE_CTX="kind-${SPOKE_CLUSTER}"
 ARGOCD_NS="${ARGOCD_NS:-argocd}"
-SPOKE_DEMO_NS="argoplane-demo"
+# Deliberately not argoplane-demo, which the hub's own demo app uses. Sharing
+# it would mean a backend reading the wrong cluster still found reports with
+# the right names, so the setup would look healthy while proving nothing.
+SPOKE_DEMO_NS="argoplane-demo-spoke"
 
 kind get clusters 2>/dev/null | grep -qx "${HUB_CLUSTER}" \
     || die "hub cluster '${HUB_CLUSTER}' not found. Run 'make dev-infra' first."
@@ -154,7 +157,58 @@ stringData:
     }
 EOF
 
-# --- 5. an Application that actually targets the spoke ---------------------
+# --- 5. let the backend read cluster Secrets, and turn the lookup on --------
+
+# Both belong here rather than in deploy/extensions/vulnerabilities: a
+# single-cluster dev setup neither needs the grant nor the lookup, and should
+# not be handed Secret access it never uses.
+log "Granting the vulnerabilities backend read access to cluster Secrets"
+kubectl --context "${HUB_CTX}" apply -f - <<EOF
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: argoplane-vulnerabilities-clusters
+  namespace: ${ARGOCD_NS}
+  labels:
+    app.kubernetes.io/name: argoplane-vulnerabilities-backend
+    app.kubernetes.io/part-of: argoplane
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argoplane-vulnerabilities-clusters
+  namespace: ${ARGOCD_NS}
+  labels:
+    app.kubernetes.io/name: argoplane-vulnerabilities-backend
+    app.kubernetes.io/part-of: argoplane
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: argoplane-vulnerabilities-clusters
+subjects:
+  - kind: ServiceAccount
+    name: argoplane-vulnerabilities-backend
+    namespace: ${ARGOCD_NS}
+EOF
+
+# Without this the backend reads its own cluster, so the spoke app's tab would
+# show the hub's reports instead of the spoke's.
+log "Enabling the multi-cluster lookup on the vulnerabilities backend"
+if kubectl --context "${HUB_CTX}" -n "${ARGOCD_NS}" get deploy argoplane-vulnerabilities-backend >/dev/null 2>&1; then
+    kubectl --context "${HUB_CTX}" -n "${ARGOCD_NS}" set env \
+        deploy/argoplane-vulnerabilities-backend MULTI_CLUSTER=true
+    kubectl --context "${HUB_CTX}" -n "${ARGOCD_NS}" rollout status \
+        deploy/argoplane-vulnerabilities-backend --timeout=120s
+else
+    warn "argoplane-vulnerabilities-backend is not deployed yet."
+    warn "Run 'make setup-argocd', then re-run 'make spoke' to enable the lookup."
+fi
+
+# --- 6. an Application that actually targets the spoke ---------------------
 
 # Addressed by name rather than server on purpose: ArgoCD only sets
 # Argocd-Target-Cluster-URL when an Application sets spec.destination.server,
@@ -206,6 +260,10 @@ echo ""
 echo "    Trivy needs a few minutes to scan before reports appear:"
 echo "      kubectl --context ${SPOKE_CTX} get vulnerabilityreports -n ${SPOKE_DEMO_NS}"
 echo ""
-echo "    'argoplane-demo' (single-cluster) keeps working unchanged, so both"
-echo "    paths are visible side by side."
+echo "    'argoplane-demo' (single-cluster, namespace argoplane-demo) keeps"
+echo "    working unchanged, so both paths are visible side by side."
+echo ""
+echo "    The two apps deliberately use different namespaces: a backend reading"
+echo "    the wrong cluster finds nothing rather than the other app's reports,"
+echo "    so a misconfiguration shows up as an empty tab instead of passing."
 echo ""
