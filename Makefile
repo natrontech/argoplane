@@ -3,6 +3,8 @@
 
 # --- Configuration ---
 CLUSTER_NAME    ?= argoplane-dev
+# Opt-in second cluster; only created by the spoke/dev-infra-multicluster targets.
+SPOKE_CLUSTER_NAME ?= argoplane-dev-spoke
 ARGOCD_VERSION  ?= v3.5.2
 ARGOCD_NS       := argocd
 KIND_CONFIG     := hack/kind-config.yaml
@@ -30,6 +32,26 @@ cluster-delete: ## Delete kind cluster (idempotent)
 	else \
 		echo "==> Cluster '$(CLUSTER_NAME)' does not exist"; \
 	fi
+
+.PHONY: spoke
+spoke: ## Add an opt-in spoke cluster to an existing hub (multi-cluster dev)
+	@CLUSTER_NAME=$(CLUSTER_NAME) SPOKE_CLUSTER_NAME=$(SPOKE_CLUSTER_NAME) \
+		ARGOCD_NS=$(ARGOCD_NS) bash hack/setup-spoke.sh
+
+.PHONY: spoke-delete
+spoke-delete: ## Delete the spoke cluster, leaving the hub alone (idempotent)
+	@if kind get clusters 2>/dev/null | grep -q '^$(SPOKE_CLUSTER_NAME)$$'; then \
+		echo "==> Deleting spoke cluster '$(SPOKE_CLUSTER_NAME)'"; \
+		kind delete cluster --name $(SPOKE_CLUSTER_NAME); \
+	else \
+		echo "==> Spoke cluster '$(SPOKE_CLUSTER_NAME)' does not exist"; \
+	fi
+	@echo "==> Removing the spoke's registration from the hub"
+	-@kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) delete application argoplane-demo-spoke --ignore-not-found 2>/dev/null || true
+	-@kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) delete secret $(SPOKE_CLUSTER_NAME) --ignore-not-found 2>/dev/null || true
+	@echo "==> Returning the backend to single-cluster, and revoking the Secret grant"
+	-@kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) set env deploy/argoplane-vulnerabilities-backend MULTI_CLUSTER- 2>/dev/null || true
+	-@kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) delete role,rolebinding argoplane-vulnerabilities-clusters --ignore-not-found 2>/dev/null || true
 
 # --- CNI (Cilium) ---
 
@@ -115,6 +137,16 @@ dev-infra: argocd prometheus loki trivy setup-argocd ## Full local dev stack (ki
 	@echo "    Run 'make argocd-portforward' to access the UI"
 	@echo "    Run 'make argocd-password' to get the admin password"
 
+.PHONY: dev-infra-multicluster
+# Same steps as dev-infra, but reload-extensions in place of setup-argocd: the spoke
+# setup waits for the vulnerabilities backend to roll out, so its image has to be
+# built and loaded first, and make runs setup-argocd only once per invocation.
+dev-infra-multicluster: argocd prometheus loki trivy reload-extensions spoke ## Full local dev stack plus an opt-in spoke cluster
+	@echo ""
+	@echo "==> Multi-cluster dev infrastructure ready!"
+	@echo "    Hub:   kind-$(CLUSTER_NAME)"
+	@echo "    Spoke: kind-$(SPOKE_CLUSTER_NAME)"
+
 # --- Extensions ---
 
 .PHONY: build-extensions
@@ -184,7 +216,7 @@ clean: ## Remove test resources, keep cluster
 	-@kubectl delete ns argoplane-test --wait=false 2>/dev/null || true
 
 .PHONY: clean-all
-clean-all: cluster-delete ## Destroy everything
+clean-all: spoke-delete cluster-delete ## Destroy everything, including the spoke if one exists
 
 # --- Documentation ---
 

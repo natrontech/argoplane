@@ -247,6 +247,17 @@ extensions:
       # Matches the app's spec.destination.name or .server; both empty = off.
       # CLUSTER_NAME: "in-cluster"
       # CLUSTER_SERVER: "https://kubernetes.default.svc"
+      #
+      # Read reports from whichever cluster an Application deploys to, rather
+      # than only the cluster this backend runs on. Off by default, so an
+      # upgrade changes nothing for a single-cluster install.
+      #
+      # Needs rbac.namespacedRules below as well, and carries the exposure
+      # documented there. Mutually exclusive with CLUSTER_NAME/CLUSTER_SERVER
+      # above: those pin the backend to one cluster and reject Applications
+      # targeting any other, which is the one-backend-per-cluster model this
+      # replaces.
+      # MULTI_CLUSTER: "true"
     extraEnv: []
     resources:
       requests:
@@ -282,6 +293,25 @@ extensions:
         - apiGroups: ["argoproj.io"]
           resources: ["applications"]
           verbs: ["get"]
+      # Reading ArgoCD's cluster Secrets is how the backend reaches a cluster
+      # other than its own. Both halves are off by default, and both are
+      # needed together: env MULTI_CLUSTER=true below, plus this rule.
+      #
+      # A single-cluster install needs neither. A destination of in-cluster,
+      # the API server's own URL, or a Secret pointing back at this cluster
+      # all resolve to the in-cluster client without any lookup.
+      #
+      # Understand the exposure before enabling. Kubernetes RBAC cannot filter
+      # Secrets by label, and "list" returns full Secret data exactly as "get"
+      # does, so this grants the backend read access to everything in the
+      # ArgoCD namespace: argocd-secret (including server.secretkey, which
+      # signs ArgoCD tokens), every repository credential, and every spoke's
+      # credentials. Namespaced keeps workload Secrets elsewhere in the
+      # cluster out of reach; it does not make the grant narrow.
+      namespacedRules: []
+      #   - apiGroups: [""]
+      #     resources: ["secrets"]
+      #     verbs: ["list"]
 
   events:
     enabled: false

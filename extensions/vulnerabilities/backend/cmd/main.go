@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 
+	"github.com/natrontech/argoplane/extensions/vulnerabilities/backend/internal/cluster"
 	"github.com/natrontech/argoplane/extensions/vulnerabilities/backend/internal/handler"
 )
 
@@ -22,6 +24,14 @@ type Config struct {
 	LogLevel      string `envconfig:"LOG_LEVEL" default:"info"`
 	ClusterName   string `envconfig:"CLUSTER_NAME"`
 	ClusterServer string `envconfig:"CLUSTER_SERVER"`
+	// MultiCluster turns on resolving reports from the cluster an Application
+	// deploys to. Off by default: with it off the backend behaves exactly as
+	// it always has, reading only the cluster it runs on, so an upgrade
+	// changes nothing for a single-cluster install.
+	MultiCluster bool `envconfig:"MULTI_CLUSTER" default:"false"`
+	// ArgocdNamespace is where the cluster Secrets live. Defaults to the
+	// backend's own namespace, which is where the chart puts both.
+	ArgocdNamespace string `envconfig:"ARGOCD_NAMESPACE"`
 }
 
 func main() {
@@ -48,14 +58,33 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create handlers.
+	// Report data comes from whichever cluster the Application deploys to,
+	// resolved per request from ArgoCD's own registered cluster Secrets. With
+	// MULTI_CLUSTER off, every read uses the in-cluster client exactly as it
+	// did before this existed.
+	//
+	// The Authorizer always stays on the local client either way: Application
+	// CRs live beside ArgoCD, not on the cluster running the workload.
+	var clients handler.Clients = handler.Static(dynClient)
+	if config.MultiCluster {
+		ns := config.ArgocdNamespace
+		if ns == "" {
+			ns = currentNamespace()
+		}
+		slog.Info("multi-cluster report lookup enabled", "cluster_secret_namespace", ns)
+		clients = cluster.NewRegistry(dynClient, ns, kubeConfig.Host)
+	}
+
+	// CLUSTER_NAME/CLUSTER_SERVER pin this backend to one cluster, rejecting
+	// Applications that target any other. That is the per-spoke deployment
+	// model and is incompatible with MULTI_CLUSTER, which serves them all.
 	auth := handler.NewAuthorizer(dynClient, handler.WithCluster(config.ClusterName, config.ClusterServer))
-	reportsHandler := handler.NewReportsHandler(dynClient, auth)
-	overviewHandler := handler.NewOverviewHandler(dynClient, auth)
-	auditHandler := handler.NewAuditHandler(dynClient, auth)
-	secretsHandler := handler.NewSecretsHandler(dynClient, auth)
-	sbomHandler := handler.NewSbomHandler(dynClient, auth)
-	exportHandler := handler.NewExportHandler(dynClient, auth)
+	reportsHandler := handler.NewReportsHandler(clients, auth)
+	overviewHandler := handler.NewOverviewHandler(clients, auth)
+	auditHandler := handler.NewAuditHandler(clients, auth)
+	secretsHandler := handler.NewSecretsHandler(clients, auth)
+	sbomHandler := handler.NewSbomHandler(clients, auth)
+	exportHandler := handler.NewExportHandler(clients, auth)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/reports", reportsHandler.Handle)
@@ -95,6 +124,19 @@ func main() {
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		slog.Error("shutdown error", "error", err)
 	}
+}
+
+// currentNamespace reads the namespace this pod runs in, so the cluster Secret
+// lookup lands where the chart actually installed things instead of assuming
+// "argocd".
+func currentNamespace() string {
+	const nsFile = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+	if b, err := os.ReadFile(nsFile); err == nil {
+		if ns := strings.TrimSpace(string(b)); ns != "" {
+			return ns
+		}
+	}
+	return "argocd"
 }
 
 func setupLogging(level string) {

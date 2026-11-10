@@ -6,20 +6,19 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/dynamic"
 
 	"github.com/natrontech/argoplane/extensions/vulnerabilities/backend/internal/types"
 )
 
 // SbomHandler handles SBOM report queries.
 type SbomHandler struct {
-	client dynamic.Interface
-	auth   *Authorizer
+	clients Clients
+	auth    *Authorizer
 }
 
 // NewSbomHandler creates a new SbomHandler.
-func NewSbomHandler(client dynamic.Interface, auth *Authorizer) *SbomHandler {
-	return &SbomHandler{client: client, auth: auth}
+func NewSbomHandler(clients Clients, auth *Authorizer) *SbomHandler {
+	return &SbomHandler{clients: clients, auth: auth}
 }
 
 // HandleOverview returns SBOM data for all images in a namespace.
@@ -46,7 +45,12 @@ func (h *SbomHandler) HandleOverview(w http.ResponseWriter, r *http.Request) {
 
 	var truncated bool
 	listOpts := metav1.ListOptions{LabelSelector: resourceLabelSelector(req.Resources)}
-	reportList := h.client.Resource(types.SbomReportGVR).Namespace(req.Namespace).List
+	cl, err := clientFor(h.clients, h.auth, r)
+	if err != nil {
+		WriteError(w, http.StatusBadGateway, "cannot reach the cluster this application deploys to")
+		return
+	}
+	reportList := cl.Resource(types.SbomReportGVR).Namespace(req.Namespace).List
 
 	totalComponents := 0
 	reports := make([]types.SbomReport, 0, 0)

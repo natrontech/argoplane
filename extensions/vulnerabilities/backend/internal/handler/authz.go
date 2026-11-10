@@ -15,6 +15,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+
+	"github.com/natrontech/argoplane/extensions/vulnerabilities/backend/internal/cluster"
 )
 
 // applicationGVR is the GroupVersionResource for ArgoCD Applications.
@@ -88,6 +90,44 @@ func (a *Authorizer) AuthorizeNamespace(w http.ResponseWriter, r *http.Request, 
 	return true
 }
 
+// application returns the Application, from cache when it is still fresh.
+func (a *Authorizer) application(ctx context.Context, appNs, appName string) (*unstructured.Unstructured, error) {
+	key := appNs + "/" + appName
+	if app, ok := a.cache.get(key, time.Now()); ok {
+		return app, nil
+	}
+	app, err := a.client.Resource(applicationGVR).Namespace(appNs).Get(ctx, appName, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get application %s/%s: %w", appNs, appName, err)
+	}
+	a.cache.put(key, app, time.Now())
+	return app, nil
+}
+
+// Destination reports the cluster the Application deploys to, read from the
+// Application itself rather than from a request header.
+//
+// ArgoCD only overwrites Argocd-Target-Cluster-URL when the Application sets
+// spec.destination.server. An Application that names its destination instead
+// leaves that header untouched, so a client could supply any value and read
+// another cluster's reports. The Application is the only trustworthy source.
+func (a *Authorizer) Destination(ctx context.Context, r *http.Request) (cluster.Destination, error) {
+	appNs, appName, ok := appFromHeader(r)
+	if !ok {
+		return cluster.Destination{}, errors.New("request must come through ArgoCD proxy")
+	}
+	app, err := a.application(ctx, appNs, appName)
+	if err != nil {
+		return cluster.Destination{}, err
+	}
+	name, _, _ := unstructured.NestedString(app.Object, "spec", "destination", "name")
+	server, _, _ := unstructured.NestedString(app.Object, "spec", "destination", "server")
+	if name == "" && server == "" {
+		return cluster.Destination{}, fmt.Errorf("application %s/%s has no destination cluster", appNs, appName)
+	}
+	return cluster.Destination{Name: name, Server: server}, nil
+}
+
 // appFromHeader parses the "namespace:name" Argocd-Application-Name header.
 func appFromHeader(r *http.Request) (namespace, name string, ok bool) {
 	parts := strings.SplitN(r.Header.Get("Argocd-Application-Name"), ":", 2)
@@ -100,15 +140,9 @@ func appFromHeader(r *http.Request) (namespace, name string, ok bool) {
 // allowedNamespaces returns the set of namespaces the Application manages:
 // its destination namespace plus the namespace of every resource in its status.
 func (a *Authorizer) allowedNamespaces(ctx context.Context, appNs, appName string) (map[string]struct{}, error) {
-	key := appNs + "/" + appName
-	app, ok := a.cache.get(key, time.Now())
-	if !ok {
-		var err error
-		app, err = a.client.Resource(applicationGVR).Namespace(appNs).Get(ctx, appName, metav1.GetOptions{})
-		if err != nil {
-			return nil, fmt.Errorf("failed to get application %s/%s: %w", appNs, appName, err)
-		}
-		a.cache.put(key, app, time.Now())
+	app, err := a.application(ctx, appNs, appName)
+	if err != nil {
+		return nil, err
 	}
 	if !a.servesCluster(app) {
 		return nil, errOtherCluster

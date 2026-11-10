@@ -50,6 +50,11 @@ spec:
           env:
             - name: PORT
               value: {{ $ext.port | quote }}
+            # Where the cluster Secrets live, which is wherever this chart put
+            # the backend. Left to the backend's own default it would assume
+            # "argocd" and be forbidden in any other namespace.
+            - name: ARGOCD_NAMESPACE
+              value: {{ include "argoplane.argocdNamespace" $ | quote }}
             {{- range $key, $val := $ext.env }}
             - name: {{ $key }}
               value: {{ $val | quote }}

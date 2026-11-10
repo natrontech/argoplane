@@ -99,7 +99,12 @@ func (c reportClient) Namespace(string) dynamic.ResourceInterface { return c }
 
 func (c reportClient) Get(context.Context, string, metav1.GetOptions, ...string) (*unstructured.Unstructured, error) {
 	return &unstructured.Unstructured{Object: map[string]any{
-		"spec": map[string]any{"destination": map[string]any{"namespace": "team-a"}},
+		"spec": map[string]any{"destination": map[string]any{
+			"namespace": "team-a",
+			// Real Applications always name a destination cluster, and the
+			// backend now resolves its client from it rather than a header.
+			"server": "https://kubernetes.default.svc",
+		}},
 	}}, nil
 }
 
@@ -135,10 +140,10 @@ func TestOverviewEndpointsHonorResourceFilter(t *testing.T) {
 		field  string
 		handle http.HandlerFunc
 	}{
-		{"overview", "images", NewOverviewHandler(client, auth).Handle},
-		{"audit", "reports", NewAuditHandler(client, auth).HandleOverview},
-		{"secrets", "reports", NewSecretsHandler(client, auth).HandleOverview},
-		{"sbom", "reports", NewSbomHandler(client, auth).HandleOverview},
+		{"overview", "images", NewOverviewHandler(Static(client), auth).Handle},
+		{"audit", "reports", NewAuditHandler(Static(client), auth).HandleOverview},
+		{"secrets", "reports", NewSecretsHandler(Static(client), auth).HandleOverview},
+		{"sbom", "reports", NewSbomHandler(Static(client), auth).HandleOverview},
 	}
 	filters := []struct {
 		name string

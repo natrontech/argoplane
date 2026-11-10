@@ -92,7 +92,7 @@ This relies on the identity headers coming from argocd-server. A pod that reache
 
 ### Multi-cluster ArgoCD
 
-The events, networking and vulnerabilities backends read from the cluster they run in. If one ArgoCD deploys to several clusters, an app targeting cluster X with namespace `payments` would otherwise see this cluster's `payments` namespace, which may belong to another team.
+The events and networking backends read from the cluster they run in, and so does the vulnerabilities backend unless you enable the mode described below. If one ArgoCD deploys to several clusters, an app targeting cluster X with namespace `payments` would otherwise see this cluster's `payments` namespace, which may belong to another team.
 
 Set `CLUSTER_NAME`, `CLUSTER_SERVER` or both on those backends to name the cluster they read from. The backend then rejects apps whose `spec.destination` points elsewhere with `403 application deploys to a cluster this backend does not serve`. An app matches if its `destination.name` equals `CLUSTER_NAME` or its `destination.server` equals `CLUSTER_SERVER` (a trailing slash is ignored). Apps often set only one of the two, so set both. With neither set, the check is off.
 
@@ -104,7 +104,44 @@ extensions:
       CLUSTER_SERVER: "https://kubernetes.default.svc"
 ```
 
-To serve several clusters, run one backend per cluster and list each in the proxy config with a `cluster: { name | server }` entry, so ArgoCD routes every app to the backend for its cluster. The check then catches requests that reach the wrong one.
+To serve several clusters this way, run one backend per cluster and list each in the proxy config with a `cluster: { name | server }` entry, so ArgoCD routes every app to the backend for its cluster. The check then catches requests that reach the wrong one.
+
+#### One backend for every cluster (vulnerabilities)
+
+The vulnerabilities backend can instead resolve reports from whichever cluster an Application deploys to, so a single instance beside ArgoCD serves them all. It reads the cluster Secrets ArgoCD already maintains and builds a client per destination.
+
+It is off by default; a single-cluster install is unaffected either way.
+
+```yaml
+extensions:
+  vulnerabilities:
+    env:
+      MULTI_CLUSTER: "true"
+    rbac:
+      namespacedRules:
+        - apiGroups: [""]
+          resources: ["secrets"]
+          verbs: ["list"]
+```
+
+**`MULTI_CLUSTER` and `CLUSTER_NAME`/`CLUSTER_SERVER` are mutually exclusive.** If you have followed the section above and pinned the backend to one cluster, an app targeting any other is rejected with `403 application deploys to a cluster this backend does not serve` before the lookup ever runs. Remove those two variables when enabling `MULTI_CLUSTER`.
+
+**Understand the grant before enabling it.** Kubernetes RBAC cannot filter Secrets by label, and `list` returns full Secret data exactly as `get` does. The backend can therefore read everything in the ArgoCD namespace: `argocd-secret` (including `server.secretkey`, which signs ArgoCD tokens), every repository credential, and every registered cluster's credentials. Keeping the rule namespaced stops it reaching workload Secrets elsewhere in the cluster; it does not make it narrow.
+
+Supported cluster Secret auth:
+
+| Method | Supported |
+|---|---|
+| `bearerToken` | Yes |
+| `execProviderConfig` running `argocd-k8s-auth gcp` | Yes |
+| `awsAuthConfig` (EKS) | No, returns an error |
+| Client certificates (`certData`/`keyData`) | No, returns an error |
+| Basic auth (`username`/`password`) | No, returns an error |
+| `proxyUrl`, `tlsClientConfig.serverName` | No, rejected rather than ignored |
+
+On GKE, the backend authenticates as its **own** service account. It does not inherit the application-controller's identity, so give its ServiceAccount a Workload Identity binding and RBAC on each spoke (reusing ArgoCD's own GSA is the shortest path, but the binding still has to name this ServiceAccount).
+
+Resolved clients are cached for five minutes, so a rotated credential or an unregistered cluster takes effect within that window rather than at the next restart.
 
 Metrics and logs are different: they often query a Prometheus and Loki shared by several clusters. Set `CLUSTER_LABEL` (and optionally `CLUSTER_MAP`) on those two backends to scope every query to the Application's destination cluster. See "Cluster filter" on the Metrics extension page.
 

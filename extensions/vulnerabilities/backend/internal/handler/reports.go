@@ -9,20 +9,19 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/dynamic"
 
 	"github.com/natrontech/argoplane/extensions/vulnerabilities/backend/internal/types"
 )
 
 // ReportsHandler handles vulnerability report queries.
 type ReportsHandler struct {
-	client dynamic.Interface
-	auth   *Authorizer
+	clients Clients
+	auth    *Authorizer
 }
 
 // NewReportsHandler creates a new ReportsHandler.
-func NewReportsHandler(client dynamic.Interface, auth *Authorizer) *ReportsHandler {
-	return &ReportsHandler{client: client, auth: auth}
+func NewReportsHandler(clients Clients, auth *Authorizer) *ReportsHandler {
+	return &ReportsHandler{clients: clients, auth: auth}
 }
 
 // Handle returns vulnerability reports filtered by namespace.
@@ -44,7 +43,12 @@ func (h *ReportsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	var truncated bool
 	opts := metav1.ListOptions{LabelSelector: resourceLabelSelector(nonEmpty(resourceFilter))}
 	reports := make([]types.ImageReport, 0)
-	for item, err := range eachReport(r.Context(), h.client.Resource(types.VulnerabilityReportGVR).Namespace(namespace).List, opts, &truncated) {
+	cl, err := clientFor(h.clients, h.auth, r)
+	if err != nil {
+		WriteError(w, http.StatusBadGateway, "cannot reach the cluster this application deploys to")
+		return
+	}
+	for item, err := range eachReport(r.Context(), cl.Resource(types.VulnerabilityReportGVR).Namespace(namespace).List, opts, &truncated) {
 		if err != nil {
 			WriteError(w, http.StatusInternalServerError, "failed to list vulnerability reports")
 			return

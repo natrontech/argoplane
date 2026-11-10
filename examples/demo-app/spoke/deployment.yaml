@@ -1,0 +1,33 @@
+# Workload for the optional spoke cluster (make spoke). Kept separate from
+# ../manifests for two reasons: those pin namespace argoplane-demo, which
+# spec.destination.namespace cannot override, and they include a
+# CiliumNetworkPolicy the spoke cannot apply because it runs without Cilium.
+# One Deployment is all the spoke needs: Trivy scans its image.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guestbook-ui
+  namespace: argoplane-demo-spoke
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: guestbook-ui
+  template:
+    metadata:
+      labels:
+        app: guestbook-ui
+    spec:
+      containers:
+        - image: gcr.io/google-samples/gb-frontend:v5
+          name: guestbook-ui
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
