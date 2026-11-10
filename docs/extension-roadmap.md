@@ -28,7 +28,7 @@ ArgoCD v3.x provides six registration methods. ArgoPlane uses most of them:
 | Observe | **logs** | Historical log search, label-based filtering, severity detection, time range selection, volume charts. No live tail (ArgoCD's built-in Logs tab handles real-time pod streaming; Loki's tail API uses WebSocket which the proxy extension mechanism does not support). | Loki | Resource tabs (Pod, Deployment, StatefulSet) + App view |
 | Secure | **vulnerabilities** | Image vulnerability scanning (CVEs), config audit, exposed secrets detection, SBOM inventory. Per-image severity breakdown, CSV export, deduplication across ReplicaSets. | Trivy Operator (K8s API) | App view (4 tabs: Vulnerabilities, Config Audit, Exposed Secrets, SBOM) |
 | Observe | **events** | Kubernetes events per resource and application. Warning/Normal event filtering, timeline view. | Kubernetes API | Resource tabs + App view |
-| Observe | **alerts** | Firing and pending alerts per app, app vs platform ownership from the PrometheusRule that defines them, rule health, runbook and dashboard links. Read-only; silences planned. | Prometheus rules API (Prometheus, Thanos, Mimir, vmalert), optional Alertmanager | Status panel + App view + Resource tabs (Pod, Deployment, StatefulSet, DaemonSet, Job) |
+| Observe | **alerts** | Firing and pending alerts per app, app vs platform ownership from the PrometheusRule that defines them, rule health, runbook and dashboard links. Read-only; silences planned. | Prometheus rules API (Prometheus, Thanos, Mimir, vmalert), optional Alertmanager | App view + Resource tabs (Pod, Deployment, StatefulSet, DaemonSet, Job) |
 
 ## Next
 

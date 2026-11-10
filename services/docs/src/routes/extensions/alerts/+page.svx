@@ -11,13 +11,12 @@ description: Firing and pending Prometheus alerts for ArgoCD applications and re
 
 # Alerts Extension
 
-ArgoCD's "Healthy" means the pods are running, not that the service works. The alerts extension shows which Prometheus alerts fire for an application, right next to its sync status: a badge in the app header, a full view per application, and a tab per workload.
+ArgoCD's "Healthy" means the pods are running, not that the service works. The alerts extension shows which Prometheus alerts fire for an application, inside ArgoCD: a full view per application and a tab per workload.
 
 It is read-only and works with any server that speaks the Prometheus rules API: Prometheus, Thanos, Mimir and VictoriaMetrics (vmalert). Alertmanager is optional.
 
 ## Registration
 
-- **Status panel** in the application header: "2 firing · 1 pending", coloured by the worst firing severity. Clicking it opens the app view in a flyout.
 - **App view** on any ArgoCD Application (Alerts)
 - **Resource tabs** on `Pod`, `Deployment`, `StatefulSet`, `DaemonSet` and `Job`
 

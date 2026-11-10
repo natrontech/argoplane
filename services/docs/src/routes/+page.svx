@@ -33,7 +33,7 @@ No separate app. No extra auth layer. Each extension is independent and can be i
 - **[Logs]({base}/extensions/logs)**: Loki log search, severity detection, volume charts
 - **[Vulnerabilities]({base}/extensions/vulnerabilities)**: Trivy Operator image CVEs, config audit, exposed secrets, SBOM
 - **[Events]({base}/extensions/events)**: Kubernetes events per resource and application
-- **[Alerts]({base}/extensions/alerts)**: firing and pending Prometheus alerts in the app header, per application and per workload
+- **[Alerts]({base}/extensions/alerts)**: firing and pending Prometheus alerts per application and per workload
 
 ## Quick start
 

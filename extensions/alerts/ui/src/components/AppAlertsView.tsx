@@ -20,6 +20,10 @@ import { Note } from './common';
 type View = 'alerts' | 'rules';
 type OwnerFilter = 'all' | 'app' | 'platform';
 
+// ArgoCD's stylesheet gives selects full width; fix them to their content so
+// the toggles, filters and search share one row.
+const select: React.CSSProperties = { ...inputStyle, cursor: 'pointer', width: 'auto', flex: '0 0 auto' };
+
 const toggle = (active: boolean): React.CSSProperties => ({
   ...inputStyle,
   cursor: 'pointer',
@@ -73,13 +77,13 @@ export const AppAlertsView: React.FC<{ application: any; tree?: any }> = ({ appl
         <button style={toggle(view === 'rules')} onClick={() => setView('rules')}>Rules</button>
         {view === 'alerts' && (
           <>
-            <select style={{ ...inputStyle, cursor: 'pointer' }} value={owner}
+            <select style={select} value={owner}
               onChange={(e) => setOwner(e.target.value as OwnerFilter)}>
               <option value="all">All owners</option>
               <option value="app">App rules</option>
               <option value="platform">Platform rules</option>
             </select>
-            <select style={{ ...inputStyle, cursor: 'pointer' }} value={severity}
+            <select style={select} value={severity}
               onChange={(e) => setSeverity(e.target.value as 'all' | Severity)}>
               <option value="all">All severities</option>
               <option value="critical">Critical</option>
@@ -87,7 +91,7 @@ export const AppAlertsView: React.FC<{ application: any; tree?: any }> = ({ appl
               <option value="info">Info</option>
               <option value="unknown">Unknown</option>
             </select>
-            <input style={{ ...inputStyle, minWidth: 200 }} placeholder="Search name, summary, labels"
+            <input style={{ ...inputStyle, flex: '1 1 200px', minWidth: 200, width: 'auto' }} placeholder="Search name, summary, labels"
               value={search} onChange={(e) => setSearch(e.target.value)} />
           </>
         )}
