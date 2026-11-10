@@ -82,8 +82,9 @@ make spoke
 make spoke-delete
 ```
 
-The spoke is a second kind cluster running Trivy Operator and the demo
-workloads. It is registered with the hub's ArgoCD as an ordinary cluster
+The spoke is a second kind cluster running Trivy Operator and a single demo
+Deployment from `examples/demo-app/spoke/`. It runs without Cilium, so it gets
+its own manifest rather than the hub's demo workloads. It is registered with the hub's ArgoCD as an ordinary cluster
 Secret, and a second Application (`argoplane-demo-spoke`) deploys to it.
 
 That Application addresses its destination by **name** rather than server, on

@@ -228,7 +228,7 @@ spec:
   source:
     repoURL: https://github.com/natrontech/argoplane.git
     targetRevision: HEAD
-    path: examples/demo-app/manifests
+    path: examples/demo-app/spoke
   destination:
     name: ${SPOKE_CLUSTER}
     namespace: ${SPOKE_DEMO_NS}
