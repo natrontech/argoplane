@@ -100,7 +100,7 @@ gh release create vX.Y.Z --verify-tag --title vX.Y.Z --notes-file <draft.md> --g
 
 ```bash
 helm show chart oci://ghcr.io/natrontech/charts/argoplane --version X.Y.Z | grep -E '^(version|appVersion)'
-gh release view vX.Y.Z --json isLatest,isPrerelease
+gh release list --limit 2                            # vX.Y.Z marked Latest
 ```
 
 Report the release URL to the user.
