@@ -138,7 +138,10 @@ dev-infra: argocd prometheus loki trivy setup-argocd ## Full local dev stack (ki
 	@echo "    Run 'make argocd-password' to get the admin password"
 
 .PHONY: dev-infra-multicluster
-dev-infra-multicluster: dev-infra spoke ## Full local dev stack plus an opt-in spoke cluster
+# Same steps as dev-infra, but reload-extensions in place of setup-argocd: the spoke
+# setup waits for the vulnerabilities backend to roll out, so its image has to be
+# built and loaded first, and make runs setup-argocd only once per invocation.
+dev-infra-multicluster: argocd prometheus loki trivy reload-extensions spoke ## Full local dev stack plus an opt-in spoke cluster
 	@echo ""
 	@echo "==> Multi-cluster dev infrastructure ready!"
 	@echo "    Hub:   kind-$(CLUSTER_NAME)"
