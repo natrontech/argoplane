@@ -6,6 +6,8 @@ CLUSTER_NAME    ?= argoplane-dev
 # Opt-in second cluster; only created by the spoke/dev-infra-multicluster targets.
 SPOKE_CLUSTER_NAME ?= argoplane-dev-spoke
 ARGOCD_VERSION  ?= v3.5.2
+# 93.x ships prometheus-operator v0.95.1, which has no arm64 image.
+KUBE_PROMETHEUS_STACK_VERSION ?= 92.22.0
 ARGOCD_NS       := argocd
 KIND_CONFIG     := hack/kind-config.yaml
 EXTENSIONS      := metrics networking logs vulnerabilities events
@@ -94,6 +96,7 @@ prometheus: cluster ## Install kube-prometheus-stack (idempotent)
 	@helm repo add prometheus-community https://prometheus-community.github.io/helm-charts 2>/dev/null || true
 	@helm repo update prometheus-community
 	@helm upgrade --install kube-prometheus prometheus-community/kube-prometheus-stack \
+		--version $(KUBE_PROMETHEUS_STACK_VERSION) \
 		--namespace monitoring --create-namespace \
 		--set grafana.enabled=false \
 		--set alertmanager.enabled=false \
