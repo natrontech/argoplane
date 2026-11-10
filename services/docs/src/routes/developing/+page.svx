@@ -93,9 +93,11 @@ Application sets `spec.destination.server`, so a name-addressed destination is
 exactly the case a backend reading that header would get wrong. A backend has
 to resolve the destination from the Application itself.
 
-`make spoke` also enables `MULTI_CLUSTER` on the vulnerabilities backend and
-grants it the Secret read it needs, since neither belongs in a single-cluster
-setup. `make spoke-delete` reverts both.
+`make spoke` also enables `MULTI_CLUSTER` on the events and vulnerabilities
+backends and grants them the Secret read they need, since neither belongs in a
+single-cluster setup. `make spoke-delete` reverts both. The spoke app's
+Metrics, Logs and Networking tabs stay empty: those backends read the hub's
+Prometheus, Loki and Hubble, and the spoke runs none of them.
 
 The two Applications deploy to **different namespaces** on purpose
 (`argoplane-demo` on the hub, `argoplane-demo-spoke` on the spoke). Sharing one

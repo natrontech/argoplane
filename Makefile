@@ -5,6 +5,8 @@
 CLUSTER_NAME    ?= argoplane-dev
 # Opt-in second cluster; only created by the spoke/dev-infra-multicluster targets.
 SPOKE_CLUSTER_NAME ?= argoplane-dev-spoke
+# Backends make spoke switches to multi-cluster (passed to hack/setup-spoke.sh).
+MULTI_CLUSTER_BACKENDS := vulnerabilities events
 ARGOCD_VERSION  ?= v3.5.2
 # 93.x ships prometheus-operator v0.95.1, which has no arm64 image.
 KUBE_PROMETHEUS_STACK_VERSION ?= 92.22.0
@@ -38,7 +40,7 @@ cluster-delete: ## Delete kind cluster (idempotent)
 .PHONY: spoke
 spoke: ## Add an opt-in spoke cluster to an existing hub (multi-cluster dev)
 	@CLUSTER_NAME=$(CLUSTER_NAME) SPOKE_CLUSTER_NAME=$(SPOKE_CLUSTER_NAME) \
-		ARGOCD_NS=$(ARGOCD_NS) bash hack/setup-spoke.sh
+		ARGOCD_NS=$(ARGOCD_NS) MULTI_CLUSTER_BACKENDS="$(MULTI_CLUSTER_BACKENDS)" bash hack/setup-spoke.sh
 
 .PHONY: spoke-delete
 spoke-delete: ## Delete the spoke cluster, leaving the hub alone (idempotent)
@@ -51,9 +53,11 @@ spoke-delete: ## Delete the spoke cluster, leaving the hub alone (idempotent)
 	@echo "==> Removing the spoke's registration from the hub"
 	-@kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) delete application argoplane-demo-spoke --ignore-not-found --interactive=false 2>/dev/null || true
 	-@kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) delete secret $(SPOKE_CLUSTER_NAME) --ignore-not-found --interactive=false 2>/dev/null || true
-	@echo "==> Returning the backend to single-cluster, and revoking the Secret grant"
-	-@kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) set env deploy/argoplane-vulnerabilities-backend MULTI_CLUSTER- 2>/dev/null || true
-	-@kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) delete role,rolebinding argoplane-vulnerabilities-clusters --ignore-not-found --interactive=false 2>/dev/null || true
+	@echo "==> Returning the backends to single-cluster, and revoking the Secret grants"
+	-@for b in $(MULTI_CLUSTER_BACKENDS); do \
+		kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) set env deploy/argoplane-$$b-backend MULTI_CLUSTER- 2>/dev/null || true; \
+		kubectl --context kind-$(CLUSTER_NAME) -n $(ARGOCD_NS) delete role,rolebinding argoplane-$$b-clusters --ignore-not-found --interactive=false 2>/dev/null || true; \
+	done
 
 # --- CNI (Cilium) ---
 

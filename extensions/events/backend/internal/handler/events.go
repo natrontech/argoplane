@@ -31,13 +31,13 @@ const requestTimeout = 15 * time.Second
 
 // EventsHandler handles Kubernetes event queries.
 type EventsHandler struct {
-	client kubernetes.Interface
-	auth   *Authorizer
+	clients Clients
+	auth    *Authorizer
 }
 
 // NewEventsHandler creates a new events handler.
-func NewEventsHandler(client kubernetes.Interface, auth *Authorizer) *EventsHandler {
-	return &EventsHandler{client: client, auth: auth}
+func NewEventsHandler(clients Clients, auth *Authorizer) *EventsHandler {
+	return &EventsHandler{clients: clients, auth: auth}
 }
 
 // EventResponse is the JSON response for the events endpoint.
@@ -164,6 +164,12 @@ func (h *EventsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	cutoff := time.Now().Add(-since)
 
+	client, err := clientFor(h.clients, h.auth, r)
+	if err != nil {
+		WriteError(w, http.StatusBadGateway, "cannot reach the cluster this application deploys to")
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), requestTimeout)
 	defer cancel()
 
@@ -177,7 +183,7 @@ func (h *EventsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		sel["involvedObject.name"] = name
 	}
 	opts := metav1.ListOptions{Limit: eventListLimit, FieldSelector: fields.SelectorFromSet(sel).String()}
-	items, truncated, err := h.recentEvents(ctx, namespace, opts, cutoff, time.Now().Add(maxScanTime))
+	items, truncated, err := recentEvents(ctx, client, namespace, opts, cutoff, time.Now().Add(maxScanTime))
 	if err != nil {
 		slog.Error("failed to list events", "error", err, "namespace", namespace)
 		WriteError(w, http.StatusInternalServerError, "failed to list events")
@@ -194,11 +200,11 @@ func (h *EventsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 // older than cutoff. The API server returns events in name order, so stopping at
 // a count would drop the newest ones. Paging stops early after stopAt. truncated
 // reports that events were dropped or left unread.
-func (h *EventsHandler) recentEvents(ctx context.Context, namespace string, opts metav1.ListOptions, cutoff, stopAt time.Time) ([]corev1.Event, bool, error) {
+func recentEvents(ctx context.Context, client kubernetes.Interface, namespace string, opts metav1.ListOptions, cutoff, stopAt time.Time) ([]corev1.Event, bool, error) {
 	var items []corev1.Event
 	truncated := false
 	for {
-		events, err := h.client.CoreV1().Events(namespace).List(ctx, opts)
+		events, err := client.CoreV1().Events(namespace).List(ctx, opts)
 		if err != nil {
 			return nil, false, fmt.Errorf("failed to list events: %w", err)
 		}

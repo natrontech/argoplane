@@ -5,7 +5,8 @@
 # every backend reads the cluster it runs on. That never exercises the hub-spoke
 # case: Application CRs live beside ArgoCD, while the reports describing a
 # workload live on the cluster running it. This script builds that split so the
-# vulnerabilities backend has to resolve a client for another cluster.
+# vulnerabilities and events backends have to resolve a client for another
+# cluster.
 #
 # Everything here is idempotent, and nothing touches the hub beyond adding one
 # cluster Secret and one Application.
@@ -21,6 +22,8 @@ SPOKE_CLUSTER="${SPOKE_CLUSTER_NAME:-argoplane-dev-spoke}"
 HUB_CTX="kind-${HUB_CLUSTER}"
 SPOKE_CTX="kind-${SPOKE_CLUSTER}"
 ARGOCD_NS="${ARGOCD_NS:-argocd}"
+# Backends that can read from the cluster an Application deploys to.
+MULTI_CLUSTER_BACKENDS="${MULTI_CLUSTER_BACKENDS:-vulnerabilities events}"
 # Deliberately not argoplane-demo, which the hub's own demo app uses. Sharing
 # it would mean a backend reading the wrong cluster still found reports with
 # the right names, so the setup would look healthy while proving nothing.
@@ -157,20 +160,25 @@ stringData:
     }
 EOF
 
-# --- 5. let the backend read cluster Secrets, and turn the lookup on --------
+# --- 5. let the backends read cluster Secrets, and turn the lookup on -------
 
-# Both belong here rather than in deploy/extensions/vulnerabilities: a
-# single-cluster dev setup neither needs the grant nor the lookup, and should
-# not be handed Secret access it never uses.
-log "Granting the vulnerabilities backend read access to cluster Secrets"
-kubectl --context "${HUB_CTX}" apply -f - <<EOF
+# Both belong here rather than in deploy/extensions/<name>: a single-cluster
+# dev setup neither needs the grant nor the lookup, and should not be handed
+# Secret access it never uses.
+#
+# Every backend that resolves a client per target cluster gets the same pair.
+# Without the flag a backend reads its own cluster, so the spoke app's tab
+# would show the hub's data (or nothing) instead of the spoke's.
+for backend in ${MULTI_CLUSTER_BACKENDS}; do
+    log "Granting the ${backend} backend read access to cluster Secrets"
+    kubectl --context "${HUB_CTX}" apply -f - <<EOF
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: argoplane-vulnerabilities-clusters
+  name: argoplane-${backend}-clusters
   namespace: ${ARGOCD_NS}
   labels:
-    app.kubernetes.io/name: argoplane-vulnerabilities-backend
+    app.kubernetes.io/name: argoplane-${backend}-backend
     app.kubernetes.io/part-of: argoplane
 rules:
   - apiGroups: [""]
@@ -180,33 +188,32 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: argoplane-vulnerabilities-clusters
+  name: argoplane-${backend}-clusters
   namespace: ${ARGOCD_NS}
   labels:
-    app.kubernetes.io/name: argoplane-vulnerabilities-backend
+    app.kubernetes.io/name: argoplane-${backend}-backend
     app.kubernetes.io/part-of: argoplane
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: argoplane-vulnerabilities-clusters
+  name: argoplane-${backend}-clusters
 subjects:
   - kind: ServiceAccount
-    name: argoplane-vulnerabilities-backend
+    name: argoplane-${backend}-backend
     namespace: ${ARGOCD_NS}
 EOF
 
-# Without this the backend reads its own cluster, so the spoke app's tab would
-# show the hub's reports instead of the spoke's.
-log "Enabling the multi-cluster lookup on the vulnerabilities backend"
-if kubectl --context "${HUB_CTX}" -n "${ARGOCD_NS}" get deploy argoplane-vulnerabilities-backend >/dev/null 2>&1; then
-    kubectl --context "${HUB_CTX}" -n "${ARGOCD_NS}" set env \
-        deploy/argoplane-vulnerabilities-backend MULTI_CLUSTER=true
-    kubectl --context "${HUB_CTX}" -n "${ARGOCD_NS}" rollout status \
-        deploy/argoplane-vulnerabilities-backend --timeout=120s
-else
-    warn "argoplane-vulnerabilities-backend is not deployed yet."
-    warn "Run 'make setup-argocd', then re-run 'make spoke' to enable the lookup."
-fi
+    log "Enabling the multi-cluster lookup on the ${backend} backend"
+    if kubectl --context "${HUB_CTX}" -n "${ARGOCD_NS}" get deploy "argoplane-${backend}-backend" >/dev/null 2>&1; then
+        kubectl --context "${HUB_CTX}" -n "${ARGOCD_NS}" set env \
+            "deploy/argoplane-${backend}-backend" MULTI_CLUSTER=true
+        kubectl --context "${HUB_CTX}" -n "${ARGOCD_NS}" rollout status \
+            "deploy/argoplane-${backend}-backend" --timeout=120s
+    else
+        warn "argoplane-${backend}-backend is not deployed yet."
+        warn "Run 'make setup-argocd', then re-run 'make spoke' to enable the lookup."
+    fi
+done
 
 # --- 6. an Application that actually targets the spoke ---------------------
 
@@ -253,9 +260,10 @@ echo "    hub    ${HUB_CTX}     ArgoCD, extension backends"
 echo "    spoke  ${SPOKE_CTX}   workloads + Trivy reports"
 echo ""
 echo "    Open the ArgoCD UI and pick 'argoplane-demo-spoke'. Its Vulnerabilities"
-echo "    tab reads reports from the spoke, which only works if the backend"
-echo "    resolves a client for the Application's destination instead of using"
-echo "    its own in-cluster client."
+echo "    and Events tabs read from the spoke, which only works if the backends"
+echo "    resolve a client for the Application's destination instead of using"
+echo "    their own in-cluster client. Metrics, Logs and Networking stay empty:"
+echo "    they read the hub's Prometheus, Loki and Hubble."
 echo ""
 echo "    Trivy needs a few minutes to scan before reports appear:"
 echo "      kubectl --context ${SPOKE_CTX} get vulnerabilityreports -n ${SPOKE_DEMO_NS}"

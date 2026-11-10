@@ -329,6 +329,15 @@ extensions:
       # Matches the app's spec.destination.name or .server; both empty = off.
       # CLUSTER_NAME: "in-cluster"
       # CLUSTER_SERVER: "https://kubernetes.default.svc"
+      #
+      # Read events from whichever cluster an Application deploys to, rather
+      # than only the cluster this backend runs on. Off by default, so an
+      # upgrade changes nothing for a single-cluster install.
+      #
+      # Same model as the vulnerabilities backend: needs rbac.namespacedRules
+      # below as well, carries the exposure documented there, and is mutually
+      # exclusive with CLUSTER_NAME/CLUSTER_SERVER above.
+      # MULTI_CLUSTER: "true"
     extraEnv: []
     resources:
       requests:
@@ -367,6 +376,15 @@ extensions:
         - apiGroups: ["argoproj.io"]
           resources: ["applications"]
           verbs: ["get"]
+      # Reading ArgoCD's cluster Secrets is how the backend reaches a cluster
+      # other than its own; needed together with env MULTI_CLUSTER=true. The
+      # grant exposes everything in the ArgoCD namespace, argocd-secret and
+      # every spoke's credentials included: see the vulnerabilities block
+      # above before enabling.
+      namespacedRules: []
+      #   - apiGroups: [""]
+      #     resources: ["secrets"]
+      #     verbs: ["list"]
 
 # -- Optional ArgoPlane services (docs site)
 services:

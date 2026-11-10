@@ -58,6 +58,28 @@ The events backend queries the Kubernetes Events API:
 | `LOG_LEVEL` | No | `info` | Log level |
 | `CLUSTER_NAME` | No | | ArgoCD name of the cluster this backend reads from. When set, apps whose `spec.destination.name` differs get a 403. See "Multi-cluster ArgoCD" on the ArgoCD Configuration page. |
 | `CLUSTER_SERVER` | No | | API server URL of that cluster, matched against `spec.destination.server` |
+| `MULTI_CLUSTER` | No | `false` | Read events from the cluster each Application deploys to, instead of only this one. Mutually exclusive with `CLUSTER_NAME`/`CLUSTER_SERVER`. Requires `rbac.namespacedRules`. |
+| `ARGOCD_NAMESPACE` | No | pod's own namespace | Where the ArgoCD cluster Secrets live. Set by the Helm chart; only needed if ArgoCD runs elsewhere. |
+
+### Reading other clusters
+
+With `MULTI_CLUSTER` enabled, one backend beside ArgoCD serves every registered cluster, the same way the vulnerabilities backend does. It resolves each Application's `spec.destination` against ArgoCD's cluster Secrets and builds a client for that cluster, caching it for five minutes.
+
+Enabling it takes two Helm values together:
+
+```yaml
+extensions:
+  events:
+    env:
+      MULTI_CLUSTER: "true"
+    rbac:
+      namespacedRules:
+        - apiGroups: [""]
+          resources: ["secrets"]
+          verbs: ["list"]
+```
+
+Both default to off, so a single-cluster install is unaffected. The spoke's credentials need read access to events there. Supported auth, the exposure the Secret rule carries, and the GKE Workload Identity requirement are covered under "Multi-cluster ArgoCD" on the [ArgoCD Configuration](/deployment/argocd-configuration) page.
 
 ### RBAC
 

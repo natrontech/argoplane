@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
 )
@@ -59,9 +60,9 @@ func TestFilterAndConvertSummaryIgnoresTypeFilter(t *testing.T) {
 	}
 }
 
-// pagedEvents is a handler whose client serves items in eventListLimit pages,
+// pagedEvents is a client that serves items in eventListLimit pages,
 // in the given order, the way the API server serves them in name order.
-func pagedEvents(items []corev1.Event) *EventsHandler {
+func pagedEvents(items []corev1.Event) kubernetes.Interface {
 	client := fake.NewClientset()
 	client.PrependReactor("list", "events", func(action k8stesting.Action) (bool, runtime.Object, error) {
 		start, _ := strconv.Atoi(action.(k8stesting.ListActionImpl).ListOptions.Continue)
@@ -72,7 +73,7 @@ func pagedEvents(items []corev1.Event) *EventsHandler {
 		}
 		return true, list, nil
 	})
-	return NewEventsHandler(client, nil)
+	return client
 }
 
 // nameOrdered returns n events named in creation order, all at the same time.
@@ -106,7 +107,7 @@ func TestRecentEvents(t *testing.T) {
 		for i := range items {
 			items[i].LastTimestamp = metav1.NewTime(now.Add(-time.Duration(5200-i) * time.Second))
 		}
-		got, truncated, err := pagedEvents(items).recentEvents(context.Background(), "ns", metav1.ListOptions{}, cutoff, later)
+		got, truncated, err := recentEvents(context.Background(), pagedEvents(items), "ns", metav1.ListOptions{}, cutoff, later)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -119,7 +120,7 @@ func TestRecentEvents(t *testing.T) {
 	})
 
 	t.Run("timestamp ties are settled by name", func(t *testing.T) {
-		got, _, err := pagedEvents(nameOrdered(5200, now)).recentEvents(context.Background(), "ns", metav1.ListOptions{}, cutoff, later)
+		got, _, err := recentEvents(context.Background(), pagedEvents(nameOrdered(5200, now)), "ns", metav1.ListOptions{}, cutoff, later)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -130,7 +131,7 @@ func TestRecentEvents(t *testing.T) {
 
 	t.Run("events outside the window don't count against the cap", func(t *testing.T) {
 		items := append(nameOrdered(5200, now.Add(-24*time.Hour)), nameOrdered(10, now)...)
-		got, truncated, err := pagedEvents(items).recentEvents(context.Background(), "ns", metav1.ListOptions{}, cutoff, later)
+		got, truncated, err := recentEvents(context.Background(), pagedEvents(items), "ns", metav1.ListOptions{}, cutoff, later)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -140,7 +141,7 @@ func TestRecentEvents(t *testing.T) {
 	})
 
 	t.Run("exactly the cap is complete", func(t *testing.T) {
-		got, truncated, err := pagedEvents(nameOrdered(maxEvents, now)).recentEvents(context.Background(), "ns", metav1.ListOptions{}, cutoff, later)
+		got, truncated, err := recentEvents(context.Background(), pagedEvents(nameOrdered(maxEvents, now)), "ns", metav1.ListOptions{}, cutoff, later)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -150,7 +151,7 @@ func TestRecentEvents(t *testing.T) {
 	})
 
 	t.Run("running out of time returns what was read and says so", func(t *testing.T) {
-		got, truncated, err := pagedEvents(nameOrdered(600, now)).recentEvents(context.Background(), "ns", metav1.ListOptions{}, cutoff, now.Add(-time.Second))
+		got, truncated, err := recentEvents(context.Background(), pagedEvents(nameOrdered(600, now)), "ns", metav1.ListOptions{}, cutoff, now.Add(-time.Second))
 		if err != nil {
 			t.Fatal(err)
 		}

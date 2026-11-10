@@ -92,7 +92,7 @@ This relies on the identity headers coming from argocd-server. A pod that reache
 
 ### Multi-cluster ArgoCD
 
-The events and networking backends read from the cluster they run in, and so does the vulnerabilities backend unless you enable the mode described below. If one ArgoCD deploys to several clusters, an app targeting cluster X with namespace `payments` would otherwise see this cluster's `payments` namespace, which may belong to another team.
+The networking backend reads from the cluster it runs in, and so do the events and vulnerabilities backends unless you enable the mode described below. If one ArgoCD deploys to several clusters, an app targeting cluster X with namespace `payments` would otherwise see this cluster's `payments` namespace, which may belong to another team.
 
 Set `CLUSTER_NAME`, `CLUSTER_SERVER` or both on those backends to name the cluster they read from. The backend then rejects apps whose `spec.destination` points elsewhere with `403 application deploys to a cluster this backend does not serve`. An app matches if its `destination.name` equals `CLUSTER_NAME` or its `destination.server` equals `CLUSTER_SERVER` (a trailing slash is ignored). Apps often set only one of the two, so set both. With neither set, the check is off.
 
@@ -106,11 +106,11 @@ extensions:
 
 To serve several clusters this way, run one backend per cluster and list each in the proxy config with a `cluster: { name | server }` entry, so ArgoCD routes every app to the backend for its cluster. The check then catches requests that reach the wrong one.
 
-#### One backend for every cluster (vulnerabilities)
+#### One backend for every cluster (events, vulnerabilities)
 
-The vulnerabilities backend can instead resolve reports from whichever cluster an Application deploys to, so a single instance beside ArgoCD serves them all. It reads the cluster Secrets ArgoCD already maintains and builds a client per destination.
+The events and vulnerabilities backends can instead read from whichever cluster an Application deploys to, so a single instance beside ArgoCD serves them all. Each reads the cluster Secrets ArgoCD already maintains and builds a client per destination.
 
-It is off by default; a single-cluster install is unaffected either way.
+It is off by default and enabled per backend; a single-cluster install is unaffected either way. The example enables it for vulnerabilities; the same two values under `events` do the same there.
 
 ```yaml
 extensions:
@@ -139,11 +139,13 @@ Supported cluster Secret auth:
 | Basic auth (`username`/`password`) | No, returns an error |
 | `proxyUrl`, `tlsClientConfig.serverName` | No, rejected rather than ignored |
 
-On GKE, the backend authenticates as its **own** service account. It does not inherit the application-controller's identity, so give its ServiceAccount a Workload Identity binding and RBAC on each spoke (reusing ArgoCD's own GSA is the shortest path, but the binding still has to name this ServiceAccount).
+On GKE, each backend authenticates as its **own** service account. It does not inherit the application-controller's identity, so give its ServiceAccount a Workload Identity binding and RBAC on each spoke (reusing ArgoCD's own GSA is the shortest path, but the binding still has to name this ServiceAccount).
 
 Resolved clients are cached for five minutes, so a rotated credential or an unregistered cluster takes effect within that window rather than at the next restart.
 
 Metrics and logs are different: they often query a Prometheus and Loki shared by several clusters. Set `CLUSTER_LABEL` (and optionally `CLUSTER_MAP`) on those two backends to scope every query to the Application's destination cluster. See "Cluster filter" on the Metrics extension page.
+
+**An empty tab on a spoke app does not mean all clear.** Metrics and Logs show a spoke only if it ships to the Prometheus and Loki those backends query, and Networking always reads the Hubble Relay and API server of the cluster it runs on. Without that, a spoke app's tabs are empty because no data reaches the backend, not because the workload is quiet.
 
 ### What the backends need
 
