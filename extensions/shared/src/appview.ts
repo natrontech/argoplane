@@ -35,6 +35,7 @@ export function registerArgoPlaneView(entry: ArgoPlaneViewEntry): void {
 const TAB_ORDER: Record<string, number> = {
   metrics: 1,
   logs: 2,
+  alerts: 3,
   networking: 4,
   vulnerabilities: 5,
   'config-audit': 6,

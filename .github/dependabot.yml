@@ -10,6 +10,7 @@ updates:
       - /extensions/logs/backend
       - /extensions/vulnerabilities/backend
       - /extensions/events/backend
+      - /extensions/alerts/backend
       - /tests
     schedule:
       interval: monthly
@@ -33,6 +34,7 @@ updates:
       - /extensions/logs/ui
       - /extensions/vulnerabilities/ui
       - /extensions/events/ui
+      - /extensions/alerts/ui
       - /extensions/argoplane/ui
     schedule:
       interval: monthly
@@ -98,6 +100,7 @@ updates:
       - /extensions/logs/backend
       - /extensions/vulnerabilities/backend
       - /extensions/events/backend
+      - /extensions/alerts/backend
       - /deploy/docker
       - /services/docs
     schedule:

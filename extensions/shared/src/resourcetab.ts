@@ -69,6 +69,7 @@ export function getRegisteredResourceTypes(): Array<{ group: string; kind: strin
 const TAB_ORDER: Record<string, number> = {
   metrics: 1,
   logs: 2,
+  alerts: 3,
   networking: 4,
   vulnerabilities: 5,
   events: 6,

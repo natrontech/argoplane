@@ -63,13 +63,14 @@ p, role:developer, extensions, invoke, networking, allow
 p, role:developer, extensions, invoke, logs, allow
 p, role:developer, extensions, invoke, vulnerabilities, allow
 p, role:developer, extensions, invoke, events, allow
+p, role:developer, extensions, invoke, alerts, allow
 ```
 
 ### Verify
 
 After deployment, navigate to any ArgoCD Application. You should see new tabs on Deployment and StatefulSet resources (Metrics, Logs, Events), new panels in the Application detail view (Networking), and vulnerability/security tabs (Vulnerabilities).
 
-ArgoPlane currently ships five extensions: metrics, logs, networking, vulnerabilities, and events. The Velero backups extension was removed in v1.5.0.
+ArgoPlane currently ships six extensions: metrics, logs, networking, vulnerabilities, events, and alerts. The Velero backups extension was removed in v1.5.0.
 
 ## Demo app
 

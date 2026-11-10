@@ -391,6 +391,72 @@ extensions:
       #     resources: ["secrets"]
       #     verbs: ["list"]
 
+  alerts:
+    enabled: false
+    image:
+      repository: ghcr.io/natrontech/argoplane-alerts-backend
+      tag: ""
+      pullPolicy: IfNotPresent
+    replicas: 1
+    revisionHistoryLimit: 3
+    port: 8086
+    env:
+      LOG_LEVEL: "info"
+      # Any server with the Prometheus rules API: Prometheus, Thanos, Mimir,
+      # VictoriaMetrics (vmalert).
+      PROMETHEUS_URL: "http://kube-prometheus-kube-prome-prometheus.monitoring.svc:9090"
+      # Optional: marks silenced and inhibited alerts. Without it every
+      # active alert shows as firing or pending.
+      # ALERTMANAGER_URL: "http://kube-prometheus-kube-prome-alertmanager.monitoring.svc:9093"
+      # Optional: browser-reachable Prometheus, for a link from every rule to
+      # its expression.
+      # PROMETHEUS_EXTERNAL_URL: "https://prometheus.example.com"
+      # Label and annotation names, if your install differs from
+      # kube-prometheus conventions.
+      # NAMESPACE_LABEL: "namespace"
+      # SEVERITY_LABEL: "severity"
+      # LINK_ANNOTATIONS: "runbook_url,dashboard_url"
+      # Shared Prometheus for several clusters: same as metrics and logs.
+      # CLUSTER_LABEL: "cluster"
+      # CLUSTER_MAP: '{"in-cluster": "hub"}'
+    extraEnv: []
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+    podLabels: {}
+    podAnnotations: {}
+    priorityClassName: ""
+    podSecurityContext:
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 65534
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop: ["ALL"]
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    serviceAccount:
+      create: true
+      annotations: {}
+    rbac:
+      rules:
+        # Reads the PrometheusRules an Application deploys, to tell its own
+        # rules from the platform's.
+        - apiGroups: ["monitoring.coreos.com"]
+          resources: ["prometheusrules"]
+          verbs: ["get"]
+        - apiGroups: ["argoproj.io"]
+          resources: ["applications"]
+          verbs: ["get"]
+
 # -- Optional ArgoPlane services (docs site)
 services:
   docs:

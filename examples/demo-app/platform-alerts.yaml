@@ -1,0 +1,22 @@
+# Platform-owned alerting rule: it lives outside the demo app, so the alerts
+# extension shows it as a "platform" alert, visible because it fires in the
+# app's namespace.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: platform-demo-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus
+spec:
+  groups:
+    - name: platform-demo
+      rules:
+        - alert: PlatformDemoBlockedTraffic
+          expr: kube_deployment_status_replicas_available{namespace="argoplane-demo", deployment="traffic-blocked"} > 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: traffic-blocked keeps trying to reach guestbook-ui and gets dropped.
+            description: Demo platform alert about a workload in the demo namespace.

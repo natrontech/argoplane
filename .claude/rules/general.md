@@ -11,7 +11,7 @@ Each extension is a self-contained module under `extensions/<name>/`:
 - `extensions/events/` - Kubernetes events
 - `extensions/argoplane/` - System-level UI extension (no backend)
 - `extensions/policies/` - Kyverno policy reports (planned)
-- `extensions/alerts/` - Prometheus/Alertmanager alerts (planned)
+- `extensions/alerts/` - Prometheus alerts (rules API, optional Alertmanager)
 
 ## API Naming
 

@@ -1,0 +1,124 @@
+---
+title: Alerts Extension
+description: Firing and pending Prometheus alerts for ArgoCD applications and resources
+---
+
+<script>
+  import { resolve } from '$app/paths';
+  const base = resolve('/').slice(0, -1);
+  import Callout from '#lib/components/docs/Callout.svelte';
+</script>
+
+# Alerts Extension
+
+ArgoCD's "Healthy" means the pods are running, not that the service works. The alerts extension shows which Prometheus alerts fire for an application, right next to its sync status: a badge in the app header, a full view per application, and a tab per workload.
+
+It is read-only and works with any server that speaks the Prometheus rules API: Prometheus, Thanos, Mimir and VictoriaMetrics (vmalert). Alertmanager is optional.
+
+## Registration
+
+- **Status panel** in the application header: "2 firing · 1 pending", coloured by the worst firing severity. Clicking it opens the app view in a flyout.
+- **App view** on any ArgoCD Application (Alerts)
+- **Resource tabs** on `Pod`, `Deployment`, `StatefulSet`, `DaemonSet` and `Job`
+
+## What it shows
+
+### Application view
+
+- Summary cards: firing, critical, warning, pending and silenced
+- **Active alerts**: name, summary, severity, state, how long it has been active, owner and links
+- Filters for owner, severity and free text across name, summary and labels
+- **Rules**: the alerting rules the application deploys itself, with their state, their health and the last evaluation error. A rule that fails to evaluate never fires, so a broken expression shows up here instead of staying silent.
+
+### Resource tabs
+
+Active alerts about one workload or pod. An alert belongs to a workload when it carries kube-state-metrics' label for that kind (`deployment`, `statefulset`, `daemonset`, `job_name`) or a `pod` label with a pod name that workload produces.
+
+## Which alerts an application sees
+
+An alert is shown when its namespace label names one of the namespaces the application manages: its destination namespace plus every namespace in `status.resources`. This is the same authorization every ArgoPlane backend applies.
+
+Alerts without a namespace label (node, cluster or control-plane alerts) are never shown, with one exception: an alert from a rule the application deploys itself appears in the app view even if the rule aggregates the namespace away. An alert from the application's own rule that names a namespace the application does not manage is dropped, so a rule that queries another team's namespace cannot surface their data.
+
+## App and platform alerts
+
+Each alert is marked **app** or **platform**, without relying on any label convention of your install:
+
+- **App**: the rule comes from a PrometheusRule the ArgoCD Application deploys.
+- **Platform**: the rule comes from anywhere else, and the alert fires in one of the application's namespaces.
+
+prometheus-operator names each rule file after its PrometheusRule (`<namespace>-<name>-<uid>.yaml`). The backend reads the UID of every PrometheusRule in the application's resource tree and matches the files exactly, so a similarly named rule elsewhere is never mistaken for the application's own.
+
+Without prometheus-operator (for example a standalone Thanos Ruler), every alert is shown as platform.
+
+## Severity and links
+
+Severities are read from the `severity` label and mapped onto critical, warning and info. Common spellings such as `page`, `error`, `high` or `p1` count as critical; anything unrecognised shows as unknown, with the original value next to it.
+
+Links come from the `runbook_url` and `dashboard_url` annotations. With `PROMETHEUS_EXTERNAL_URL` set, every rule also links to its expression in Prometheus. Only `http` and `https` links are shown: annotations are written by whoever can create a PrometheusRule.
+
+## Backend
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/v1/alerts` | Active alerts with a summary |
+| `GET /api/v1/rules` | The application's own alerting rules |
+
+See the [Alerts API]({base}/api/alerts) reference.
+
+### Configuration
+
+| Environment Variable | Required | Default | Description |
+|---------------------|----------|---------|-------------|
+| `PORT` | No | `8086` | HTTP server port |
+| `LOG_LEVEL` | No | `info` | Log level |
+| `PROMETHEUS_URL` | No | kube-prometheus-stack service | Any server with the Prometheus rules API |
+| `ALERTMANAGER_URL` | No | | Marks silenced and inhibited alerts. Without it every active alert shows as firing or pending. |
+| `PROMETHEUS_EXTERNAL_URL` | No | | Browser-reachable Prometheus, for a link from every rule to its expression |
+| `NAMESPACE_LABEL` | No | `namespace` | Label that names an alert's namespace |
+| `SEVERITY_LABEL` | No | `severity` | Label that holds an alert's severity |
+| `LINK_ANNOTATIONS` | No | `runbook_url,dashboard_url` | Annotations shown as links |
+| `CLUSTER_LABEL` | No | | Shared Prometheus for several clusters: only alerts whose label matches the application's destination cluster are shown |
+| `CLUSTER_MAP` | No | | JSON map from ArgoCD cluster name or server URL to `CLUSTER_LABEL` value |
+
+`CLUSTER_LABEL` and `CLUSTER_MAP` work exactly as for the metrics and logs backends. See "Cluster filter" on the [Metrics extension]({base}/extensions/metrics) page.
+
+Rules and Alertmanager data are fetched at most every 15 seconds and shared by all requests, because the rules API returns every rule on the server. If Alertmanager is unreachable, alerts are still returned with a warning that their silences are unknown. If the rules API is unreachable, the backend answers `502` rather than an empty list.
+
+### RBAC
+
+```yaml
+rules:
+  - apiGroups: ["monitoring.coreos.com"]
+    resources: ["prometheusrules"]
+    verbs: ["get"]
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications"]
+    verbs: ["get"]
+```
+
+### Helm
+
+```yaml
+extensions:
+  alerts:
+    enabled: true
+    env:
+      PROMETHEUS_URL: "http://kube-prometheus-kube-prome-prometheus.monitoring.svc:9090"
+      ALERTMANAGER_URL: "http://kube-prometheus-kube-prome-alertmanager.monitoring.svc:9093"
+```
+
+<Callout type="info">
+  Prometheus only evaluates the PrometheusRules it selects. kube-prometheus-stack, by default, selects only rules carrying its <code>release</code> label. A rule your application deploys without it never fires and does not appear under Rules.
+</Callout>
+
+## ArgoCD RBAC
+
+```
+p, role:developer, extensions, invoke, alerts, allow
+```
+
+## Not yet supported
+
+- Silences: the extension does not create or expire them yet.
+- Grafana-managed alert rules.

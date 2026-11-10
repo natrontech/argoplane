@@ -23,6 +23,7 @@ extensions/          # ArgoCD UI extensions (React + Go)
   logs/              # Logs extension (Loki)
   vulnerabilities/   # Vulnerabilities extension (Trivy Operator)
   events/            # Events extension (Kubernetes Events API)
+  alerts/            # Alerts extension (Prometheus rules API)
 services/            # Standalone services
   docs/              # Documentation site (SvelteKit)
 design-system/       # CSS design tokens and components

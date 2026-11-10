@@ -28,6 +28,7 @@ The demo app uses the public `argocd-example-apps/guestbook` repo as the ArgoCD 
 | **Networking** | App view (application detail) + Pod resource tab | Any ArgoCD Application + `/Pod` | `guestbook-ui` Deployment + 2 app CiliumNetworkPolicies + 2 platform CiliumClusterwideNetworkPolicies + 2 platform CiliumNetworkPolicies + cross-ns traffic + Hubble flows |
 | **Logs** | Resource tab (Pod, Deployment, StatefulSet) + App view (Log Explorer) | `apps/Deployment`, `apps/StatefulSet`, `/Pod` + Any ArgoCD Application | `guestbook-ui` Deployment pods (requires Loki + Alloy collecting logs) |
 | **Vulnerabilities** | App view (4 tabs: Vulnerabilities, Config Audit, Exposed Secrets, SBOM) | Any ArgoCD Application | `guestbook-ui` Deployment images (requires Trivy Operator scanning workloads) |
+| **Alerts** | Status panel + App view + Resource tab (Pod, Deployment, StatefulSet, DaemonSet, Job) | Any ArgoCD Application + workloads | `guestbook-alerts` PrometheusRule (app: one firing, one pending) + `platform-demo-alerts` PrometheusRule in `monitoring` (platform: critical) |
 
 ## When Adding a New Extension
 

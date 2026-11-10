@@ -12,7 +12,7 @@ ARGOCD_VERSION  ?= v3.5.2
 KUBE_PROMETHEUS_STACK_VERSION ?= 92.22.0
 ARGOCD_NS       := argocd
 KIND_CONFIG     := hack/kind-config.yaml
-EXTENSIONS      := metrics networking logs vulnerabilities events
+EXTENSIONS      := metrics networking logs vulnerabilities events alerts
 UI_ONLY_EXTENSIONS := argoplane
 ALL_UI_EXTENSIONS  := $(EXTENSIONS) $(UI_ONLY_EXTENSIONS)
 
@@ -201,6 +201,7 @@ clean-example: ## Remove demo app and namespace
 	-@kubectl delete ns argoplane-demo --wait=false --interactive=false 2>/dev/null || true
 	-@kubectl delete ns other-team --wait=false --interactive=false 2>/dev/null || true
 	-@kubectl delete ciliumclusterwidenetworkpolicy platform-allow-dns platform-allow-health-probes --interactive=false 2>/dev/null || true
+	-@kubectl delete prometheusrule -n monitoring platform-demo-alerts --ignore-not-found --interactive=false 2>/dev/null || true
 
 # --- Testing ---
 

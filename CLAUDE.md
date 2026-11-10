@@ -70,6 +70,9 @@ extensions/
   events/
     ui/
     backend/         # Go service querying Kubernetes Events API
+  alerts/
+    ui/
+    backend/         # Go service querying the Prometheus rules API (+ optional Alertmanager)
   argoplane/
     ui/              # System-level UI extension (no backend)
 services/
@@ -88,11 +91,11 @@ docs/
 
 ## Current Scope
 
-**Done:** Metrics (Prometheus), Networking (Cilium/Hubble), Logs (Loki), Vulnerabilities (Trivy Operator), Events (Kubernetes Events API)
+**Done:** Metrics (Prometheus), Networking (Cilium/Hubble), Logs (Loki), Vulnerabilities (Trivy Operator), Events (Kubernetes Events API), Alerts (Prometheus rules API, read-only)
 
 **Removed:** Backups (Velero) — deprecated and removed in v1.5.0; the extension saw no real usage.
 
-**Next:** Alerts (Prometheus Rules / Alertmanager), Policies (Kyverno)
+**Next:** Policies (Kyverno), alert silences
 
 **Future:** Traces (Tempo/Jaeger), Certificates (cert-manager), Scaling (HPA/KEDA)
 

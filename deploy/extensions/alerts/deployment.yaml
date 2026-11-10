@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argoplane-alerts-backend
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argoplane-alerts-backend
+    app.kubernetes.io/part-of: argoplane
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argoplane-alerts-reader
+  labels:
+    app.kubernetes.io/name: argoplane-alerts-backend
+    app.kubernetes.io/part-of: argoplane
+rules:
+  # Reads the PrometheusRules an Application deploys, to tell its own rules
+  # from the platform's.
+  - apiGroups: ["monitoring.coreos.com"]
+    resources: ["prometheusrules"]
+    verbs: ["get"]
+  # Reads ArgoCD Applications to authorize namespace scoping.
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argoplane-alerts-reader
+  labels:
+    app.kubernetes.io/name: argoplane-alerts-backend
+    app.kubernetes.io/part-of: argoplane
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argoplane-alerts-reader
+subjects:
+  - kind: ServiceAccount
+    name: argoplane-alerts-backend
+    namespace: argocd
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argoplane-alerts-backend
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argoplane-alerts-backend
+    app.kubernetes.io/part-of: argoplane
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argoplane-alerts-backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: argoplane-alerts-backend
+        app.kubernetes.io/part-of: argoplane
+    spec:
+      serviceAccountName: argoplane-alerts-backend
+      containers:
+        - name: backend
+          image: argoplane-alerts-backend:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8086
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "8086"
+            - name: LOG_LEVEL
+              value: "info"
+            # The dev stack runs kube-prometheus-stack without Alertmanager,
+            # so ALERTMANAGER_URL stays unset and nothing shows as silenced.
+            - name: PROMETHEUS_URL
+              value: "http://kube-prometheus-kube-prome-prometheus.monitoring.svc:9090"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8086
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8086
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: argoplane-alerts-backend
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argoplane-alerts-backend
+    app.kubernetes.io/part-of: argoplane
+spec:
+  ports:
+    - port: 8086
+      targetPort: 8086
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: argoplane-alerts-backend

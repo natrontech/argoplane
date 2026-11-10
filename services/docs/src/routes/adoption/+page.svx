@@ -13,7 +13,7 @@ description: Why teams adopt ArgoPlane and how to evaluate it
 
 # Adoption
 
-ArgoPlane is for platform teams that already use ArgoCD and want to give developers operational visibility (metrics, logs, network flows, vulnerabilities, events) inside ArgoCD itself, without deploying another UI.
+ArgoPlane is for platform teams that already use ArgoCD and want to give developers operational visibility (metrics, logs, alerts, network flows, vulnerabilities, events) inside ArgoCD itself, without deploying another UI.
 
 ## Is ArgoPlane right for you?
 

@@ -1,0 +1,118 @@
+---
+title: Alerts API
+description: Alerts extension backend API reference
+---
+
+# Alerts API
+
+The alerts backend exposes a JSON HTTP API consumed by the UI extension via ArgoCD's proxy at `/extensions/alerts/`.
+
+## Authorization
+
+Every data endpoint requires the `Argocd-Application-Name` header (`namespace:name` format, set automatically by ArgoCD's proxy). The backend returns `403` if the header is missing or if a requested namespace is not managed by that Application (its destination namespace plus namespaces in `status.resources`). It needs `get` on `applications.argoproj.io` and `monitoring.coreos.com/prometheusrules`; the Helm chart grants both.
+
+## Endpoints
+
+### List active alerts
+
+```
+GET /api/v1/alerts?namespace={ns}&kind={kind}&name={name}
+```
+
+Without parameters, returns every active alert the Application may see. `namespace` narrows that to one of its namespaces; `kind` and `name` narrow it to one workload and need `namespace`.
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `namespace` | string | No | One of the Application's namespaces |
+| `kind` | string | With `name` | `Pod`, `Deployment`, `StatefulSet`, `DaemonSet` or `Job` |
+| `name` | string | With `kind` | Workload or pod name |
+
+**Response:**
+
+```json
+{
+  "alerts": [
+    {
+      "name": "HighErrorRate",
+      "state": "firing",
+      "severity": "critical",
+      "severityRaw": "page",
+      "summary": "5xx rate above 5% for 10 minutes",
+      "owner": "app",
+      "namespace": "shop",
+      "labels": { "alertname": "HighErrorRate", "namespace": "shop", "deployment": "checkout", "severity": "page" },
+      "activeAt": "2026-11-10T08:00:00Z",
+      "value": "0.072",
+      "group": "checkout",
+      "silenced": false,
+      "inhibited": false,
+      "links": [{ "label": "Runbook", "url": "https://wiki.example.com/runbooks/high-error-rate" }]
+    }
+  ],
+  "summary": { "firing": 1, "pending": 0, "suppressed": 0, "critical": 1, "warning": 0, "info": 0, "unknown": 0 },
+  "warnings": []
+}
+```
+
+- `state` is `firing` or `pending`.
+- `severity` is `critical`, `warning`, `info` or `unknown`. `severityRaw` holds the label's original value when it differs.
+- `owner` is `app` when the rule comes from a PrometheusRule the Application deploys, `platform` otherwise.
+- `silenced` and `inhibited` are only ever `true` with `ALERTMANAGER_URL` set.
+- `summary.firing` and the severity counts exclude silenced or inhibited alerts, which count only towards `suppressed`.
+- `warnings` explains data the response could not include, such as silences while Alertmanager is unreachable. It is left out when empty.
+
+Alerts are sorted firing first, then by severity, then newest first.
+
+### List the Application's rules
+
+```
+GET /api/v1/rules
+```
+
+Returns the alerting rules loaded from PrometheusRules the Application deploys. Platform rules are not listed: until one fires, nothing ties it to the Application.
+
+**Response:**
+
+```json
+{
+  "rules": [
+    {
+      "name": "HighErrorRate",
+      "group": "checkout",
+      "query": "sum(rate(http_requests_total{code=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m])) > 0.05",
+      "for": "10m0s",
+      "severity": "critical",
+      "summary": "5xx rate above 5% for 10 minutes",
+      "health": "ok",
+      "state": "firing",
+      "firing": 1,
+      "pending": 0,
+      "links": []
+    }
+  ]
+}
+```
+
+`health` is `ok`, `err` or `unknown`; with `err`, `lastError` holds the evaluation error.
+
+### Health check
+
+```
+GET /healthz
+```
+
+Returns `200 OK` when the service is running.
+
+## Error responses
+
+```json
+{
+  "error": "namespace not managed by this application"
+}
+```
+
+| Status | Meaning |
+|--------|---------|
+| `400` | Invalid namespace or name, or `kind`/`name` without the other or without `namespace` |
+| `403` | Missing ArgoCD headers, or a namespace the Application does not manage |
+| `502` | The rules API is unreachable or returned an error |

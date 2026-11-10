@@ -17,7 +17,8 @@ export const navigation: NavItem[] = [
 			{ title: 'Networking', href: '/extensions/networking' },
 			{ title: 'Logs', href: '/extensions/logs' },
 			{ title: 'Vulnerabilities', href: '/extensions/vulnerabilities' },
-			{ title: 'Events', href: '/extensions/events' }
+			{ title: 'Events', href: '/extensions/events' },
+			{ title: 'Alerts', href: '/extensions/alerts' }
 		]
 	},
 	{
@@ -47,7 +48,8 @@ export const navigation: NavItem[] = [
 			{ title: 'Networking API', href: '/api/networking' },
 			{ title: 'Logs API', href: '/api/logs' },
 			{ title: 'Vulnerabilities API', href: '/api/vulnerabilities' },
-			{ title: 'Events API', href: '/api/events' }
+			{ title: 'Events API', href: '/api/events' },
+			{ title: 'Alerts API', href: '/api/alerts' }
 		]
 	},
 	{

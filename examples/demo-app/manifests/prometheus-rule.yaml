@@ -1,0 +1,33 @@
+# App-owned alerting rules. Because ArgoCD deploys this PrometheusRule as part
+# of the app, the alerts extension shows these as "app" alerts.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: guestbook-alerts
+  namespace: argoplane-demo
+  labels:
+    # kube-prometheus-stack only loads rules carrying its release label.
+    release: kube-prometheus
+spec:
+  groups:
+    - name: guestbook
+      rules:
+        # Fires for as long as guestbook-ui runs, so there is always
+        # something to look at.
+        - alert: GuestbookDemoFiring
+          expr: kube_deployment_status_replicas_available{namespace="argoplane-demo", deployment="guestbook-ui"} > 0
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: guestbook-ui is up, which this demo rule treats as worth a warning.
+            description: Demo alert. It fires whenever guestbook-ui has an available replica.
+            runbook_url: https://natrontech.github.io/argoplane/extensions/alerts
+        # Its "for" outlasts any demo session, so it stays pending.
+        - alert: GuestbookDemoPending
+          expr: kube_deployment_spec_replicas{namespace="argoplane-demo", deployment="guestbook-ui"} > 0
+          for: 24h
+          labels:
+            severity: info
+          annotations:
+            summary: Demo alert that stays pending for a day before it would fire.
