@@ -157,8 +157,14 @@ func (r *Registry) For(ctx context.Context, d Destination) (dynamic.Interface, e
 		return r.local, nil
 	}
 
-	key := d.Server
-	if key == "" {
+	// Both forms are prefixed so the two keyspaces cannot overlap by
+	// construction. No test covers the collision because it cannot be reached:
+	// a server string shaped like "name/<x>" is not a valid host, and
+	// client-go rejects it ("host must be a URL or a host:port pair") before
+	// any client is built or cached. The prefix keeps that independent of
+	// client-go's validation.
+	key := "server/" + d.Server
+	if d.Server == "" {
 		key = "name/" + d.Name
 	}
 
