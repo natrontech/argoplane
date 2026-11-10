@@ -54,9 +54,11 @@ metadata:
     app.kubernetes.io/name: argoplane-vulnerabilities-backend
     app.kubernetes.io/part-of: argoplane
 rules:
-  # list only: the backend discovers the right Secret by scanning the labelled
-  # set, and never fetches one by name. RBAC cannot filter by label, so this is
-  # as narrow as the lookup allows.
+  # The backend finds the right Secret by scanning the labelled set and never
+  # fetches one by name, so "get" is unused. Note that "list" is not the
+  # narrower grant it looks like: it returns full Secret data, exactly as "get"
+  # would, and RBAC cannot filter by label. Everything in this namespace is
+  # readable, argocd-secret included.
   - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["list"]

@@ -44,7 +44,6 @@ func clientFor(c Clients, auth *Authorizer, r *http.Request) (dynamic.Interface,
 			"error", err,
 			"cluster_name", dest.Name,
 			"cluster_server", dest.Server,
-			"project", dest.Project,
 			"app", r.Header.Get("Argocd-Application-Name"))
 		return nil, err
 	}

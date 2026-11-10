@@ -86,8 +86,32 @@ The vulnerabilities backend queries Trivy Operator CRDs via the Kubernetes API:
 | `LOG_LEVEL` | No | `info` | Log level |
 | `CLUSTER_NAME` | No | | ArgoCD name of the cluster this backend reads from. When set, apps whose `spec.destination.name` differs get a 403. See "Multi-cluster ArgoCD" on the ArgoCD Configuration page. |
 | `CLUSTER_SERVER` | No | | API server URL of that cluster, matched against `spec.destination.server` |
+| `MULTI_CLUSTER` | No | `false` | Resolve reports from the cluster each Application deploys to, instead of only this one. Mutually exclusive with `CLUSTER_NAME`/`CLUSTER_SERVER`. Requires `rbac.namespacedRules`. |
+| `ARGOCD_NAMESPACE` | No | pod's own namespace | Where the ArgoCD cluster Secrets live. Set by the Helm chart; only needed if ArgoCD runs elsewhere. |
 
 The backend uses in-cluster Kubernetes credentials (service account) to read Trivy Operator CRDs. No external service URL is needed.
+
+### Reading other clusters
+
+With `MULTI_CLUSTER` enabled, one backend beside ArgoCD serves every registered cluster. It resolves each Application's `spec.destination` against ArgoCD's cluster Secrets and builds a client for that cluster, caching it for five minutes.
+
+Enabling it takes two Helm values together:
+
+```yaml
+extensions:
+  vulnerabilities:
+    env:
+      MULTI_CLUSTER: "true"
+    rbac:
+      namespacedRules:
+        - apiGroups: [""]
+          resources: ["secrets"]
+          verbs: ["list"]
+```
+
+Both default to off, so a single-cluster install is unaffected. Supported cluster Secret auth is `bearerToken` and `execProviderConfig` running `argocd-k8s-auth gcp`; EKS `awsAuthConfig`, client certificates and basic auth return an error, as do `proxyUrl` and `tlsClientConfig.serverName`.
+
+The RBAC rule is worth reading before you enable it, and the Workload Identity requirement on GKE: both are covered under "Multi-cluster ArgoCD" on the [ArgoCD Configuration](/deployment/argocd-configuration) page.
 
 ### Trivy Operator CRDs
 

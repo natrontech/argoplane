@@ -125,10 +125,7 @@ func (a *Authorizer) Destination(ctx context.Context, r *http.Request) (cluster.
 	if name == "" && server == "" {
 		return cluster.Destination{}, fmt.Errorf("application %s/%s has no destination cluster", appNs, appName)
 	}
-	// The project decides which registered clusters this Application may use;
-	// a project-scoped cluster Secret belongs to that project alone.
-	project, _, _ := unstructured.NestedString(app.Object, "spec", "project")
-	return cluster.Destination{Name: name, Server: server, Project: project}, nil
+	return cluster.Destination{Name: name, Server: server}, nil
 }
 
 // appFromHeader parses the "namespace:name" Argocd-Application-Name header.
